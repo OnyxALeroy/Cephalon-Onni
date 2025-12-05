@@ -1,7 +1,7 @@
 import sqlite3
 from typing import Dict, List, Optional, Union
 
-from backend.database.db_helpers import drop_tables, list_tables, describe_table, preview_table, value_exists, \
+from backend.database.static.db_helpers import drop_tables, list_tables, describe_table, preview_table, \
     get_value_by_column
 
 DB_FILE = "test.db"
@@ -182,8 +182,8 @@ def main() -> None:
         if not create_translation_database(conn) or not create_item_database(conn) or not create_recipe_database(conn):
             return
 
-        fill_img_db(conn, "./ExportManifest.json")
-        fill_recipes_db(conn, "./ExportRecipes_en.json")
+        fill_img_db(conn, "ExportManifest.json")
+        fill_recipes_db(conn, "ExportRecipes_en.json")
 
         tables = list_tables(conn)
         if not tables:
