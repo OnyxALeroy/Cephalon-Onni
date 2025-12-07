@@ -8,6 +8,8 @@ import webbrowser
 import threading
 import time
 
+from routers import inventory, protected, user
+
 from models.users import UserCreate
 from database.dynamic.crud import create_user, get_user_by_email
 from database.dynamic.security import verify_password
@@ -31,8 +33,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# app.include_router(rooms.router, prefix="/rooms", tags=["rooms"])
-# app.include_router(users.router, tags=["users"])
+app.include_router(inventory.router)
+app.include_router(protected.router)
+app.include_router(user.router)
 
 # Serve the main index.html
 @app.get("/{full_path:path}")

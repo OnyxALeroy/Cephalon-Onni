@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
-from backend.database.dynamic.auth import SECRET_KEY, ALGORITHM
+from database.dynamic.auth import SECRET_KEY, ALGORITHM
 
 oauth2 = OAuth2PasswordBearer(tokenUrl="login")
 
