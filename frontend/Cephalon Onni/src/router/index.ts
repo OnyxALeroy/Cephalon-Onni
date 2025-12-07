@@ -3,6 +3,8 @@ import ConsoleLayout from "@/layouts/ConsoleLayout.vue";
 
 import Home from "@/views/Home.vue";
 import Inventory from "@/views/Inventory.vue";
+import Login from "@/views/Login.vue";
+import Register from "@/views/Register.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -15,6 +17,9 @@ const router = createRouter({
         { path: "inventory", component: Inventory },
       ],
     },
+
+    { path: "/login", component: Login },
+    { path: "/register", component: Register },
   ],
 });
 

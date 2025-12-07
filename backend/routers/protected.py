@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from backend.dependencies import get_current_user
+from dependencies import get_current_user
 
 router = APIRouter()
 

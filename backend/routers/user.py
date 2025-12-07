@@ -1,26 +1,79 @@
-from fastapi import APIRouter, HTTPException
+from bson import ObjectId
+from fastapi import APIRouter, HTTPException, Response, Request
 
-from backend.models.users import UserCreate
-from backend.database.dynamic.auth import create_token
-from backend.database.dynamic.crud import create_user, get_user_by_email
-from backend.database.dynamic.security import verify_password
+from models.users import UserCreate, UserPublic
+from database.dynamic.auth import create_token, decode_token
+from database.dynamic.crud import create_user, get_user_by_email
+from database.dynamic.security import hash_password, verify_password
+from database.dynamic.db import users_collection
 
 router = APIRouter()
 
-@router.post("/register")
-async def register(user: UserCreate):
+@router.post("/register", response_model=UserPublic)
+def register(user: UserCreate):
+    if get_user_by_email(user.email):
+        raise HTTPException(400, "Email already used")
+
+    data = user.dict()
+    data["hashed_password"] = hash_password(data.pop("password"))
+
+    result = users_collection.insert_one(data)
+
+    return {
+        "id": str(result.inserted_id),
+        "email": user.email,
+        "username": user.username
+    }
+
+
+@router.post("/login", response_model=UserPublic)
+def login(data: dict, response: Response):
+    user = users_collection.find_one({"email": data.get("email")})
+    if not user:
+        raise HTTPException(401, "Invalid credentials")
+
+    if not verify_password(data.get("password"), user["hashed_password"]):
+        raise HTTPException(401, "Invalid credentials")
+
+    token = create_token(str(user["_id"]))
+
+    response.set_cookie(
+        "access_token",
+        token,
+        httponly=True,
+        samesite="lax"
+    )
+
+    return {
+        "id": str(user["_id"]),
+        "email": user["email"],
+        "username": user["username"]
+    }
+
+@router.get("/me", response_model=UserPublic)
+def me(request: Request):
+    token = request.cookies.get("access_token")
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
     try:
-        u = await create_user(user)
-        return {"message": "User created"}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        payload = decode_token(token)
+        user_id = payload.get("sub")
 
-@router.post("/login")
-async def login(email: str, password: str):
-    user = await get_user_by_email(email)
+        if user_id is None:
+            raise HTTPException(401, "Invalid token")
 
-    if not user or not verify_password(password, user["hashed_password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Token expired or invalid")
 
-    token = create_token({"sub": str(user["_id"])})
-    return {"access_token": token}
+    user = users_collection.find_one({"_id": ObjectId(user_id)})
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Account not found")
+
+    return {
+        "id": str(user["_id"]),
+        "email": user["email"],
+        "username": user["username"]
+    }
