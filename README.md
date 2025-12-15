@@ -26,13 +26,30 @@ The goal is to provide Tenno with a clean, fast, and modern interface to view th
 
 ## Setup Instructions
 
-### Install dependencies
+### Backend
+
+The whole backend is encapsulated in a Docker container. To run it locally, install Docker on your machine, and run from the `backend` directory (eventually as a superuser):
+   ```bash
+   docker compose up --build
+   ```
+
+The backend will be available at:
+
+```
+http://localhost:8000
+```
+
+Once you're done, stop the container by pressing `Ctrl+C` in the terminal and don't forget to remove the container with `docker compose down`.
+
+### Frontend
+
+#### Install dependencies
 
 ```bash
 npm install
 ```
 
-### Run development server
+#### Run development server
 
 ```bash
 npm run dev
