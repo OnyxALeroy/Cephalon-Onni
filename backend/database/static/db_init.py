@@ -232,19 +232,19 @@ def fill_recipes_db(conn: sqlite3.Connection, json_path: str) -> bool:
                 ingredient1_q = 0
             if len(ingredients) >= 2:
                 ingredient2 = get_value_by_column(cursor, "items", "uniqueName", ingredients[1].get("ItemType"), "id")
-                ingredient2_q = ingredients[0].get("ItemCount")
+                ingredient2_q = ingredients[1].get("ItemCount")
             else:
                 ingredient2 = -1
                 ingredient2_q = 0
             if len(ingredients) >= 3:
                 ingredient3 = get_value_by_column(cursor, "items", "uniqueName", ingredients[2].get("ItemType"), "id")
-                ingredient3_q = ingredients[0].get("ItemCount")
+                ingredient3_q = ingredients[2].get("ItemCount")
             else:
                 ingredient3 = -1
                 ingredient3_q = 0
             if len(ingredients) >= 4:
                 ingredient4 = get_value_by_column(cursor, "items", "uniqueName", ingredients[3].get("ItemType"), "id")
-                ingredient4_q = ingredients[0].get("ItemCount")
+                ingredient4_q = ingredients[3].get("ItemCount")
             else:
                 ingredient4 = -1
                 ingredient4_q = 0
