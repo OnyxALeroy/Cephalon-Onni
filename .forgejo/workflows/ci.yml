@@ -1,0 +1,46 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request: 
+    branches: [ main ]
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with: 
+          node-version: '18'
+          
+      - name: Install frontend dependencies
+        working-directory: ./frontend/Cephalon Onni
+        run: npm install
+        
+      - name: Build frontend
+        working-directory: ./frontend/Cephalon Onni
+        run: npm run build
+
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name:  Setup Python
+        uses: actions/setup-python@v4
+        with: 
+          python-version: '3.11'
+          
+      - name:  Install backend dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Run backend tests
+        working-directory: ./backend
+        run: pytest  # Add this when you have tests
