@@ -1,10 +1,26 @@
-import sqlite3
+import os
 from typing import Dict, List, Optional, Union
+from sqlalchemy import create_engine, text, inspect
+from sqlalchemy.orm import sessionmaker
+from urllib.parse import quote_plus
 
 from backend.database.static.db_helpers import drop_tables, list_tables, describe_table, preview_table, \
     get_value_by_column
 
-DB_FILE = "test.db"
+# PostgreSQL connection setup
+POSTGRES_USER = os.getenv("POSTGRES_USER", "user")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "cephalon_db")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+
+# URL encode the password for special characters
+encoded_password = quote_plus(POSTGRES_PASSWORD)
+DATABASE_URL = f"postgresql://{POSTGRES_USER}:{encoded_password}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+
+# SQLAlchemy engine and session
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_json_index(language_code: str)-> Optional[List[str]]:
     url: str = "https://origin.warframe.com/PublicExport/index_" + language_code.lower() + ".txt.lzma"
@@ -122,38 +138,40 @@ def load_json(path: str) -> Optional[Union[Dict, List]]:
 # DB Creation
 # ----------------------------------------------------------------------------------------------------------------------
 
-def create_translation_database(conn: sqlite3.Connection) -> bool:
+def create_translation_database(session) -> bool:
     try:
-        conn.cursor().execute("""
+        session.execute(text("""
         CREATE TABLE IF NOT EXISTS translations (
             id INTEGER NOT NULL,            
             language TEXT NOT NULL,
             value TEXT NOT NULL,
             PRIMARY KEY (id, language)
-        )""")
-        conn.commit()
+        )"""))
+        session.commit()
         return True
     except Exception as e:
         print(f"[ERROR] While creating translation database: {e}")
+        session.rollback()
         return False
 
-def create_item_database(conn: sqlite3.Connection) -> bool:
+def create_item_database(session) -> bool:
     try:
-        conn.cursor().execute("""
+        session.execute(text("""
         CREATE TABLE IF NOT EXISTS items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            uniqueName TEXT NOT NULL,
+            id SERIAL PRIMARY KEY,
+            uniqueName TEXT NOT NULL UNIQUE,
             imageURL TEXT NOT NULL
-        )""")
-        conn.commit()
+        )"""))
+        session.commit()
         return True
     except Exception as e:
         print(f"[ERROR] While creating item database: {e}")
+        session.rollback()
         return False
 
-def create_recipe_database(conn: sqlite3.Connection) -> bool:
+def create_recipe_database(session) -> bool:
     try:
-        conn.cursor().execute("""
+        session.execute(text("""
         CREATE TABLE IF NOT EXISTS recipes (
             recipe_name TEXT PRIMARY KEY NOT NULL,
             
@@ -165,13 +183,13 @@ def create_recipe_database(conn: sqlite3.Connection) -> bool:
             codex_secret BOOLEAN NOT NULL DEFAULT FALSE,
             
             result_id INTEGER NOT NULL,
-            ingredient_1_id INTEGER NOT NULL,
+            ingredient_1_id INTEGER,
             ingredient_1_quantity INTEGER NOT NULL DEFAULT 1,
-            ingredient_2_id INTEGER NOT NULL,
+            ingredient_2_id INTEGER,
             ingredient_2_quantity INTEGER NOT NULL DEFAULT 1,
-            ingredient_3_id INTEGER NOT NULL,
+            ingredient_3_id INTEGER,
             ingredient_3_quantity INTEGER NOT NULL DEFAULT 1,
-            ingredient_4_id INTEGER NOT NULL,
+            ingredient_4_id INTEGER,
             ingredient_4_quantity INTEGER NOT NULL DEFAULT 1,
 
             FOREIGN KEY (ingredient_1_id) REFERENCES items(id),
@@ -179,18 +197,19 @@ def create_recipe_database(conn: sqlite3.Connection) -> bool:
             FOREIGN KEY (ingredient_3_id) REFERENCES items(id),
             FOREIGN KEY (ingredient_4_id) REFERENCES items(id),
             FOREIGN KEY (result_id) REFERENCES items(id)
-        )""")
-        conn.commit()
+        )"""))
+        session.commit()
         return True
     except Exception as e:
         print(f"[ERROR] While creating recipe database: {e}")
+        session.rollback()
         return False
 
 # ----------------------------
 # DB FILLER
 # ----------------------------
 
-def fill_img_db(conn: sqlite3.Connection, json_path: str) -> bool:
+def fill_img_db(session, json_path: str) -> bool:
     try:
         json_content = load_json(json_path)
         if not json_content: return False
@@ -199,19 +218,27 @@ def fill_img_db(conn: sqlite3.Connection, json_path: str) -> bool:
             return False
 
         items = json_content["Manifest"]
-        cursor = conn.cursor()
         for item in items:
-            cursor.execute("INSERT INTO items (uniqueName, imageURL) VALUES(?, ?)", (
-                   item.get("uniqueName"), item.get("textureLocation")))
+            session.execute(text("""
+                INSERT INTO items (uniqueName, imageURL) 
+                VALUES(:uniqueName, :imageURL)
+                ON CONFLICT (uniqueName) DO NOTHING
+            """), {
+                   "uniqueName": item.get("uniqueName"), 
+                   "imageURL": item.get("textureLocation")
+            })
+        session.commit()
         return True
     except KeyError as ke:
         print(f"[ERROR] While loading image database: {ke}")
+        session.rollback()
         return False
     except Exception as e:
         print(f"[ERROR] While loading image database: {e}")
+        session.rollback()
         return False
 
-def fill_recipes_db(conn: sqlite3.Connection, json_path: str) -> bool:
+def fill_recipes_db(session, json_path: str) -> bool:
     try:
         json_content = load_json(json_path)
         if not json_content: return False
@@ -220,52 +247,70 @@ def fill_recipes_db(conn: sqlite3.Connection, json_path: str) -> bool:
             return False
 
         recipes = json_content["ExportRecipes"]
-        cursor = conn.cursor()
         for recipe in recipes:
             # Ingredients
             ingredients = recipe.get("ingredients")
             if len(ingredients) >= 1:
-                ingredient1 = get_value_by_column(cursor, "items", "uniqueName", ingredients[0].get("ItemType"), "id")
+                ingredient1 = get_value_by_column(session, "items", "uniqueName", ingredients[0].get("ItemType"), "id")
                 ingredient1_q = ingredients[0].get("ItemCount")
             else:
-                ingredient1 = -1
+                ingredient1 = None
                 ingredient1_q = 0
             if len(ingredients) >= 2:
-                ingredient2 = get_value_by_column(cursor, "items", "uniqueName", ingredients[1].get("ItemType"), "id")
+                ingredient2 = get_value_by_column(session, "items", "uniqueName", ingredients[1].get("ItemType"), "id")
                 ingredient2_q = ingredients[1].get("ItemCount")
             else:
-                ingredient2 = -1
+                ingredient2 = None
                 ingredient2_q = 0
             if len(ingredients) >= 3:
-                ingredient3 = get_value_by_column(cursor, "items", "uniqueName", ingredients[2].get("ItemType"), "id")
+                ingredient3 = get_value_by_column(session, "items", "uniqueName", ingredients[2].get("ItemType"), "id")
                 ingredient3_q = ingredients[2].get("ItemCount")
             else:
-                ingredient3 = -1
+                ingredient3 = None
                 ingredient3_q = 0
             if len(ingredients) >= 4:
-                ingredient4 = get_value_by_column(cursor, "items", "uniqueName", ingredients[3].get("ItemType"), "id")
+                ingredient4 = get_value_by_column(session, "items", "uniqueName", ingredients[3].get("ItemType"), "id")
                 ingredient4_q = ingredients[3].get("ItemCount")
             else:
-                ingredient4 = -1
+                ingredient4 = None
                 ingredient4_q = 0
 
             # Insertion
-            cursor.execute("""
+            session.execute(text("""
                INSERT INTO recipes
                (recipe_name, build_price, build_time, skip_build_time_price, consume_on_use,
                produced_amount, codex_secret, result_id, ingredient_1_id, ingredient_1_quantity, ingredient_2_id,
                ingredient_2_quantity, ingredient_3_id, ingredient_3_quantity, ingredient_4_id, ingredient_4_quantity)
-               VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-               """, (
-                   recipe.get("uniqueName"), recipe.get("buildPrice"), recipe.get("buildTime"), recipe.get("skipBuildTimePrice"),
-                   recipe.get("consumeOnUse"), recipe.get("num"), recipe.get("codexSecret"), get_value_by_column(cursor, "items", "uniqueName", recipe.get("resultType"), "id"),
-                   ingredient1, ingredient1_q, ingredient2, ingredient2_q, ingredient3, ingredient3_q, ingredient4, ingredient4_q))
+               VALUES(:recipe_name, :build_price, :build_time, :skip_build_time_price, :consume_on_use,
+               :produced_amount, :codex_secret, :result_id, :ingredient_1_id, :ingredient_1_quantity, :ingredient_2_id,
+               :ingredient_2_quantity, :ingredient_3_id, :ingredient_3_quantity, :ingredient_4_id, :ingredient_4_quantity)
+               """), {
+                   "recipe_name": recipe.get("uniqueName"), 
+                   "build_price": recipe.get("buildPrice"), 
+                   "build_time": recipe.get("buildTime"), 
+                   "skip_build_time_price": recipe.get("skipBuildTimePrice"),
+                   "consume_on_use": recipe.get("consumeOnUse"), 
+                   "produced_amount": recipe.get("num"), 
+                   "codex_secret": recipe.get("codexSecret"), 
+                   "result_id": get_value_by_column(session, "items", "uniqueName", recipe.get("resultType"), "id"),
+                   "ingredient_1_id": ingredient1, 
+                   "ingredient_1_quantity": ingredient1_q, 
+                   "ingredient_2_id": ingredient2, 
+                   "ingredient_2_quantity": ingredient2_q, 
+                   "ingredient_3_id": ingredient3, 
+                   "ingredient_3_quantity": ingredient3_q, 
+                   "ingredient_4_id": ingredient4, 
+                   "ingredient_4_quantity": ingredient4_q
+            })
+        session.commit()
         return True
     except KeyError as ke:
         print(f"[ERROR] While loading recipe database: {ke}")
+        session.rollback()
         return False
     except Exception as e:
         print(f"[ERROR] While loading recipe database: {e}")
+        session.rollback()
         return False
 
 # ----------------------------
@@ -273,32 +318,32 @@ def fill_recipes_db(conn: sqlite3.Connection, json_path: str) -> bool:
 # ----------------------------
 
 def main() -> None:
-    print(f"Opening database: {DB_FILE}")
-    conn = sqlite3.connect(DB_FILE)
+    print(f"Connecting to PostgreSQL database: {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
+    session = SessionLocal()
 
     try:
-        drop_tables(conn, ["translations", "items", "recipes"])
+        drop_tables(session, ["translations", "items", "recipes"])
 
-        if not create_translation_database(conn) or not create_item_database(conn) or not create_recipe_database(conn):
+        if not create_translation_database(session) or not create_item_database(session) or not create_recipe_database(session):
             return
 
-        fill_img_db(conn, "ExportManifest.json")
-        fill_recipes_db(conn, "ExportRecipes_en.json")
+        fill_img_db(session, "ExportManifest.json")
+        fill_recipes_db(session, "ExportRecipes_en.json")
 
-        tables = list_tables(conn)
+        tables = list_tables(session)
         if not tables:
             print("No tables found.")
             return
 
         for table in tables:
-            describe_table(conn, table)
-            preview_table(conn, table)
+            describe_table(session, table)
+            preview_table(session, table)
 
     except Exception as e:
         print(f"[ERROR] While reading DB: {e}")
 
     finally:
         print("\nDone.")
-        conn.close()
+        session.close()
 
 if __name__ == "__main__": main()
