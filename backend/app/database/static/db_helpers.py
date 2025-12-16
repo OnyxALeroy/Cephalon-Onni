@@ -1,5 +1,6 @@
-import sqlite3
 from typing import List, Optional, Any
+from sqlalchemy import text, inspect
+from sqlalchemy.orm import Session
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -7,80 +8,78 @@ from typing import List, Optional, Any
 # ----------------------------------------------------------------------------------------------------------------------
 
 def get_value_by_column(
-    cursor: sqlite3.Cursor,
+    session: Session,
     table: str,
     lookup_column: str,
     lookup_value: Any,
     return_column: str = "id",
 ) -> Optional[Any]:
-    cursor.execute(f"""
+    result = session.execute(text(f"""
         SELECT {return_column}
         FROM {table}
-        WHERE {lookup_column} = ?
+        WHERE {lookup_column} = :lookup_value
         LIMIT 1
-    """, (lookup_value,))
-    row = cursor.fetchone()
+    """), {"lookup_value": lookup_value})
+    row = result.fetchone()
     return row[0] if row else None
 
-def value_exists(cursor: sqlite3.Cursor, table: str, column: str, value) -> bool:
-    cursor.execute(
-        f"SELECT EXISTS(SELECT 1 FROM {table} WHERE {column} = ?)",
-        (value,)
-    )
-    return bool(cursor.fetchone()[0])
+def value_exists(session: Session, table: str, column: str, value) -> bool:
+    result = session.execute(text(f"SELECT EXISTS(SELECT 1 FROM {table} WHERE {column} = :value)"), {"value": value})
+    return bool(result.fetchone()[0])
 
 # ----------------------------------------------------------------------------------------------------------------------
 # DB Safe deletion
 # ----------------------------------------------------------------------------------------------------------------------
 
-def drop_tables(conn: sqlite3.Connection, tables: List[str]) -> None:
+def drop_tables(session: Session, tables: List[str]) -> None:
     try:
-        cursor = conn.cursor()
         for table in tables:
             answer = input(f"Drop table '{table}' ? [y/N]: ").strip().lower()
             if answer != "y":
                 print(f"[SKIPPED] {table}")
                 continue
-            cursor.execute(f"DROP TABLE IF EXISTS {table}")
+            session.execute(text(f"DROP TABLE IF EXISTS {table}"))
             print(f"[DROPPED] {table}")
-        conn.commit()
+        session.commit()
     except Exception as e:
         print(f"[ERROR] While dropping tables: {e}")
+        session.rollback()
     return
 
 # ----------------------------------------------------------------------------------------------------------------------
 # DB VIEWER
 # ----------------------------------------------------------------------------------------------------------------------
 
-def list_tables(conn: sqlite3.Connection) -> List[str]:
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT name 
-        FROM sqlite_master
-        WHERE type='table'
-    """)
-    return [row[0] for row in cursor.fetchall()]
+def list_tables(session: Session) -> List[str]:
+    inspector = inspect(session.bind)
+    return inspector.get_table_names()
 
-def describe_table(conn: sqlite3.Connection, table: str) -> None:
-    cursor = conn.cursor()
-    cursor.execute(f"PRAGMA table_info({table});")
-    cols = cursor.fetchall()
+def describe_table(session: Session, table: str) -> None:
+    inspector = inspect(session.bind)
+    columns = inspector.get_columns(table)
 
     print(f"\n--- {table} ---")
-    for cid, name, col_type, notnull, default, pk in cols:
+    for column in columns:
+        name = column["name"]
+        col_type = str(column["type"])
+        nullable = column["nullable"]
+        default = column.get("default")
+        primary_key = column.get("primary_key", False)
+        
         flags = []
-        if pk:
+        if primary_key:
             flags.append("PK")
-        if notnull:
+        if not nullable:
             flags.append("NOT NULL")
+        if default is not None:
+            flags.append(f"DEFAULT {default}")
         flags = f" ({', '.join(flags)})" if flags else ""
-        print(f"  {name:<15} {col_type:<10}{flags}")
+        print(f"  {name:<15} {col_type:<20}{flags}")
 
 PREVIEW_ROWS = 10
-def preview_table(conn: sqlite3.Connection, table: str, limit: int = PREVIEW_ROWS) -> None:
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM {table} LIMIT {limit}")
-    rows = cursor.fetchall()
+def preview_table(session: Session, table: str, limit: int = PREVIEW_ROWS) -> None:
+    result = session.execute(text(f"SELECT * FROM {table} LIMIT {limit}"))
+    rows = result.fetchall()
 
     if not rows:
         print("  [EMPTY]")
