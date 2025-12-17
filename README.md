@@ -76,6 +76,7 @@ http://localhost:5173
 * [ ] Event agenda?
 * [ ] Easy resource map reader (what is available on each planet)
 * [ ] Void relics content searcher
+* [ ] Warframe Market (when looking for something, adding the WM as a source with the average price)
 
 ---
 
