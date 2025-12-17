@@ -1,11 +1,45 @@
 import os
-from typing import Dict, List, Optional, Union
-from sqlalchemy import create_engine, text, inspect
-from sqlalchemy.orm import sessionmaker
+from typing import Dict, List, Optional, Union, TypedDict
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker, Session
 from urllib.parse import quote_plus
 
-from backend.database.static.db_helpers import drop_tables, list_tables, describe_table, preview_table, \
+from database.static.db_helpers import drop_tables, list_tables, describe_table, preview_table, \
     get_value_by_column
+
+# ----------------------------------------------------------------------------------------------------------------------
+# DB Types
+# ----------------------------------------------------------------------------------------------------------------------
+
+class Ingredient(TypedDict):
+    ItemType: str
+    ItemCount:  int
+
+class ImgItem(TypedDict):
+    uniqueName: str
+    textureLocation: str
+
+class Recipe(TypedDict):
+    uniqueName: str
+    buildPrice: int
+    buildTime:  int
+    skipBuildTimePrice: int
+    consumeOnUse: bool
+    num: int
+    codexSecret: bool
+    resultType: str
+    ingredients: list[Ingredient]
+
+class ExportJsonDict(TypedDict, total= False):
+    ExportRecipes: list[Recipe]
+    ExportManifest: list[ImgItem]
+
+AnyExportJson = Union[list[Recipe], list[ImgItem]]
+AnyExportJsonDirect = Union[dict[str, list[Recipe]], dict[str, list[ImgItem]]]
+
+# ----------------------------------------------------------------------------------------------------------------------
+# DB Setup
+# ----------------------------------------------------------------------------------------------------------------------
 
 # PostgreSQL connection setup
 POSTGRES_USER = os.getenv("POSTGRES_USER", "user")
@@ -21,6 +55,11 @@ DATABASE_URL = f"postgresql://{POSTGRES_USER}:{encoded_password}@{POSTGRES_HOST}
 # SQLAlchemy engine and session
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Obtain jsons
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 def get_json_index(language_code: str)-> Optional[List[str]]:
     url: str = "https://origin.warframe.com/PublicExport/index_" + language_code.lower() + ".txt.lzma"
@@ -39,8 +78,11 @@ def get_json_index(language_code: str)-> Optional[List[str]]:
         print(f"[ERROR] While decompressing index lzma: {e}")
         return None
 
-def get_export_json(index_content: List[str], json_name: str)-> Optional[Union[Dict, List]]:
-    file_match: str = "Export" + json_name + "_"
+def get_export_json(index_content: List[str], json_name: str)-> Optional[dict[str, AnyExportJson]]:
+    if json_name != "Manifest":
+        file_match: str = "Export" + json_name + "_"
+    else:
+        file_match: str = "Export" + json_name + "."
     file_name: str = ""
     for line in index_content:
         if line.startswith(file_match):
@@ -57,13 +99,13 @@ def get_export_json(index_content: List[str], json_name: str)-> Optional[Union[D
         print(f"[ERROR] While getting json {file_name} from the Public Export API: {e}")
         return None
     try:
-       return response.json()
+       return response.json()[json_name]
     except Exception as e:
         print(f"[ERROR] While loading json {file_name} from the Public Export API as a json: {e}")
         return None 
 
 
-def get_jsons(language_code: str, json_names: List[str])->Optional[Dict[str, Union[Dict, List]]]:
+def get_jsons(language_code: str, json_names: List[str])->Optional[ExportJsonDict]:
     language_code_list: List[str] = [
         "de", "en", "es",
         "fr", "it", "ja",
@@ -105,10 +147,10 @@ def get_jsons(language_code: str, json_names: List[str])->Optional[Dict[str, Uni
     index_content = get_json_index(language_code)
     if index_content is None:
         return None
-    results: dict[str, Union[Dict, List]] = {}
+    results: ExportJsonDict = {}
     from concurrent. futures import ThreadPoolExecutor, as_completed, Future
     with ThreadPoolExecutor(max_workers=min(len(json_names), 16)) as executor:
-        future_to_index: Dict[Future, str] = {
+        future_to_index: Dict[Future[Optional[dict[str,AnyExportJson]]], str] = {
             executor.submit(get_export_json, index_content, json_name): json_name
             for json_name in json_names
         }
@@ -116,13 +158,18 @@ def get_jsons(language_code: str, json_names: List[str])->Optional[Dict[str, Uni
         for future in as_completed(future_to_index):
             name:  str = future_to_index[future]
             try:
-                results[name] = future.result()
+                res:dict[str,AnyExportJson]|None = future.result()
+                if res is dict[str, AnyExportJson]:
+                    if len(res.keys()) == 1:
+                        results[name] = res[res.keys()[0]]
+                    else:
+                        print(f"[ERROR] Unexpected json with {name}")
             except Exception as e: 
                 print(f"Error downloading {name}:  {e}")
     
     return results
 
-def load_json(path: str) -> Optional[Union[Dict, List]]:
+def load_json(path: str) -> Optional[AnyExportJsonDirect]:
     import json
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -138,7 +185,7 @@ def load_json(path: str) -> Optional[Union[Dict, List]]:
 # DB Creation
 # ----------------------------------------------------------------------------------------------------------------------
 
-def create_translation_database(session) -> bool:
+def create_translation_database(session: Session) -> bool:
     try:
         session.execute(text("""
         CREATE TABLE IF NOT EXISTS translations (
@@ -154,7 +201,7 @@ def create_translation_database(session) -> bool:
         session.rollback()
         return False
 
-def create_item_database(session) -> bool:
+def create_item_database(session: Session) -> bool:
     try:
         session.execute(text("""
         CREATE TABLE IF NOT EXISTS items (
@@ -169,7 +216,7 @@ def create_item_database(session) -> bool:
         session.rollback()
         return False
 
-def create_recipe_database(session) -> bool:
+def create_recipe_database(session: Session) -> bool:
     try:
         session.execute(text("""
         CREATE TABLE IF NOT EXISTS recipes (
@@ -209,17 +256,10 @@ def create_recipe_database(session) -> bool:
 # DB FILLER
 # ----------------------------
 
-def fill_img_db(session, json_path: str) -> bool:
+def fill_img_db(session: Session, items: list[ImgItem]) -> bool:
     try:
-        json_content = load_json(json_path)
-        if not json_content: return False
-        if type(json_content) != dict:
-            print(f"[Error] Json Content was no dict, but {type(json_content)}")
-            return False
-
-        items = json_content["Manifest"]
         for item in items:
-            session.execute(text("""
+            session.execute(text("""    
                 INSERT INTO items (uniqueName, imageURL) 
                 VALUES(:uniqueName, :imageURL)
                 ON CONFLICT (uniqueName) DO NOTHING
@@ -238,15 +278,9 @@ def fill_img_db(session, json_path: str) -> bool:
         session.rollback()
         return False
 
-def fill_recipes_db(session, json_path: str) -> bool:
+def fill_recipes_db(session: Session, arg2: list[Recipe]) -> bool:
     try:
-        json_content = load_json(json_path)
-        if not json_content: return False
-        if type(json_content) != dict:
-            print(f"[Error] Json Content was no dict, but {type(json_content)}")
-            return False
-
-        recipes = json_content["ExportRecipes"]
+        recipes = arg2
         for recipe in recipes:
             # Ingredients
             ingredients = recipe.get("ingredients")
@@ -327,8 +361,36 @@ def main() -> None:
         if not create_translation_database(session) or not create_item_database(session) or not create_recipe_database(session):
             return
 
-        fill_img_db(session, "ExportManifest.json")
-        fill_recipes_db(session, "ExportRecipes_en.json")
+        jsons: List[str] = [
+            # "Customs",
+            # "Drones",
+            # "Flavour",
+            # "FusionBundles",
+            # "Gear",
+            # "Keys",
+            "Recipes",
+            # "Regions",
+            # "RelicArcane",
+            # "Resources",
+            # "Sentinels",
+            # "SortieRewards",
+            # "Upgrades",
+            # "Warframes",
+            # "Weapons",
+            "Manifest",
+        ]
+        json_dict = get_jsons("en", jsons)
+        if json_dict is None:
+            return
+        
+        if "ExportManifest" in json_dict:
+            fill_img_db(session, json_dict["ExportManifest"])
+        else:
+            print("[ERROR] Could not get ExportManifest")
+        if "Recipes" in json_dict:
+            fill_img_db(session, json_dict["Recipes"])
+        else:
+            print("[ERROR] Could not get ExportRecipes")
 
         tables = list_tables(session)
         if not tables:
