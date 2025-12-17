@@ -23,9 +23,11 @@ def get_value_by_column(
     row = result.fetchone()
     return row[0] if row else None
 
-def value_exists(session: Session, table: str, column: str, value) -> bool:
-    result = session.execute(text(f"SELECT EXISTS(SELECT 1 FROM {table} WHERE {column} = :value)"), {"value": value})
-    return bool(result.fetchone()[0])
+def value_exists(session: Session, table: str, column: str, value:str|int|bool) -> bool:
+    result = session.execute(text(f"SELECT EXISTS(SELECT 1 FROM {table} WHERE {column} = :value)"), {"value": value}).fetchone()
+    if result is None:
+        return False
+    return bool(result[0])
 
 # ----------------------------------------------------------------------------------------------------------------------
 # DB Safe deletion
@@ -52,10 +54,16 @@ def drop_tables(session: Session, tables: List[str]) -> None:
 
 def list_tables(session: Session) -> List[str]:
     inspector = inspect(session.bind)
+    if inspector is None:
+        print("[ERROR] The table could not be inspected in list_table")
+        return []
     return inspector.get_table_names()
 
 def describe_table(session: Session, table: str) -> None:
     inspector = inspect(session.bind)
+    if inspector is None:
+        print("[ERROR] The table could not be inspected in describe_table")
+        return None
     columns = inspector.get_columns(table)
 
     print(f"\n--- {table} ---")
@@ -66,15 +74,15 @@ def describe_table(session: Session, table: str) -> None:
         default = column.get("default")
         primary_key = column.get("primary_key", False)
         
-        flags = []
+        flags: list[str] = []
         if primary_key:
             flags.append("PK")
         if not nullable:
             flags.append("NOT NULL")
         if default is not None:
             flags.append(f"DEFAULT {default}")
-        flags = f" ({', '.join(flags)})" if flags else ""
-        print(f"  {name:<15} {col_type:<20}{flags}")
+        flags_str = f" ({', '.join(flags)})" if flags else ""
+        print(f"  {name:<15} {col_type:<20}{flags_str}")
 
 PREVIEW_ROWS = 10
 def preview_table(session: Session, table: str, limit: int = PREVIEW_ROWS) -> None:
