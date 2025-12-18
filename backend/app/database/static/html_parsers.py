@@ -1,15 +1,15 @@
 import re
-from typing import List
+from typing import List, Optional
 
 import requests
 from bs4 import BeautifulSoup
 
-# from database.static.neo4j_helper import Neo4jHelper
+from database.static.neo4j_helper import Neo4jHelper
 
 # -------------------------------------------------------------------------------------------------
 
 
-def handle_missions(row_list: List[str]):
+def handle_missions(row_list: List[str], saved_json_path: Optional[str] = None) -> None:
     # Build the graph
     graph_data = {"missions": [], "rewards": [], "relationships": []}
     current_mission = {}
@@ -53,14 +53,13 @@ def handle_missions(row_list: List[str]):
         else:
             continue
 
-    # TEMP: store in a raw json
-    import json
+    # Eventual save
+    if saved_json_path:
+        import json
 
-    with open("outputs/missions.json", "w") as f:
-        json.dump(graph_data, f)
+        with open(f"{saved_json_path}/missions.json", "w") as f:
+            json.dump(graph_data, f)
 
-
-"""
     # Store it in Neo4J
     neo4j = Neo4jHelper()
     for mission in graph_data["missions"]:
@@ -77,10 +76,9 @@ def handle_missions(row_list: List[str]):
             to_props={"name": rel["to"]["name"]},
             relationship_props=rel.get("properties", {}),
         )
-"""
 
 
-def handle_relics(row_list: List[str]):
+def handle_relics(row_list: List[str], saved_json_path: Optional[str] = None) -> None:
     # Build the graph
     graph_data = {"relics": [], "contents": [], "relationships": []}
     current_relic = ""
@@ -101,7 +99,7 @@ def handle_relics(row_list: List[str]):
                 graph_data["contents"].append(content)
                 graph_data["relationships"].append(
                     {
-                        "from": current_relic,
+                        "from": {"name": current_relic},
                         "to": content,
                         "rel_type": "CONTAINS",
                         "properties": {"chance": p_value.strip()},
@@ -110,14 +108,32 @@ def handle_relics(row_list: List[str]):
         else:
             continue
 
-    # TEMP: store in a raw json
-    import json
+    # Eventual save
+    if saved_json_path:
+        import json
 
-    with open("outputs/relics.json", "w") as f:
-        json.dump(graph_data, f)
+        with open(f"{saved_json_path}/relics.json", "w") as f:
+            json.dump(graph_data, f)
+
+    # Store it in Neo4J
+    neo4j = Neo4jHelper()
+    for relic in graph_data["relics"]:
+        neo4j.create_node("Relic", relic)
+    for content in graph_data["contents"]:
+        neo4j.create_node("Content", content)
+
+    for rel in graph_data["relationships"]:
+        neo4j.create_relationship(
+            from_label="Relic",
+            from_props=rel["from"],
+            relationship_type=rel["rel_type"],
+            to_label="Content",
+            to_props=rel["to"],
+            relationship_props=rel.get("properties", {}),
+        )
 
 
-def handle_keys(row_list: List[str]):
+def handle_keys(row_list: List[str], saved_json_path: Optional[str] = None) -> None:
     # Build the graph
     graph_data = {"keys": [], "rewards": [], "relationships": []}
     current_key = {}
@@ -154,14 +170,34 @@ def handle_keys(row_list: List[str]):
         else:
             continue
 
-    # TEMP: store in a raw json
-    import json
+    # Eventual save
+    if saved_json_path:
+        import json
 
-    with open("outputs/keys.json", "w") as f:
-        json.dump(graph_data, f)
+        with open(f"{saved_json_path}/keys.json", "w") as f:
+            json.dump(graph_data, f)
+
+    # Store it in Neo4J
+    neo4j = Neo4jHelper()
+    for key in graph_data["keys"]:
+        neo4j.create_node("Key", key)
+    for reward in graph_data["rewards"]:
+        neo4j.create_node("Reward", reward)
+
+    for rel in graph_data["relationships"]:
+        neo4j.create_relationship(
+            from_label="Key",
+            from_props=rel["from"],
+            relationship_type=rel["rel_type"],
+            to_label="Reward",
+            to_props=rel["to"],
+            relationship_props=rel.get("properties", {}),
+        )
 
 
-def handle_dynamic_location_rewards(row_list: List[List[str]]):
+def handle_dynamic_location_rewards(
+    row_list: List[List[str]], saved_json_path: Optional[str] = None
+) -> None:
     for sub_list in row_list:
         for element in sub_list:
             if element == "":
@@ -204,14 +240,34 @@ def handle_dynamic_location_rewards(row_list: List[List[str]]):
         else:
             continue
 
-    # TEMP: store in a raw json
-    import json
+    # Eventual save
+    if saved_json_path:
+        import json
 
-    with open("outputs/dynamic_rewards.json", "w") as f:
-        json.dump(graph_data, f)
+        with open(f"{saved_json_path}/dynamic_rewards.json", "w") as f:
+            json.dump(graph_data, f)
+
+    # Store it in Neo4J
+    neo4j = Neo4jHelper()
+    for location in graph_data["dynamic_locations"]:
+        neo4j.create_node("DynamicLocation", location)
+    for reward in graph_data["rewards"]:
+        neo4j.create_node("Reward", reward)
+
+    for rel in graph_data["relationships"]:
+        neo4j.create_relationship(
+            from_label="DynamicLocation",
+            from_props=rel["from"],
+            relationship_type=rel["rel_type"],
+            to_label="Reward",
+            to_props=rel["to"],
+            relationship_props=rel.get("properties", {}),
+        )
 
 
-def handle_sorties(row_list: List[List[str]]):
+def handle_sorties(
+    row_list: List[List[str]], saved_json_path: Optional[str] = None
+) -> None:
     # Build the graph
     graph_data = {"sorties": [{"name": "Sortie"}], "rewards": [], "relationships": []}
     cursor = 0
@@ -236,14 +292,34 @@ def handle_sorties(row_list: List[List[str]]):
         else:
             continue
 
-    # TEMP: store in a raw json
-    import json
+    # Eventual save
+    if saved_json_path:
+        import json
 
-    with open("outputs/sorties.json", "w") as f:
-        json.dump(graph_data, f)
+        with open(f"{saved_json_path}/sorties.json", "w") as f:
+            json.dump(graph_data, f)
+
+    # Store it in Neo4J
+    neo4j = Neo4jHelper()
+    for sortie in graph_data["sorties"]:
+        neo4j.create_node("Sortie", sortie)
+    for reward in graph_data["rewards"]:
+        neo4j.create_node("Reward", reward)
+
+    for rel in graph_data["relationships"]:
+        neo4j.create_relationship(
+            from_label="Sortie",
+            from_props=rel["from"],
+            relationship_type=rel["rel_type"],
+            to_label="Reward",
+            to_props=rel["to"],
+            relationship_props=rel.get("properties", {}),
+        )
 
 
-def handle_bounty_rewards(row_list: List[List[str]], mission_title: str):
+def handle_bounty_rewards(
+    row_list: List[List[str]], mission_title: str, saved_json_path: Optional[str] = None
+) -> None:
     def parse_stages(s):
         if s.strip() == "Final Stage":
             return ["Final Stage"]
@@ -303,16 +379,49 @@ def handle_bounty_rewards(row_list: List[List[str]], mission_title: str):
         else:
             continue
 
-    # TEMP: store in a raw json
-    import json
+    # Eventual save
+    if saved_json_path:
+        import json
 
-    with open(
-        f"outputs/{mission_title.lower().replace(' ', '_')}_bounties.json", "w"
-    ) as f:
-        json.dump(graph_data, f)
+        with open(
+            f"{saved_json_path}/{mission_title.lower().replace(' ', '_')}_bounties.json",
+            "w",
+        ) as f:
+            json.dump(graph_data, f)
+
+    # Store it in Neo4J
+    neo4j = Neo4jHelper()
+    for bounty in graph_data["bounties"]:
+        neo4j.create_node("Bounty", bounty)
+    for level in graph_data["levels"]:
+        neo4j.create_node("Level", level)
+    for reward in graph_data["rewards"]:
+        neo4j.create_node("Reward", reward)
+
+    for rel in graph_data["relationships"]:
+        if rel["rel_type"] == "HAS":
+            neo4j.create_relationship(
+                from_label="Bounty",
+                from_props=rel["from"],
+                relationship_type=rel["rel_type"],
+                to_label="Level",
+                to_props=rel["to"],
+                relationship_props={},
+            )
+        else:
+            neo4j.create_relationship(
+                from_label="Level",
+                from_props=rel["from"],
+                relationship_type=rel["rel_type"],
+                to_label="Reward",
+                to_props=rel["to"],
+                relationship_props=rel.get("properties", {}),
+            )
 
 
-def handle_general_drops(row_list: List[List[str]], title):
+def handle_general_drops(
+    row_list: List[List[str]], title: str, saved_json_path: Optional[str] = None
+) -> None:
     # Build the graph
     graph_data = {
         "sources": [],
@@ -355,30 +464,52 @@ def handle_general_drops(row_list: List[List[str]], title):
         else:
             continue
 
-    # TEMP: store in a raw json
-    import json
+    # Eventual save
+    if saved_json_path:
+        import json
 
-    with open(f"outputs/{title.lower().replace(' ', '_')}.json", "w") as f:
-        json.dump(graph_data, f)
+        with open(
+            f"{saved_json_path}/{title.lower().replace(' ', '_')}.json", "w"
+        ) as f:
+            json.dump(graph_data, f)
+
+    # Store it in Neo4J
+    neo4j = Neo4jHelper()
+    for source in graph_data["sources"]:
+        neo4j.create_node("Source", source)
+    for drop in graph_data["drops"]:
+        neo4j.create_node("Drop", drop)
+
+    for rel in graph_data["relationships"]:
+        neo4j.create_relationship(
+            from_label="Source",
+            from_props=rel["from"],
+            relationship_type=rel["rel_type"],
+            to_label="Drop",
+            to_props=rel["to"],
+            relationship_props=rel.get("properties", {}),
+        )
 
 
 # -------------------------------------------------------------------------------------------------
 
 
-def handle_read_values(title, reading_list):
+def handle_read_values(
+    title: str, reading_list: list, temp_files_save_path: Optional[str]
+) -> None:
     if title is None:
         return
 
     if title == "Missions:":
-        handle_missions(reading_list)
+        handle_missions(reading_list, temp_files_save_path)
     elif title == "Relics:":
-        handle_relics(reading_list)
+        handle_relics(reading_list, temp_files_save_path)
     elif title == "Keys:":
-        handle_keys(reading_list)
+        handle_keys(reading_list, temp_files_save_path)
     elif title == "Dynamic Location Rewards:":
-        handle_dynamic_location_rewards(reading_list)
+        handle_dynamic_location_rewards(reading_list, temp_files_save_path)
     elif title == "Sorties:":
-        handle_sorties(reading_list)
+        handle_sorties(reading_list, temp_files_save_path)
     elif title in [
         "Cetus Bounty Rewards:",
         "Orb Vallis Bounty Rewards:",
@@ -387,33 +518,38 @@ def handle_read_values(title, reading_list):
         "Albrecht's Laboratories Bounty Rewards:",
         "Hex Bounty Rewards:",
     ]:
-        handle_bounty_rewards(reading_list, title[:-1])
+        handle_bounty_rewards(reading_list, title[:-1], temp_files_save_path)
     elif title in ["Mod Drops by Mod:", "Resource Drops by Resource:"]:
         return
     elif " Drops by " in title:
-        # FIXME: do not need the title as a parameter here
-        handle_general_drops(reading_list, title.replace("/", "-"))
+        handle_general_drops(
+            reading_list, title.replace("/", "-"), temp_files_save_path
+        )
+    else:
+        raise ValueError(f"Unknown title: {title}")
 
 
-url = "https://www.warframe.com/fr/droptables"
-resp = requests.get(url, timeout=10)
-resp.raise_for_status()
+# -------------------------------------------------------------------------------------------------
 
-soup = BeautifulSoup(resp.text, "lxml")
-tables = soup.find_all("table")
 
-last_header = None
-reading_list = []
-with open("outputs/output.txt", "w", encoding="utf-8") as file:
+def compute_drop_tables(temp_files_save_path: Optional[str] = None):
+    url = "https://www.warframe.com/fr/droptables"
+    resp = requests.get(url, timeout=10)
+    resp.raise_for_status()
+
+    soup = BeautifulSoup(resp.text, "lxml")
+    tables = soup.find_all("table")
+
+    last_header = None
+    reading_list = []
     for table in tables:
         h3 = table.find_previous("h3")
         title = h3.get_text(strip=True) if h3 else None
         if title != last_header:
-            handle_read_values(last_header, reading_list)
+            handle_read_values(last_header, reading_list, temp_files_save_path)
             last_header = title
             reading_list = []
         print("Table title:", title)
-        file.write(str(title) + "\n")
         for row in table.find_all("tr"):
             cells = row.find_all(["td", "th"])
             values = [cell.get_text(strip=True) for cell in cells]
@@ -422,9 +558,25 @@ with open("outputs/output.txt", "w", encoding="utf-8") as file:
                 continue
             reading_list.append(values)
             print(values)
-            file.write("\t" + str(values) + "\n")
-    handle_read_values(last_header, reading_list)
+    if last_header:
+        handle_read_values(last_header, reading_list, temp_files_save_path)
 
-    # table = soup.find("table", {"id": "results"})
+    if temp_files_save_path:
+        with open(f"{temp_files_save_path}/output.txt", "w", encoding="utf-8") as file:
+            for table in tables:
+                h3 = table.find_previous("h3")
+                title = h3.get_text(strip=True) if h3 else None
+                if title != last_header:
+                    last_header = title
+                    reading_list = []
+                file.write(str(title) + "\n")
+                for row in table.find_all("tr"):
+                    cells = row.find_all(["td", "th"])
+                    values = [cell.get_text(strip=True) for cell in cells]
+
+                    if values == [""]:
+                        continue
+                    file.write("\t" + str(values) + "\n")
+
 
 # -------------------------------------------------------------------------------------------------
