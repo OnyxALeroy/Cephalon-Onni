@@ -11,6 +11,7 @@ async def create_user(user: UserCreate):
         "email": user.email,
         "username": user.username,
         "hashed_password": hash_password(user.password),
+        "role": user.role.value if hasattr(user.role, 'value') else user.role
     }
 
     res = await users_collection.insert_one(doc)

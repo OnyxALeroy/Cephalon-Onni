@@ -4,21 +4,21 @@ import webbrowser
 from contextlib import asynccontextmanager
 
 import uvicorn
-from database.dynamic.auth import create_token
+from database.dynamic.auth import create_token, decode_token
 from database.dynamic.crud import create_user, get_user_by_email
 from database.dynamic.security import verify_password
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from models.users import UserCreate
 from motor.motor_asyncio import AsyncIOMotorClient
-from routers import inventory, protected, user
+from routers import inventory, protected, user, auth
 
 
 # Connecting to the db
 @asynccontextmanager
 async def lifespan(application: FastAPI):
-    application.state.client = AsyncIOMotorClient("mongodb://localhost:27017")
+    application.state.client = AsyncIOMotorClient("mongodb://mongodb:27017")
     application.state.db = application.state.client["cephalon_onni"]
     yield
     application.state.client.close()
@@ -37,11 +37,28 @@ app.add_middleware(
 app.include_router(inventory.router)
 app.include_router(protected.router)
 app.include_router(user.router)
+app.include_router(auth.router)
 
 
-# Serve the main index.html
-@app.get("/{full_path:path}")
-async def serve_vue_app(full_path: str, request: Request):
+# Serve the main index.html for frontend routes
+@app.get("/")
+async def serve_index():
+    return FileResponse("../frontend/Cephalon-Onni/dist/index.html")
+
+@app.get("/admin")
+async def serve_admin():
+    return FileResponse("../frontend/Cephalon-Onni/dist/index.html")
+
+@app.get("/login")
+async def serve_login():
+    return FileResponse("../frontend/Cephalon-Onni/dist/index.html")
+
+@app.get("/register")
+async def serve_register():
+    return FileResponse("static/index.html")
+
+@app.get("/inventory")
+async def serve_inventory():
     return FileResponse("static/index.html")
 
 

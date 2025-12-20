@@ -12,6 +12,10 @@
 
       <span class="divider" />
 
+      <!-- Admin link only shown to administrators -->
+      <RouterLink v-if="isAdmin" to="/admin" class="nav">Administrator</RouterLink>
+      <span v-if="isAdmin" class="divider" />
+
       <RouterLink to="/creative" class="nav">Creative Lab</RouterLink>
       <RouterLink to="/stars" class="nav">Star Chart</RouterLink>
       <RouterLink to="/events" class="nav">Events</RouterLink>
@@ -24,7 +28,43 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, computed } from "vue";
 import { RouterLink, RouterView } from "vue-router";
+
+interface User {
+  id: string;
+  username: string;
+  role: string;
+}
+
+/* --- STATES --- */
+
+const user = ref<User | null>(null);
+
+/* --- AUTH + DATA FETCH --- */
+
+onMounted(async () => {
+  await fetchUser();
+});
+
+async function fetchUser() {
+  try {
+    const res = await fetch("/api/auth/me", { credentials: "include" });
+    
+    if (res.ok) {
+      user.value = await res.json();
+    }
+  } catch (error) {
+    // User not authenticated, that's fine for layout
+    console.log("User not authenticated");
+  }
+}
+
+/* --- COMPUTED --- */
+
+const isAdmin = computed(() => {
+  return user.value && user.value.role === "Administrator";
+});
 </script>
 
 <style scoped>
