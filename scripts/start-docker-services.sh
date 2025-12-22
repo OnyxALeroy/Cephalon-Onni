@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Cephalon-Onni Docker Runner
-# This script starts all Docker services and tests their connections
+# Cephalon-Onni Docker Service Starter
+# This script starts all Docker services with health checks and testing
 
 set -e
 
@@ -35,9 +35,9 @@ check_service_health() {
     local container_name=$2
     local max_attempts=30
     local attempt=1
-    
+
     print_status "Checking health of $service_name..."
-    
+
     while [ $attempt -le $max_attempts ]; do
         if docker ps --filter "name=$container_name" --filter "status=running" | grep -q "$container_name"; then
             if [ "$service_name" = "backend" ]; then
@@ -64,12 +64,12 @@ check_service_health() {
                 return 0
             fi
         fi
-        
+
         echo -n "."
         sleep 2
         attempt=$((attempt + 1))
     done
-    
+
     print_error "$service_name failed to become healthy!"
     return 1
 }
@@ -77,7 +77,7 @@ check_service_health() {
 # Function to test database connections
 test_database_connections() {
     print_status "Testing database connections..."
-    
+
     # Test PostgreSQL
     print_status "Testing PostgreSQL connection..."
     if docker exec cephalon-onni-postgres pg_isready -U user -d cephalon_db > /dev/null 2>&1; then
@@ -86,7 +86,7 @@ test_database_connections() {
         print_error "PostgreSQL connection failed"
         return 1
     fi
-    
+
     # Test MongoDB
     print_status "Testing MongoDB connection..."
     if docker exec cephalon-onni-mongo mongosh --eval "db.adminCommand('ping')" > /dev/null 2>&1; then
@@ -95,33 +95,38 @@ test_database_connections() {
         print_error "MongoDB connection failed"
         return 1
     fi
-    
-    # Test Neo4j
-    print_status "Testing Neo4j connection..."
-    if docker exec cephalon-onni-neo4j cypher-shell -u neo4j -p password "RETURN 1" > /dev/null 2>&1; then
-        print_success "Neo4j connection successful"
+
+    # Test Apache AGE
+    print_status "Testing Apache AGE (PostgreSQL) connection..."
+    if docker exec cephalon-onni-postgres psql -U user -d cephalon_db -c "
+        CREATE EXTENSION IF NOT EXISTS age;
+        LOAD 'age';
+        SET search_path = ag_catalog, \"\$user\", public;
+        SELECT * FROM ag_graph WHERE name = 'loot_tables';
+    " > /dev/null 2>&1; then
+        print_success "Apache AGE and loot_tables graph are ready"
     else
-        print_error "Neo4j connection failed"
-        return 1
+        print_warning "Apache AGE or loot_tables graph not ready yet"
+        print_status "You can initialize AGE by running: ./scripts/setup-age-db.sh"
     fi
-    
+
     return 0
 }
 
 # Function to test API endpoints
 test_api_endpoints() {
     print_status "Testing API endpoints..."
-    
+
     # Wait a bit for backend to fully start
     sleep 5
-    
+
     # Test health endpoint
     if curl -f -s http://localhost:8000/health > /dev/null 2>&1; then
         print_success "Backend health endpoint accessible"
     else
         print_warning "Backend health endpoint not accessible (might not be implemented)"
     fi
-    
+
     # Test auth endpoints (should not error out)
     if curl -f -s -X POST http://localhost:8000/api/auth/register \
         -H "Content-Type: application/json" \
@@ -131,27 +136,34 @@ test_api_endpoints() {
     else
         print_warning "Registration endpoint test failed (might be due to validation)"
     fi
-    
+
     return 0
 }
+
+# Get project root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Main execution
 main() {
     print_status "Starting Cephalon-Onni Docker services..."
-    
+
+    # Navigate to project root
+    cd "$PROJECT_ROOT"
+
     # Check if docker-compose exists
     if ! command -v docker-compose &> /dev/null && ! command -v docker &> /dev/null; then
         print_error "Docker or Docker Compose not found!"
         exit 1
     fi
-    
+
     # Stop existing containers
     print_status "Stopping existing containers..."
     docker-compose down 2>/dev/null || docker compose down 2>/dev/null || true
-    
+
     # Clean up any orphaned containers
     docker system prune -f > /dev/null 2>&1 || true
-    
+
     # Build and start services
     print_status "Building and starting services..."
     if command -v docker-compose &> /dev/null; then
@@ -159,23 +171,22 @@ main() {
     else
         docker compose up --build -d
     fi
-    
+
     # Wait for services to start
     print_status "Waiting for services to start..."
     sleep 10
-    
+
     # Check service health
     echo
     print_status "Checking service health..."
-    
+
     services=(
         "PostgreSQL:cephalon-onni-postgres"
         "MongoDB:cephalon-onni-mongo"
-        "Neo4j:cephalon-onni-neo4j"
         "Backend:cephalon-onni-backend"
         "Frontend:cephalon-onni-frontend"
     )
-    
+
     all_healthy=true
     for service in "${services[@]}"; do
         IFS=':' read -r name container <<< "$service"
@@ -184,40 +195,52 @@ main() {
         fi
         echo
     done
-    
+
     # Test database connections
     if [ "$all_healthy" = true ]; then
         test_database_connections
         echo
-        
+
         # Test API endpoints
         test_api_endpoints
         echo
     fi
-    
+
     # Display service URLs
     print_status "Service URLs:"
     echo "  Frontend: http://localhost:8080"
     echo "  Backend API: http://localhost:8000"
     echo "  API Docs: http://localhost:8000/docs"
-    echo "  Neo4j Browser: http://localhost:7474"
-    echo "  PostgreSQL: localhost:5432"
+    echo "  PostgreSQL (with AGE): localhost:5432"
     echo "  MongoDB: localhost:27017"
     echo
-    
+
     # Show running containers
     print_status "Running containers:"
     docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
     echo
-    
+
     if [ "$all_healthy" = true ]; then
         print_success "All services are running successfully!"
         print_status "You can now access the application at http://localhost:8080"
+        
+        # Ask user if they want to initialize database
+        echo
+        read -p "Do you want to initialize the database with HTML parser data? (y/N): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            print_status "Initializing database..."
+            if ./scripts/setup-age-db.sh; then
+                print_success "Database initialized successfully!"
+            else
+                print_warning "Database initialization failed. You can run it manually later with: ./scripts/setup-age-db.sh"
+            fi
+        fi
     else
         print_warning "Some services may not be fully operational. Check the logs above."
         print_status "To view logs: docker-compose logs -f [service_name]"
     fi
-    
+
     print_status "To stop all services: docker-compose down"
     print_status "To view logs: docker-compose logs -f"
 }

@@ -3,8 +3,7 @@ from typing import List, Optional
 
 import requests
 from bs4 import BeautifulSoup
-
-from database.static.neo4j_helper import Neo4jHelper
+from database.static.age_helper import AgeDB
 
 # -------------------------------------------------------------------------------------------------
 
@@ -60,22 +59,49 @@ def handle_missions(row_list: List[str], saved_json_path: Optional[str] = None) 
         with open(f"{saved_json_path}/missions.json", "w") as f:
             json.dump(graph_data, f)
 
-    # Store it in Neo4J
-    neo4j = Neo4jHelper()
-    for mission in graph_data["missions"]:
-        neo4j.create_node("Mission", mission)
-    for reward in graph_data["rewards"]:
-        neo4j.create_node("Reward", reward)
-
-    for rel in graph_data["relationships"]:
-        neo4j.create_relationship(
-            from_label="Mission",
-            from_props={"name": rel["from"]["name"], "type": rel["from"]["type"]},
-            relationship_type=rel["rel_type"],
-            to_label="Reward",
-            to_props={"name": rel["to"]["name"]},
-            relationship_props=rel.get("properties", {}),
+    # Store it in age
+    age = AgeDB()
+    total_operations = len(graph_data["missions"]) + len(graph_data["rewards"]) + len(graph_data["relationships"])
+    completed = 0
+    
+    print(f"Processing missions: 0% (0/{total_operations} operations)", end="", flush=True)
+    
+    for i, mission in enumerate(graph_data["missions"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Mission",
+            properties=mission,
         )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["missions"]) - 1:
+            print(f"\rProcessing missions: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+
+    for i, reward in enumerate(graph_data["rewards"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Reward",
+            properties=reward,
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["rewards"]) - 1:
+            print(f"\rProcessing missions: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+
+    for i, rel in enumerate(graph_data["relationships"]):
+        age.create_relationship(
+            graph="loot_tables",
+            from_label="Mission",
+            from_match=rel["from"],
+            rel_type=rel["rel_type"],
+            to_label="Reward",
+            to_match=rel["to"],
+            rel_props=rel.get("properties", {}),
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+            print(f"\rProcessing missions: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    print()  # Move to next line after completion
+    age.close()
 
 
 def handle_relics(row_list: List[str], saved_json_path: Optional[str] = None) -> None:
@@ -115,22 +141,49 @@ def handle_relics(row_list: List[str], saved_json_path: Optional[str] = None) ->
         with open(f"{saved_json_path}/relics.json", "w") as f:
             json.dump(graph_data, f)
 
-    # Store it in Neo4J
-    neo4j = Neo4jHelper()
-    for relic in graph_data["relics"]:
-        neo4j.create_node("Relic", relic)
-    for content in graph_data["contents"]:
-        neo4j.create_node("Content", content)
-
-    for rel in graph_data["relationships"]:
-        neo4j.create_relationship(
-            from_label="Relic",
-            from_props=rel["from"],
-            relationship_type=rel["rel_type"],
-            to_label="Content",
-            to_props=rel["to"],
-            relationship_props=rel.get("properties", {}),
+    # Store it in age
+    age = AgeDB()
+    total_operations = len(graph_data["relics"]) + len(graph_data["contents"]) + len(graph_data["relationships"])
+    completed = 0
+    
+    print(f"Processing relics: 0% (0/{total_operations} operations)", end="", flush=True)
+    
+    for i, relic in enumerate(graph_data["relics"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Relic",
+            properties=relic,
         )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["relics"]) - 1:
+            print(f"\rProcessing relics: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    for i, content in enumerate(graph_data["contents"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Content",
+            properties=content,
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["contents"]) - 1:
+            print(f"\rProcessing relics: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+
+    for i, rel in enumerate(graph_data["relationships"]):
+        age.create_relationship(
+            graph="loot_tables",
+            from_label="Relic",
+            from_match=rel["from"],
+            rel_type=rel["rel_type"],
+            to_label="Content",
+            to_match=rel["to"],
+            rel_props=rel.get("properties", {}),
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+            print(f"\rProcessing relics: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    print()  # Move to next line after completion
+    age.close()
 
 
 def handle_keys(row_list: List[str], saved_json_path: Optional[str] = None) -> None:
@@ -177,22 +230,49 @@ def handle_keys(row_list: List[str], saved_json_path: Optional[str] = None) -> N
         with open(f"{saved_json_path}/keys.json", "w") as f:
             json.dump(graph_data, f)
 
-    # Store it in Neo4J
-    neo4j = Neo4jHelper()
-    for key in graph_data["keys"]:
-        neo4j.create_node("Key", key)
-    for reward in graph_data["rewards"]:
-        neo4j.create_node("Reward", reward)
-
-    for rel in graph_data["relationships"]:
-        neo4j.create_relationship(
-            from_label="Key",
-            from_props=rel["from"],
-            relationship_type=rel["rel_type"],
-            to_label="Reward",
-            to_props=rel["to"],
-            relationship_props=rel.get("properties", {}),
+    # Store it in age
+    age = AgeDB()
+    total_operations = len(graph_data["keys"]) + len(graph_data["rewards"]) + len(graph_data["relationships"])
+    completed = 0
+    
+    print(f"Processing keys: 0% (0/{total_operations} operations)", end="", flush=True)
+    
+    for i, key in enumerate(graph_data["keys"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Key",
+            properties=key,
         )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["keys"]) - 1:
+            print(f"\rProcessing keys: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    for i, reward in enumerate(graph_data["rewards"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Reward",
+            properties=reward,
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["rewards"]) - 1:
+            print(f"\rProcessing keys: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+
+    for i, rel in enumerate(graph_data["relationships"]):
+        age.create_relationship(
+            graph="loot_tables",
+            from_label="Key",
+            from_match=rel["from"],
+            rel_type=rel["rel_type"],
+            to_label="Reward",
+            to_match=rel["to"],
+            rel_props=rel.get("properties", {}),
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+            print(f"\rProcessing keys: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    print()  # Move to next line after completion
+    age.close()
 
 
 def handle_dynamic_location_rewards(
@@ -247,22 +327,49 @@ def handle_dynamic_location_rewards(
         with open(f"{saved_json_path}/dynamic_rewards.json", "w") as f:
             json.dump(graph_data, f)
 
-    # Store it in Neo4J
-    neo4j = Neo4jHelper()
-    for location in graph_data["dynamic_locations"]:
-        neo4j.create_node("DynamicLocation", location)
-    for reward in graph_data["rewards"]:
-        neo4j.create_node("Reward", reward)
-
-    for rel in graph_data["relationships"]:
-        neo4j.create_relationship(
-            from_label="DynamicLocation",
-            from_props=rel["from"],
-            relationship_type=rel["rel_type"],
-            to_label="Reward",
-            to_props=rel["to"],
-            relationship_props=rel.get("properties", {}),
+    # Store it in age
+    age = AgeDB()
+    total_operations = len(graph_data["dynamic_locations"]) + len(graph_data["rewards"]) + len(graph_data["relationships"])
+    completed = 0
+    
+    print(f"Processing dynamic location rewards: 0% (0/{total_operations} operations)", end="", flush=True)
+    
+    for i, location in enumerate(graph_data["dynamic_locations"]):
+        age.create_node(
+            graph="loot_tables",
+            label="DynamicLocation",
+            properties=location,
         )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["dynamic_locations"]) - 1:
+            print(f"\rProcessing dynamic location rewards: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    for i, reward in enumerate(graph_data["rewards"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Reward",
+            properties=reward,
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["rewards"]) - 1:
+            print(f"\rProcessing dynamic location rewards: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+
+    for i, rel in enumerate(graph_data["relationships"]):
+        age.create_relationship(
+            graph="loot_tables",
+            from_label="DynamicLocation",
+            from_match=rel["from"],
+            rel_type=rel["rel_type"],
+            to_label="Reward",
+            to_match=rel["to"],
+            rel_props=rel.get("properties", {}),
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+            print(f"\rProcessing dynamic location rewards: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    print()  # Move to next line after completion
+    age.close()
 
 
 def handle_sorties(
@@ -299,22 +406,49 @@ def handle_sorties(
         with open(f"{saved_json_path}/sorties.json", "w") as f:
             json.dump(graph_data, f)
 
-    # Store it in Neo4J
-    neo4j = Neo4jHelper()
-    for sortie in graph_data["sorties"]:
-        neo4j.create_node("Sortie", sortie)
-    for reward in graph_data["rewards"]:
-        neo4j.create_node("Reward", reward)
-
-    for rel in graph_data["relationships"]:
-        neo4j.create_relationship(
-            from_label="Sortie",
-            from_props=rel["from"],
-            relationship_type=rel["rel_type"],
-            to_label="Reward",
-            to_props=rel["to"],
-            relationship_props=rel.get("properties", {}),
+    # Store it in age
+    age = AgeDB()
+    total_operations = len(graph_data["sorties"]) + len(graph_data["rewards"]) + len(graph_data["relationships"])
+    completed = 0
+    
+    print(f"Processing sorties: 0% (0/{total_operations} operations)", end="", flush=True)
+    
+    for i, sortie in enumerate(graph_data["sorties"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Sortie",
+            properties=sortie,
         )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["sorties"]) - 1:
+            print(f"\rProcessing sorties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    for i, reward in enumerate(graph_data["rewards"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Reward",
+            properties=reward,
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["rewards"]) - 1:
+            print(f"\rProcessing sorties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+
+    for i, rel in enumerate(graph_data["relationships"]):
+        age.create_relationship(
+            graph="loot_tables",
+            from_label="Sortie",
+            from_match=rel["from"],
+            rel_type=rel["rel_type"],
+            to_label="Reward",
+            to_match=rel["to"],
+            rel_props=rel.get("properties", {}),
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+            print(f"\rProcessing sorties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    print()  # Move to next line after completion
+    age.close()
 
 
 def handle_bounty_rewards(
@@ -389,34 +523,70 @@ def handle_bounty_rewards(
         ) as f:
             json.dump(graph_data, f)
 
-    # Store it in Neo4J
-    neo4j = Neo4jHelper()
-    for bounty in graph_data["bounties"]:
-        neo4j.create_node("Bounty", bounty)
-    for level in graph_data["levels"]:
-        neo4j.create_node("Level", level)
-    for reward in graph_data["rewards"]:
-        neo4j.create_node("Reward", reward)
+    # Store it in age
+    age = AgeDB()
+    total_operations = len(graph_data["bounties"]) + len(graph_data["levels"]) + len(graph_data["rewards"]) + len(graph_data["relationships"])
+    completed = 0
+    
+    print(f"Processing {mission_title} bounties: 0% (0/{total_operations} operations)", end="", flush=True)
+    
+    for i, bounty in enumerate(graph_data["bounties"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Bounty",
+            properties=bounty,
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["bounties"]) - 1:
+            print(f"\rProcessing {mission_title} bounties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    for i, level in enumerate(graph_data["levels"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Level",
+            properties=level,
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["levels"]) - 1:
+            print(f"\rProcessing {mission_title} bounties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    for i, reward in enumerate(graph_data["rewards"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Reward",
+            properties=reward,
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["rewards"]) - 1:
+            print(f"\rProcessing {mission_title} bounties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
 
-    for rel in graph_data["relationships"]:
+    for i, rel in enumerate(graph_data["relationships"]):
         if rel["rel_type"] == "HAS":
-            neo4j.create_relationship(
+            age.create_relationship(
+                graph="loot_tables",
                 from_label="Bounty",
-                from_props=rel["from"],
-                relationship_type=rel["rel_type"],
+                from_match=rel["from"],
+                rel_type=rel["rel_type"],
                 to_label="Level",
-                to_props=rel["to"],
-                relationship_props={},
+                to_match=rel["to"],
+                rel_props={},
             )
         else:
-            neo4j.create_relationship(
+            age.create_relationship(
+                graph="loot_tables",
                 from_label="Level",
-                from_props=rel["from"],
-                relationship_type=rel["rel_type"],
+                from_match=rel["from"],
+                rel_type=rel["rel_type"],
                 to_label="Reward",
-                to_props=rel["to"],
-                relationship_props=rel.get("properties", {}),
+                to_match=rel["to"],
+                rel_props=rel.get("properties", {}),
             )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+            print(f"\rProcessing {mission_title} bounties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    print()  # Move to next line after completion
+    age.close()
 
 
 def handle_general_drops(
@@ -473,22 +643,49 @@ def handle_general_drops(
         ) as f:
             json.dump(graph_data, f)
 
-    # Store it in Neo4J
-    neo4j = Neo4jHelper()
-    for source in graph_data["sources"]:
-        neo4j.create_node("Source", source)
-    for drop in graph_data["drops"]:
-        neo4j.create_node("Drop", drop)
-
-    for rel in graph_data["relationships"]:
-        neo4j.create_relationship(
-            from_label="Source",
-            from_props=rel["from"],
-            relationship_type=rel["rel_type"],
-            to_label="Drop",
-            to_props=rel["to"],
-            relationship_props=rel.get("properties", {}),
+    # Store it in age
+    age = AgeDB()
+    total_operations = len(graph_data["sources"]) + len(graph_data["drops"]) + len(graph_data["relationships"])
+    completed = 0
+    
+    print(f"Processing {title}: 0% (0/{total_operations} operations)", end="", flush=True)
+    
+    for i, source in enumerate(graph_data["sources"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Source",
+            properties=source,
         )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["sources"]) - 1:
+            print(f"\rProcessing {title}: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    for i, drop in enumerate(graph_data["drops"]):
+        age.create_node(
+            graph="loot_tables",
+            label="Drop",
+            properties=drop,
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["drops"]) - 1:
+            print(f"\rProcessing {title}: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+
+    for i, rel in enumerate(graph_data["relationships"]):
+        age.create_relationship(
+            graph="loot_tables",
+            from_label="Source",
+            from_match=rel["from"],
+            rel_type=rel["rel_type"],
+            to_label="Drop",
+            to_match=rel["to"],
+            rel_props=rel.get("properties", {}),
+        )
+        completed += 1
+        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+            print(f"\rProcessing {title}: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+    
+    print()  # Move to next line after completion
+    age.close()
 
 
 # -------------------------------------------------------------------------------------------------
@@ -537,6 +734,12 @@ def compute_drop_tables(temp_files_save_path: Optional[str] = None):
     resp = requests.get(url, timeout=10)
     resp.raise_for_status()
 
+    age = AgeDB()
+    if "loot_tables" in age.list_graphs():
+        age.drop_graph("loot_tables", cascade=True)
+    age.create_graph("loot_tables")
+    age.close()
+
     soup = BeautifulSoup(resp.text, "lxml")
     tables = soup.find_all("table")
 
@@ -549,7 +752,6 @@ def compute_drop_tables(temp_files_save_path: Optional[str] = None):
             handle_read_values(last_header, reading_list, temp_files_save_path)
             last_header = title
             reading_list = []
-        print("Table title:", title)
         for row in table.find_all("tr"):
             cells = row.find_all(["td", "th"])
             values = [cell.get_text(strip=True) for cell in cells]
@@ -557,7 +759,6 @@ def compute_drop_tables(temp_files_save_path: Optional[str] = None):
             if values == [""]:
                 continue
             reading_list.append(values)
-            print(values)
     if last_header:
         handle_read_values(last_header, reading_list, temp_files_save_path)
 
@@ -580,3 +781,6 @@ def compute_drop_tables(temp_files_save_path: Optional[str] = None):
 
 
 # -------------------------------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    compute_drop_tables()
