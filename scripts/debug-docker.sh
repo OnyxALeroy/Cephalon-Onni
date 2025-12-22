@@ -1,7 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-echo "Cephalon-Onni Docker Debug Tool"
-echo "=================================="
+echo "Cephalon-Onni Docker Debugging Tool"
+echo "==================================="
+
+# Get project root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Navigate to project root
+cd "$PROJECT_ROOT"
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then

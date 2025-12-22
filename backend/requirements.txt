@@ -18,6 +18,8 @@ lxml==6.0.2
 motor==3.7.1
 passlib==1.7.4
 psycopg2-binary==2.9.11
+asyncpg==0.29.0
+SQLAlchemy==2.0.36
 pyasn1==0.6.1
 pydantic==2.12.5
 pydantic_core==2.41.5
