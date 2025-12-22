@@ -223,19 +223,7 @@ main() {
     if [ "$all_healthy" = true ]; then
         print_success "All services are running successfully!"
         print_status "You can now access the application at http://localhost:8080"
-        
-        # Ask user if they want to initialize database
-        echo
-        read -p "Do you want to initialize the database with HTML parser data? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            print_status "Initializing database..."
-            if ./scripts/setup-age-db.sh; then
-                print_success "Database initialized successfully!"
-            else
-                print_warning "Database initialization failed. You can run it manually later with: ./scripts/setup-age-db.sh"
-            fi
-        fi
+
     else
         print_warning "Some services may not be fully operational. Check the logs above."
         print_status "To view logs: docker-compose logs -f [service_name]"

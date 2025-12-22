@@ -28,17 +28,17 @@ async def get_graph_stats(age: AgeDB = Depends(get_age_helper)):
     try:
         # Get total nodes
         node_query = "MATCH (n) RETURN COUNT(n) as total"
-        node_result = age.cypher("loot_tables", node_query)
+        node_result = age.cypher("loot_tables", node_query, "total agtype")
         total_nodes = node_result[0]["total"] if node_result else 0
         
         # Get total edges  
         edge_query = "MATCH ()-[r]->() RETURN COUNT(r) as total"
-        edge_result = age.cypher("loot_tables", edge_query)
+        edge_result = age.cypher("loot_tables", edge_query, "total agtype")
         total_edges = edge_result[0]["total"] if edge_result else 0
         
         # Get node types
         types_query = "MATCH (n) RETURN labels(n) as labels, COUNT(n) as count"
-        types_result = age.cypher("loot_tables", types_query)
+        types_result = age.cypher("loot_tables", types_query, "labels agtype, count agtype")
         node_types = {}
         for row in types_result:
             if row["labels"]:
@@ -62,7 +62,7 @@ async def get_nodes(age: AgeDB = Depends(get_age_helper), limit: int = 100, offs
     """Get all nodes with pagination."""
     try:
         query = f"MATCH (n) RETURN n SKIP {offset} LIMIT {limit}"
-        result = age.cypher("loot_tables", query)
+        result = age.cypher("loot_tables", query, "n agtype")
         
         nodes = []
         for row in result:
@@ -87,7 +87,7 @@ async def get_edges(age: AgeDB = Depends(get_age_helper), limit: int = 100, offs
     """Get all edges with pagination."""
     try:
         query = f"MATCH (n)-[r]->(m) RETURN r, n, m SKIP {offset} LIMIT {limit}"
-        result = age.cypher("loot_tables", query)
+        result = age.cypher("loot_tables", query, "r agtype, n agtype, m agtype")
         
         edges = []
         for row in result:
@@ -126,7 +126,7 @@ async def search_graph(request: SearchRequest, age: AgeDB = Depends(get_age_help
                OR toString(n) CONTAINS '{request.query}'
             RETURN n LIMIT 50
             """
-            result = age.cypher("loot_tables", query)
+            result = age.cypher("loot_tables", query, "n agtype")
             
             nodes = []
             for row in result:
@@ -151,7 +151,7 @@ async def search_graph(request: SearchRequest, age: AgeDB = Depends(get_age_help
 async def execute_cypher(request: CypherRequest, age: AgeDB = Depends(get_age_helper)):
     """Execute a custom Cypher query."""
     try:
-        result = age.cypher("loot_tables", request.query)
+        result = age.cypher("loot_tables", request.query, "result agtype")
         return {"results": result}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to execute Cypher query: {e}")
@@ -173,10 +173,9 @@ async def create_node(node: GraphNode, age: AgeDB = Depends(get_age_helper)):
             return_node=True
         )
         
-        if result and result.get("n"):
-            created_node = result["n"]
+        if properties:
             return GraphNode(
-                id=str(created_node.get("id")),
+                id=str(properties.get("id", "")),
                 type=node.type,
                 label=node.label,
                 properties=properties
@@ -204,16 +203,14 @@ async def update_node(node_id: str, node: GraphNode, age: AgeDB = Depends(get_ag
             SET {', '.join(set_clauses)}
             RETURN n
             """
-            result = age.cypher("loot_tables", query)
+            age.cypher("loot_tables", query, "n agtype")
             
-            if result and result[0].get("n"):
-                updated_node = result[0]["n"]
-                return GraphNode(
-                    id=node_id,
-                    type=node.type,
-                    label=node.label,
-                    properties=node.properties
-                )
+            return GraphNode(
+                id=node_id,
+                type=node.type,
+                label=node.label,
+                properties=node.properties
+            )
         
         raise HTTPException(status_code=404, detail="Node not found")
     except Exception as e:
@@ -227,7 +224,7 @@ async def delete_node(node_id: str, age: AgeDB = Depends(get_age_helper)):
     """Delete a node and all its relationships."""
     try:
         query = f"MATCH (n) WHERE id(n) = {node_id} DETACH DELETE n"
-        age.cypher("loot_tables", query)
+        age.cypher("loot_tables", query, "_ agtype")
         return {"message": "Node deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete node: {e}")
@@ -262,7 +259,7 @@ async def delete_edge(edge_id: str, age: AgeDB = Depends(get_age_helper)):
     """Delete an edge."""
     try:
         query = f"MATCH ()-[r]-() WHERE id(r) = {edge_id} DELETE r"
-        age.cypher("loot_tables", query)
+        age.cypher("loot_tables", query, "_ agtype")
         return {"message": "Edge deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete edge: {e}")
@@ -278,8 +275,8 @@ async def explore_graph(age: AgeDB = Depends(get_age_helper)):
         nodes_query = "MATCH (n) RETURN n LIMIT 50"
         edges_query = "MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 100"
         
-        nodes_result = age.cypher("loot_tables", nodes_query)
-        edges_result = age.cypher("loot_tables", edges_query)
+        nodes_result = age.cypher("loot_tables", nodes_query, "n agtype")
+        edges_result = age.cypher("loot_tables", edges_query, "n agtype, r agtype, m agtype")
         
         nodes = []
         for row in nodes_result:
