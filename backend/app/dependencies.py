@@ -1,12 +1,19 @@
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-from routers.user import decode_token
+from fastapi import Depends, HTTPException, Request
+from database.dynamic.auth import decode_token
 
-oauth2 = OAuth2PasswordBearer(tokenUrl="login")
-
-def get_current_user(token: str = Depends(oauth2)):
+def get_current_user(request: Request):
+    token = request.cookies.get("access_token")
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
     try:
-        data = decode_token(token)
-        return data["sub"]
+        payload = decode_token(token)
+        user_id = payload.get("sub")
+        
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+            
+        return user_id
     except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Token expired or invalid")
