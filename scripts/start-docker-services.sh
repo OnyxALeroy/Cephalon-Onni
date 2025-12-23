@@ -128,13 +128,16 @@ test_api_endpoints() {
     fi
 
     # Test auth endpoints (should not error out)
-    if curl -f -s -X POST http://localhost:8000/api/auth/register \
+    # Use unique email to avoid "already used" error
+    local test_email="test$(date +%s)@example.com"
+    local response=$(curl -s -X POST http://localhost:8000/api/auth/register \
         -H "Content-Type: application/json" \
-        -d '{"email":"test@example.com","username":"testuser","password":"testpass"}' \
-        > /dev/null 2>&1; then
+        -d "{\"email\":\"$test_email\",\"username\":\"testuser\",\"password\":\"testpass\"}")
+    
+    if echo "$response" | grep -q '"email"'; then
         print_success "Registration endpoint working"
     else
-        print_warning "Registration endpoint test failed (might be due to validation)"
+        print_warning "Registration endpoint test failed - Response: $response"
     fi
 
     return 0
