@@ -6,6 +6,13 @@ import psycopg2
 import psycopg2.extras
 
 
+def get_dict_from_agtype(agtype_value: str) -> Dict[str, Any]:
+    import json
+
+    json_part = agtype_value.split("::")[0]
+    return json.loads(json_part)
+
+
 class AgeDB:
     def __init__(self):
         self.conn = psycopg2.connect(
