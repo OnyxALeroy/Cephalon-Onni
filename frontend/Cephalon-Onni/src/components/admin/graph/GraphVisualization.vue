@@ -123,6 +123,7 @@
                 <table v-else class="neighbors-table">
                     <thead>
                         <tr>
+                            <th>ID</th>
                             <th>Node Name</th>
                             <th>Type</th>
                             <th>Relationship</th>
@@ -135,6 +136,7 @@
                             v-for="neighbor in firstDepthNeighbors"
                             :key="neighbor.id"
                         >
+                            <td class="node-id-cell">{{ neighbor.id }}</td>
                             <td class="node-name-cell">{{ neighbor.name }}</td>
                             <td class="node-type-cell">
                                 <span class="type-badge">{{
@@ -555,6 +557,16 @@ const firstDepthNeighbors = computed(() => {
 
 .neighbors-table tr:hover {
     background: #1e293b;
+}
+
+.node-id-cell {
+    font-family: monospace;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .node-name-cell {
