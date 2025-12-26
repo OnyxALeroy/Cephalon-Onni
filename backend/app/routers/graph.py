@@ -1,5 +1,4 @@
-from datetime import datetime
-from typing import List
+import logging
 
 from database.static.age_helper import AgeDB, get_dict_from_agtype
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,10 +6,9 @@ from models.age_models import (
     CypherRequest,
     GraphEdge,
     GraphNode,
-    GraphStats,
-    SearchRequest,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/graph", tags=["graph"])
 
 
@@ -21,86 +19,6 @@ def get_age_helper():
         raise HTTPException(
             status_code=500, detail=f"Failed to initialize graph connection: {e}"
         )
-
-
-@router.get("/stats", response_model=GraphStats)
-async def get_graph_stats(age: AgeDB = Depends(get_age_helper)):
-    """Get statistics about the graph."""
-    try:
-        # Get total nodes
-        node_query = "MATCH (n) RETURN COUNT(n) as total"
-        node_result = age.cypher("loot_tables", node_query, "total agtype")
-        total_nodes = node_result[0]["total"] if node_result else 0
-
-        # Get total edges
-        edge_query = "MATCH ()-[r]->() RETURN COUNT(r) as total"
-        edge_result = age.cypher("loot_tables", edge_query, "total agtype")
-        total_edges = edge_result[0]["total"] if edge_result else 0
-
-        # Get node types
-        types_query = "MATCH (n) RETURN labels(n) as labels, COUNT(n) as node_count"
-        types_result = age.cypher(
-            "loot_tables", types_query, "labels agtype, node_count agtype"
-        )
-        node_types = {}
-        for row in types_result:
-            if row["labels"]:
-                label = (
-                    row["labels"][0]
-                    if isinstance(row["labels"], list)
-                    else row["labels"]
-                )
-                node_types[label] = row["node_count"]
-
-        return GraphStats(
-            totalNodes=total_nodes,
-            totalEdges=total_edges,
-            nodeTypes=node_types,
-            lastUpdated=datetime.now().isoformat(),
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get graph stats: {e}")
-    finally:
-        age.close()
-
-
-@router.post("/search", response_model=List[GraphNode])
-async def search_graph(request: SearchRequest, age: AgeDB = Depends(get_age_helper)):
-    """Search for nodes in the graph."""
-    try:
-        if request.type == "all" or request.type == "nodes":
-            # Search nodes by properties
-            query = f"""
-            MATCH (n)
-            WHERE n.name CONTAINS '{request.query}'
-               OR toString(n) CONTAINS '{request.query}'
-            RETURN n LIMIT 50
-            """
-            result = age.cypher("loot_tables", query, "n agtype")
-
-            nodes = []
-            for row in result:
-                node_data = row["n"]
-                if isinstance(node_data, dict):
-                    nodes.append(
-                        GraphNode(
-                            id=str(node_data.get("id")),
-                            type=node_data.get("labels", ["Unknown"])[0]
-                            if node_data.get("labels")
-                            else "Unknown",
-                            label=node_data.get("labels", ["Unknown"])[0]
-                            if node_data.get("labels")
-                            else "Unknown",
-                            properties=node_data.get("properties", node_data),
-                        )
-                    )
-
-            return nodes
-        return []
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to search graph: {e}")
-    finally:
-        age.close()
 
 
 @router.post("/cypher")
@@ -302,14 +220,10 @@ async def search_nodes_by_name_or_label(
 async def get_node_neighbors(
     name: str = "",
     label: str = "",
-    depth: int = 1,
     age: AgeDB = Depends(get_age_helper),
 ):
-    """Get a node and all its neighbors up to a specified depth using name and/or label."""
+    """Get the direct neighbors of a node using name and/or label."""
     try:
-        if depth < 1 or depth > 5:
-            raise HTTPException(status_code=400, detail="Depth must be between 1 and 5")
-
         if not name and not label:
             raise HTTPException(
                 status_code=400, detail="At least name or label must be provided"
@@ -324,113 +238,56 @@ async def get_node_neighbors(
 
         where_clause = " AND ".join(conditions)
 
-        # Cypher query to get neighbors up to specified depth
+        # Cypher query to get direct neighbors (depth = 1)
         query = f"""
         MATCH (start_node)
         WHERE {where_clause}
-        MATCH (start_node)-[r*1..{depth}]->(end_node)
-        WITH start_node, r, end_node
-        MATCH path = (start_node)-[r]->(end_node)
-        RETURN start_node, relationships(path) as rels, end_node
+        MATCH (start_node)-[r]->(end_node)
+        RETURN start_node, labels(start_node) as start_labels, r as rel, end_node, labels(end_node) as end_labels
         LIMIT 200
         """
 
         result = age.cypher(
-            "loot_tables", query, "start_node agtype, rels agtype, end_node agtype"
+            "loot_tables",
+            query,
+            "start_node agtype, start_labels agtype, rel agtype, end_node agtype, end_labels agtype",
         )
-
         if not result:
             raise HTTPException(
                 status_code=404, detail="No nodes found matching the criteria"
             )
 
-        nodes = {}
-        edges = []
-        start_node_id = None
+        neighbors = []
 
-        # Process the results to collect all nodes and edges
+        # Process the results to collect only the neighbors
         for row in result:
-            start_node_data = row["start_node"]
-            end_node_data = row["end_node"]
-            relationships = row["rels"]
+            end_node_data = get_dict_from_agtype(row["end_node"])
+            end_node_labels = get_dict_from_agtype(row["end_labels"])
 
-            # Add start node
-            if isinstance(start_node_data, dict):
-                start_id = str(start_node_data.get("id"))
-                start_node_id = start_id
-                if start_id not in nodes:
-                    nodes[start_id] = {
-                        "id": start_id,
-                        "label": start_node_data.get("name", "Unknown"),
-                        "type": (
-                            start_node_data.get("labels", ["Unknown"])[0]
-                            if start_node_data.get("labels")
-                            else "Unknown"
-                        ),
-                        "properties": start_node_data.get("properties", {}),
-                        "isStartNode": True,
-                    }
-
-            # Add end node
+            # Add neighbor node
             if isinstance(end_node_data, dict):
                 end_id = str(end_node_data.get("id"))
-                if end_id not in nodes:
-                    nodes[end_id] = {
-                        "id": end_id,
-                        "label": end_node_data.get("name", "Unknown"),
-                        "type": (
-                            end_node_data.get("labels", ["Unknown"])[0]
-                            if end_node_data.get("labels")
-                            else "Unknown"
-                        ),
-                        "properties": end_node_data.get("properties", {}),
-                        "isStartNode": False,
-                    }
 
-            # Add edges for all relationships in the path
-            if isinstance(relationships, list):
-                for rel in relationships:
-                    if isinstance(rel, dict):
-                        # Try to get from and to nodes from the relationship
-                        rel_query = f"MATCH (n)-[r]->(m) WHERE id(r) = {rel.get('id')} RETURN n, r, m"
-                        rel_result = age.cypher(
-                            "loot_tables", rel_query, "n agtype, r agtype, m agtype"
-                        )
+                # Extract label from the returned labels
+                end_label = "Unknown"
+                if end_node_labels and len(end_node_labels) > 0:
+                    if isinstance(end_node_labels, str):
+                        end_label = end_node_labels.strip('[]"')
+                    elif isinstance(end_node_labels, list) and len(end_node_labels) > 0:
+                        end_label = str(end_node_labels[0])
 
-                        if rel_result:
-                            rel_row = rel_result[0]
-                            from_node = rel_row["n"]
-                            to_node = rel_row["m"]
-                            rel_data = rel_row["r"]
+                neighbor = {
+                    "id": end_id,
+                    "name": end_node_data.get("properties", {}).get("name", "Unknown"),
+                    "type": end_label,
+                    "properties": end_node_data.get("properties", {}),
+                }
 
-                            if (
-                                isinstance(from_node, dict)
-                                and isinstance(to_node, dict)
-                                and isinstance(rel_data, dict)
-                            ):
-                                from_id = str(from_node.get("id"))
-                                to_id = str(to_node.get("id"))
-                                rel_id = str(rel_data.get("id"))
-
-                                edges.append(
-                                    {
-                                        "id": rel_id,
-                                        "source": from_id,
-                                        "target": to_id,
-                                        "type": rel_data.get("label", "RELATED_TO"),
-                                        "properties": rel_data.get("properties", {}),
-                                    }
-                                )
+                neighbors.append(neighbor)
 
         return {
-            "nodes": list(nodes.values()),
-            "edges": edges,
-            "stats": {
-                "totalNodes": len(nodes),
-                "totalEdges": len(edges),
-                "startNodeId": start_node_id,
-                "depth": depth,
-            },
+            "neighbors": neighbors,
+            "count": len(neighbors),
         }
     except HTTPException:
         raise

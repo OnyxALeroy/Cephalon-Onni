@@ -73,88 +73,93 @@
                 </div>
             </div>
 
-            <div class="exploration-section">
-                <h3>Explore Neighbors</h3>
-                <div v-if="selectedNode" class="selected-node">
+            <!-- Node Exploration Section -->
+            <div v-if="selectedNode" class="exploration-section">
+                <h3>Explore Node Neighbors</h3>
+                <div class="selected-node">
                     <div class="selected-info">
-                        <span class="selected-label">Selected:</span>
-                        <span class="selected-name"
-                            >{{ selectedNode.name }} ({{
-                                Array.isArray(selectedNode.label)
-                                    ? selectedNode.label[0]
-                                    : String(selectedNode.label)
-                            }})</span
+                        <span class="selected-label">Selected Node:</span>
+                        <span class="selected-name">{{
+                            selectedNode.name
+                        }}</span>
+                        <span class="selected-label"
+                            >({{ selectedNode.label }})</span
                         >
                     </div>
                 </div>
-                <div class="input-group">
-                    <div class="input-field">
-                        <label for="depth">Depth:</label>
-                        <select
-                            id="depth"
-                            v-model="selectedDepth"
-                            class="depth-select"
-                        >
-                            <option
-                                v-for="d in depthOptions"
-                                :key="d"
-                                :value="d"
-                            >
-                                {{ d }}
-                            </option>
-                        </select>
-                    </div>
-                </div>
+
                 <div class="control-buttons">
                     <button
                         class="btn primary"
                         @click="handleLoadNodeNeighbors"
-                        :disabled="loading || !selectedNode"
+                        :disabled="loading"
                     >
-                        {{ loading ? "Loading..." : "Explore Neighbors" }}
-                    </button>
-                    <button
-                        class="btn secondary"
-                        @click="handleRefreshGraph"
-                        :disabled="!selectedNode"
-                    >
-                        Refresh
-                    </button>
-                    <button class="btn secondary" @click="resetZoom">
-                        Reset Zoom
+                        {{ loading ? "Loading..." : "Load Neighbors" }}
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Graph Stats -->
-        <div v-if="graphStats" class="graph-stats">
-            <div class="stat-item">
-                <span class="stat-label">Nodes:</span>
-                <span class="stat-value">{{ graphStats.totalNodes }}</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">Edges:</span>
-                <span class="stat-value">{{ graphStats.totalEdges }}</span>
-            </div>
-            <div v-if="selectedNode" class="stat-item">
-                <span class="stat-label">Start Node:</span>
-                <span class="stat-value">{{ selectedNode.name }}</span>
-            </div>
-            <div v-if="graphStats.depth" class="stat-item">
-                <span class="stat-label">Depth:</span>
-                <span class="stat-value">{{ graphStats.depth }}</span>
-            </div>
-        </div>
-
-        <!-- Graph Container -->
-        <div class="graph-container" ref="graphContainer">
+        <!-- Neighbors Table Container -->
+        <div class="graph-container">
             <div v-if="!graphData && !loading" class="empty-state">
                 <p>
-                    Search for a node by name and/or label to explore the graph
+                    Search for a node by name and/or label to explore its
+                    neighbors
                 </p>
             </div>
-            <div id="graph-canvas"></div>
+            <div v-else-if="graphData" class="neighbors-table-container">
+                <h3 v-if="selectedNode">
+                    Direct Neighbors of {{ selectedNode.name }} ({{
+                        selectedNode.label
+                    }})
+                </h3>
+                <div
+                    v-if="firstDepthNeighbors.length === 0"
+                    class="empty-state"
+                >
+                    <p>No direct neighbors found for this node</p>
+                </div>
+                <table v-else class="neighbors-table">
+                    <thead>
+                        <tr>
+                            <th>Node Name</th>
+                            <th>Type</th>
+                            <th>Properties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="neighbor in firstDepthNeighbors"
+                            :key="neighbor.id"
+                        >
+                            <td class="node-name-cell">{{ neighbor.name }}</td>
+                            <td class="node-type-cell">
+                                <span class="type-badge">{{
+                                    neighbor.type
+                                }}</span>
+                            </td>
+                            <td class="properties-cell">
+                                <div class="properties-list">
+                                    <div
+                                        v-for="(
+                                            value, key
+                                        ) in neighbor.properties"
+                                        :key="key"
+                                        class="property-item"
+                                    >
+                                        <span class="prop-key">{{ key }}:</span>
+                                        <span class="prop-value">{{
+                                            value
+                                        }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div v-else id="graph-canvas" style="display: none"></div>
         </div>
     </div>
 </template>
@@ -163,23 +168,14 @@
 import { ref, computed } from "vue";
 import { useGraphApi } from "@/composables/useGraphApi";
 
-const graphContainer = ref<HTMLElement>();
 const loading = ref(false);
 const searchName = ref("");
 const searchLabel = ref("");
-const selectedDepth = ref(2);
 const selectedNode = ref<any>(null);
 const searchResults = ref<any[]>([]);
 const graphData = ref<any>(null);
 
-const depthOptions = [1, 2, 3, 4, 5];
-
-const { searchNodes, loadNodeNeighbors, updateGraphStats } = useGraphApi();
-
-const graphStats = computed(() => {
-    if (!graphData.value?.stats) return null;
-    return graphData.value.stats;
-});
+const { searchNodes, loadNodeNeighbors } = useGraphApi();
 
 // Search for nodes by name and/or label
 async function handleSearchNodes() {
@@ -229,211 +225,42 @@ function selectNode(node: any) {
     searchResults.value = [];
     searchName.value = node.name;
     searchLabel.value = node.label;
+    handleLoadNodeNeighbors();
 }
 
-// Load and render node neighbors
 async function handleLoadNodeNeighbors() {
     if (!selectedNode.value) return;
 
     loading.value = true;
+
     try {
-        console.log("Loading neighbors for:", {
-            name: selectedNode.value.name,
-            label: selectedNode.value.label,
-            depth: selectedDepth.value,
-        });
         const result = await loadNodeNeighbors(
             selectedNode.value.name,
             selectedNode.value.label,
-            selectedDepth.value,
         );
-        console.log("Neighbors result:", result);
+
         if (result.success && result.data) {
             graphData.value = result.data;
-            console.log("Graph data:", result.data);
-            renderGraph(result.data);
         } else {
-            console.log("Failed to load neighbors");
+            graphData.value = null;
         }
-    } catch (error) {
-        console.error("Error loading neighbors:", error);
+    } catch (e) {
+        console.error(e);
+        graphData.value = null;
     } finally {
         loading.value = false;
     }
 }
 
-// Refresh graph with current settings
-async function handleRefreshGraph() {
-    if (selectedNode.value) {
-        await handleLoadNodeNeighbors();
+// Get neighbors for table display
+const firstDepthNeighbors = computed(() => {
+    if (!graphData.value || !graphData.value.neighbors) {
+        return [];
     }
-    await updateGraphStats();
-}
-
-// Render graph data to SVG with improved layout
-function renderGraph(data: any) {
-    console.log("Rendering graph with data:", data);
-    const container = document.getElementById("graph-canvas");
-    if (!container) {
-        console.error("Graph container not found");
-        return;
-    }
-    if (!data.nodes || !data.edges) {
-        console.error("Missing nodes or edges in data:", {
-            nodes: data.nodes,
-            edges: data.edges,
-        });
-        return;
-    }
-
-    console.log(
-        `Rendering ${data.nodes.length} nodes and ${data.edges.length} edges`,
-    );
-    container.innerHTML = "";
-
-    // Use force-directed layout for better positioning
-    const nodePositions = calculateNodePositions(data.nodes, data.edges);
-    console.log("Node positions calculated:", nodePositions);
-
-    // Create edge elements
-    const edgeElements = data.edges
-        .map((edge: any) => {
-            const from = nodePositions.get(edge.source);
-            const to = nodePositions.get(edge.target);
-            if (!from || !to) return "";
-
-            return `<line
-      class="edge"
-      stroke="#64748b"
-      stroke-width="1"
-      x1="${from.x}"
-      y1="${from.y}"
-      x2="${to.x}"
-      y2="${to.y}"
-    />`;
-        })
-        .join("");
-
-    // Create node elements with different colors for start node
-    const nodeElements = data.nodes
-        .map((node: any) => {
-            const pos = nodePositions.get(node.id);
-            const isStartNode =
-                node.isStartNode || data.stats?.startNodeId === node.id;
-            const nodeColor = isStartNode ? "#f59e0b" : "#38bdf8";
-
-            return `
-      <g class="node" transform="translate(${pos.x}, ${pos.y})" style="cursor: pointer;">
-        <circle r="25" fill="${nodeColor}" stroke="#021019" stroke-width="2"/>
-        <text text-anchor="middle" dy="5" fill="white" font-size="10" font-weight="bold">
-          ${node.label ? node.label.substring(0, 12) : node.id.substring(0, 12)}
-        </text>
-        <text y="35" text-anchor="middle" fill="#c9e5ff" font-size="8">${node.type}</text>
-      </g>
-    `;
-        })
-        .join("");
-
-    const svgWidth = container.clientWidth || 800;
-    const svgHeight = 600;
-
-    container.innerHTML = `
-    <svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
-      <style>
-        .node:hover circle { filter: brightness(1.2); }
-        .edge { opacity: 0.6; }
-      </style>
-      ${edgeElements}
-      ${nodeElements}
-    </svg>
-  `;
-}
-
-// Calculate node positions using a simple force-directed layout
-function calculateNodePositions(nodes: any[], edges: any[]) {
-    const positions = new Map();
-    const width = 800;
-    const height = 600;
-    const centerX = width / 2;
-    const centerY = height / 2;
-
-    // Initialize positions
-    nodes.forEach((node, index) => {
-        const angle = (index / nodes.length) * 2 * Math.PI;
-        const radius = 150;
-        positions.set(node.id, {
-            x: centerX + radius * Math.cos(angle),
-            y: centerY + radius * Math.sin(angle),
-        });
-    });
-
-    // Simple force simulation
-    for (let iteration = 0; iteration < 50; iteration++) {
-        const forces = new Map();
-
-        // Initialize forces
-        nodes.forEach((node) => {
-            forces.set(node.id, { x: 0, y: 0 });
-        });
-
-        // Repulsion between all nodes
-        for (let i = 0; i < nodes.length; i++) {
-            for (let j = i + 1; j < nodes.length; j++) {
-                const pos1 = positions.get(nodes[i].id);
-                const pos2 = positions.get(nodes[j].id);
-                const dx = pos2.x - pos1.x;
-                const dy = pos2.y - pos1.y;
-                const distance = Math.sqrt(dx * dx + dy * dy) || 1;
-                const force = 1000 / (distance * distance);
-
-                const force1 = forces.get(nodes[i].id);
-                const force2 = forces.get(nodes[j].id);
-
-                force1.x -= (dx / distance) * force;
-                force1.y -= (dy / distance) * force;
-                force2.x += (dx / distance) * force;
-                force2.y += (dy / distance) * force;
-            }
-        }
-
-        // Attraction along edges
-        edges.forEach((edge) => {
-            const pos1 = positions.get(edge.source);
-            const pos2 = positions.get(edge.target);
-            const dx = pos2.x - pos1.x;
-            const dy = pos2.y - pos1.y;
-            const distance = Math.sqrt(dx * dx + dy * dy) || 1;
-            const force = distance * 0.01;
-
-            const force1 = forces.get(edge.source);
-            const force2 = forces.get(edge.target);
-
-            force1.x += (dx / distance) * force;
-            force1.y += (dy / distance) * force;
-            force2.x -= (dx / distance) * force;
-            force2.y -= (dy / distance) * force;
-        });
-
-        // Apply forces
-        nodes.forEach((node) => {
-            const pos = positions.get(node.id);
-            const force = forces.get(node.id);
-            pos.x += force.x * 0.1;
-            pos.y += force.y * 0.1;
-
-            // Keep within bounds
-            pos.x = Math.max(50, Math.min(width - 50, pos.x));
-            pos.y = Math.max(50, Math.min(height - 50, pos.y));
-        });
-    }
-
-    return positions;
-}
-
-// Reset zoom (placeholder for future graph library integration)
-function resetZoom() {
-    console.log("Reset zoom functionality to be implemented");
-}
+    
+    // Return the neighbors directly from the new API response
+    return graphData.value.neighbors;
+});
 </script>
 
 <style scoped>
@@ -448,7 +275,7 @@ function resetZoom() {
     display: grid;
     gap: 2rem;
     margin-bottom: 2rem;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
 }
 
 .search-section,
@@ -656,15 +483,98 @@ function resetZoom() {
     align-items: center;
     justify-content: center;
     height: 100%;
-    min-height: 600px;
+    min-height: 200px;
     color: #64748b;
     font-size: 1.1rem;
+    padding: 2rem;
 }
 
-#graph-canvas {
+.neighbors-table-container {
+    background: #08121f;
+    border-radius: 4px;
+    padding: 1.5rem;
+    overflow: auto;
+}
+
+.neighbors-table-container h3 {
+    color: #7dd3fc;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.neighbors-table {
     width: 100%;
-    height: 100%;
-    min-height: 600px;
+    border-collapse: collapse;
+    background: #0f172a;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.neighbors-table th {
+    background: #1e293b;
+    color: #7dd3fc;
+    padding: 0.8rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #334155;
+}
+
+.neighbors-table td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid #334155;
+    color: #f1f5f9;
+}
+
+.neighbors-table tr:hover {
+    background: #1e293b;
+}
+
+.node-name-cell {
+    font-weight: bold;
+    color: #38bdf8;
+}
+
+.node-type-cell {
+    text-align: center;
+}
+
+.type-badge {
+    background: #38bdf8;
+    color: #021019;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.properties-cell {
+    max-width: 300px;
+}
+
+.properties-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.properties-cell .property-item {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    background: #1e293b;
+    padding: 0.3rem 0.5rem;
+    border-radius: 3px;
+}
+
+.properties-cell .prop-key {
+    color: #94a3b8;
+    min-width: 80px;
+    font-weight: 600;
+}
+
+.properties-cell .prop-value {
+    color: #38bdf8;
 }
 
 .btn {

@@ -1,3 +1,4 @@
+import os
 import re
 from typing import List, Optional
 
@@ -8,9 +9,13 @@ from database.static.age_helper import AgeDB
 # -------------------------------------------------------------------------------------------------
 
 
-def handle_missions(row_list: List[str], saved_json_path: Optional[str] = None) -> None:
+def handle_missions(
+    row_list: List[str],
+    saved_json_path: Optional[str] = None,
+    clean_and_refill_age: bool = True,
+) -> None:
     # Build the graph
-    graph_data = {"missions": [], "rewards": [], "relationships": []}
+    graph_data = {"missions": {}, "items": {}, "relationships": {}}
     current_mission = {}
     current_rotation = ""
     cursor = 0
@@ -30,25 +35,25 @@ def handle_missions(row_list: List[str], saved_json_path: Optional[str] = None) 
                         "type": type.strip(),
                         "planet": planet.strip(),
                     }
-                    graph_data["missions"].append(current_mission)
+                    graph_data["missions"][current_mission["name"]] = current_mission
         elif len(row) == 2:
             item_name, probability = row[0].strip(), row[1].strip()
             prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
             if prob_match:
                 _, p_value = prob_match.groups()
-                reward = {"name": item_name.strip()}
-                graph_data["rewards"].append(reward)
-                graph_data["relationships"].append(
-                    {
-                        "from": current_mission,
-                        "to": reward,
-                        "rel_type": "DROPS",
-                        "properties": {
-                            "chance": p_value.strip(),
-                            "rotation": current_rotation.strip(),
-                        },
-                    }
-                )
+                item = {"name": item_name.strip()}
+                graph_data["items"][item["name"]] = item
+                graph_data["relationships"][
+                    f"{current_mission['name']}_{item['name']}"
+                ] = {
+                    "from": current_mission,
+                    "to": item,
+                    "rel_type": "DROPS",
+                    "properties": {
+                        "chance": p_value.strip(),
+                        "rotation": current_rotation.strip(),
+                    },
+                }
         else:
             continue
 
@@ -60,53 +65,75 @@ def handle_missions(row_list: List[str], saved_json_path: Optional[str] = None) 
             json.dump(graph_data, f)
 
     # Store it in age
-    age = AgeDB()
-    total_operations = len(graph_data["missions"]) + len(graph_data["rewards"]) + len(graph_data["relationships"])
-    completed = 0
-    
-    print(f"Processing missions: 0% (0/{total_operations} operations)", end="", flush=True)
-    
-    for i, mission in enumerate(graph_data["missions"]):
-        age.create_node(
-            graph="loot_tables",
-            label="Mission",
-            properties=mission,
+    if clean_and_refill_age:
+        age = AgeDB()
+        total_operations = (
+            len(graph_data["missions"])
+            + len(graph_data["items"])
+            + len(graph_data["relationships"])
         )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["missions"]) - 1:
-            print(f"\rProcessing missions: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+        completed = 0
 
-    for i, reward in enumerate(graph_data["rewards"]):
-        age.create_node(
-            graph="loot_tables",
-            label="Reward",
-            properties=reward,
+        print(
+            f"Processing missions: 0% (0/{total_operations} operations)",
+            end="",
+            flush=True,
         )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["rewards"]) - 1:
-            print(f"\rProcessing missions: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
 
-    for i, rel in enumerate(graph_data["relationships"]):
-        age.create_relationship(
-            graph="loot_tables",
-            from_label="Mission",
-            from_match=rel["from"],
-            rel_type=rel["rel_type"],
-            to_label="Reward",
-            to_match=rel["to"],
-            rel_props=rel.get("properties", {}),
-        )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
-            print(f"\rProcessing missions: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    print()  # Move to next line after completion
-    age.close()
+        for i, mission in enumerate(graph_data["missions"].values()):
+            age.create_node(
+                graph="loot_tables",
+                label="Mission",
+                properties=mission,
+            )
+            completed += 1
+            print(
+                f"\rProcessing missions: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                end="",
+                flush=True,
+            )
+
+        for i, item in enumerate(graph_data["items"].values()):
+            age.create_node(
+                graph="loot_tables",
+                label="Item",
+                properties=item,
+            )
+            completed += 1
+            print(
+                f"\rProcessing missions: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                end="",
+                flush=True,
+            )
+
+        for i, relationship in enumerate(graph_data["relationships"].values()):
+            age.create_relationship(
+                graph="loot_tables",
+                from_label="Mission",
+                from_match=relationship["from"],
+                rel_type=relationship["rel_type"],
+                to_label="Item",
+                to_match=relationship["to"],
+                rel_props=relationship.get("properties", {}),
+            )
+            completed += 1
+            print(
+                f"\rProcessing missions: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                end="",
+                flush=True,
+            )
+
+        print()
+        age.close()
 
 
-def handle_relics(row_list: List[str], saved_json_path: Optional[str] = None) -> None:
+def handle_relics(
+    row_list: List[str],
+    saved_json_path: Optional[str] = None,
+    clean_and_refill_age: bool = True,
+) -> None:
     # Build the graph
-    graph_data = {"relics": [], "contents": [], "relationships": []}
+    graph_data = {"relics": {}, "contents": {}, "relationships": {}}
     current_relic = ""
     cursor = 0
     while cursor < len(row_list):
@@ -114,23 +141,20 @@ def handle_relics(row_list: List[str], saved_json_path: Optional[str] = None) ->
         cursor += 1
         if len(row) == 1:
             current_relic = row[0].split("(")[0].strip()
-            if {"name": current_relic} not in graph_data["relics"]:
-                graph_data["relics"].append({"name": current_relic})
+            graph_data["relics"][current_relic] = {"name": current_relic}
         elif len(row) == 2:
             item_name, probability = row[0].strip(), row[1].strip()
             prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
             if prob_match:
                 _, p_value = prob_match.groups()
                 content = {"name": item_name.strip()}
-                graph_data["contents"].append(content)
-                graph_data["relationships"].append(
-                    {
-                        "from": {"name": current_relic},
-                        "to": content,
-                        "rel_type": "CONTAINS",
-                        "properties": {"chance": p_value.strip()},
-                    }
-                )
+                graph_data["contents"][content["name"]] = content
+                graph_data["relationships"][f"{current_relic}_{content['name']}"] = {
+                    "from": {"name": current_relic},
+                    "to": content,
+                    "rel_type": "CONTAINS",
+                    "properties": {"chance": p_value.strip()},
+                }
         else:
             continue
 
@@ -142,53 +166,78 @@ def handle_relics(row_list: List[str], saved_json_path: Optional[str] = None) ->
             json.dump(graph_data, f)
 
     # Store it in age
-    age = AgeDB()
-    total_operations = len(graph_data["relics"]) + len(graph_data["contents"]) + len(graph_data["relationships"])
-    completed = 0
-    
-    print(f"Processing relics: 0% (0/{total_operations} operations)", end="", flush=True)
-    
-    for i, relic in enumerate(graph_data["relics"]):
-        age.create_node(
-            graph="loot_tables",
-            label="Relic",
-            properties=relic,
+    if clean_and_refill_age:
+        age = AgeDB()
+        total_operations = (
+            len(graph_data["relics"])
+            + len(graph_data["contents"])
+            + len(graph_data["relationships"])
         )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["relics"]) - 1:
-            print(f"\rProcessing relics: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    for i, content in enumerate(graph_data["contents"]):
-        age.create_node(
-            graph="loot_tables",
-            label="Content",
-            properties=content,
+        completed = 0
+
+        print(
+            f"Processing relics: 0% (0/{total_operations} operations)",
+            end="",
+            flush=True,
         )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["contents"]) - 1:
-            print(f"\rProcessing relics: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
 
-    for i, rel in enumerate(graph_data["relationships"]):
-        age.create_relationship(
-            graph="loot_tables",
-            from_label="Relic",
-            from_match=rel["from"],
-            rel_type=rel["rel_type"],
-            to_label="Content",
-            to_match=rel["to"],
-            rel_props=rel.get("properties", {}),
-        )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
-            print(f"\rProcessing relics: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    print()  # Move to next line after completion
-    age.close()
+        for i, relic in enumerate(graph_data["relics"].values()):
+            age.create_node(
+                graph="loot_tables",
+                label="Item",
+                properties=relic,
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["relics"]) - 1:
+                print(
+                    f"\rProcessing relics: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        for i, content in enumerate(graph_data["contents"].values()):
+            age.create_node(
+                graph="loot_tables",
+                label="Item",
+                properties=content,
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["contents"]) - 1:
+                print(
+                    f"\rProcessing relics: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        for i, rel in enumerate(graph_data["relationships"].values()):
+            age.create_relationship(
+                graph="loot_tables",
+                from_label="Item",
+                from_match=rel["from"],
+                rel_type=rel["rel_type"],
+                to_label="Item",
+                to_match=rel["to"],
+                rel_props=rel.get("properties", {}),
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+                print(
+                    f"\rProcessing relics: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        print()  # Move to next line after completion
+        age.close()
 
 
-def handle_keys(row_list: List[str], saved_json_path: Optional[str] = None) -> None:
+def handle_keys(
+    row_list: List[str],
+    saved_json_path: Optional[str] = None,
+    clean_and_refill_age: bool = True,
+) -> None:
     # Build the graph
-    graph_data = {"keys": [], "rewards": [], "relationships": []}
+    graph_data = {"keys": {}, "items": {}, "relationships": {}}
     current_key = {}
     current_rotation = ""
     cursor = 0
@@ -200,26 +249,23 @@ def handle_keys(row_list: List[str], saved_json_path: Optional[str] = None) -> N
                 current_rotation = row[0].strip()
             else:
                 current_key = {"name": row[0]}
-                if current_key not in graph_data["keys"]:
-                    graph_data["keys"].append(current_key)
+                graph_data["keys"][current_key["name"]] = current_key
         elif len(row) == 2:
             item_name, probability = row[0].strip(), row[1].strip()
             prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
             if prob_match:
                 _, p_value = prob_match.groups()
-                reward = {"name": item_name.strip()}
-                graph_data["rewards"].append(reward)
-                graph_data["relationships"].append(
-                    {
-                        "from": current_key,
-                        "to": reward,
-                        "rel_type": "DROPS",
-                        "properties": {
-                            "chance": p_value.strip(),
-                            "rotation": current_rotation.strip(),
-                        },
-                    }
-                )
+                item = {"name": item_name.strip()}
+                graph_data["items"][item["name"]] = item
+                graph_data["relationships"][f"{current_key['name']}_{item['name']}"] = {
+                    "from": current_key,
+                    "to": item,
+                    "rel_type": "DROPS",
+                    "properties": {
+                        "chance": p_value.strip(),
+                        "rotation": current_rotation.strip(),
+                    },
+                }
         else:
             continue
 
@@ -231,52 +277,73 @@ def handle_keys(row_list: List[str], saved_json_path: Optional[str] = None) -> N
             json.dump(graph_data, f)
 
     # Store it in age
-    age = AgeDB()
-    total_operations = len(graph_data["keys"]) + len(graph_data["rewards"]) + len(graph_data["relationships"])
-    completed = 0
-    
-    print(f"Processing keys: 0% (0/{total_operations} operations)", end="", flush=True)
-    
-    for i, key in enumerate(graph_data["keys"]):
-        age.create_node(
-            graph="loot_tables",
-            label="Key",
-            properties=key,
+    if clean_and_refill_age:
+        age = AgeDB()
+        total_operations = (
+            len(graph_data["keys"])
+            + len(graph_data["items"])
+            + len(graph_data["relationships"])
         )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["keys"]) - 1:
-            print(f"\rProcessing keys: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    for i, reward in enumerate(graph_data["rewards"]):
-        age.create_node(
-            graph="loot_tables",
-            label="Reward",
-            properties=reward,
+        completed = 0
+
+        print(
+            f"Processing keys: 0% (0/{total_operations} operations)", end="", flush=True
         )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["rewards"]) - 1:
-            print(f"\rProcessing keys: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
 
-    for i, rel in enumerate(graph_data["relationships"]):
-        age.create_relationship(
-            graph="loot_tables",
-            from_label="Key",
-            from_match=rel["from"],
-            rel_type=rel["rel_type"],
-            to_label="Reward",
-            to_match=rel["to"],
-            rel_props=rel.get("properties", {}),
-        )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
-            print(f"\rProcessing keys: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    print()  # Move to next line after completion
-    age.close()
+        for i, key in enumerate(graph_data["keys"].values()):
+            age.create_node(
+                graph="loot_tables",
+                label="Key",
+                properties=key,
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["keys"]) - 1:
+                print(
+                    f"\rProcessing keys: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        for i, item in enumerate(graph_data["items"].values()):
+            age.create_node(
+                graph="loot_tables",
+                label="Item",
+                properties=item,
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["items"]) - 1:
+                print(
+                    f"\rProcessing keys: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        for i, relationship in enumerate(graph_data["relationships"].values()):
+            age.create_relationship(
+                graph="loot_tables",
+                from_label="Key",
+                from_match=relationship["from"],
+                rel_type=relationship["rel_type"],
+                to_label="Item",
+                to_match=relationship["to"],
+                rel_props=relationship.get("properties", {}),
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+                print(
+                    f"\rProcessing keys: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        print()
+        age.close()
 
 
-def handle_dynamic_location_rewards(
-    row_list: List[List[str]], saved_json_path: Optional[str] = None
+def handle_dynamic_location_items(
+    row_list: List[List[str]],
+    saved_json_path: Optional[str] = None,
+    clean_and_refill_age: bool = True,
 ) -> None:
     for sub_list in row_list:
         for element in sub_list:
@@ -284,7 +351,7 @@ def handle_dynamic_location_rewards(
                 sub_list.remove(element)
 
     # Build the graph
-    graph_data = {"dynamic_locations": [], "rewards": [], "relationships": []}
+    graph_data = {"dynamic_locations": {}, "items": {}, "relationships": {}}
     current_dynamic_location = {}
     current_rotation: str | None = ""
     cursor = 0
@@ -297,26 +364,27 @@ def handle_dynamic_location_rewards(
             else:
                 current_dynamic_location = {"name": row[0]}
                 current_rotation = None
-                if current_dynamic_location not in graph_data["dynamic_locations"]:
-                    graph_data["dynamic_locations"].append(current_dynamic_location)
+                graph_data["dynamic_locations"][current_dynamic_location["name"]] = (
+                    current_dynamic_location
+                )
         elif len(row) == 2:
             item_name, probability = row[0].strip(), row[1].strip()
             prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
             if prob_match:
                 _, p_value = prob_match.groups()
-                reward = {"name": item_name.strip()}
-                graph_data["rewards"].append(reward)
+                item = {"name": item_name.strip()}
+                graph_data["items"][item["name"]] = item
                 properties = {"chance": p_value.strip()}
                 if current_rotation:
                     properties["rotation"] = current_rotation.strip()
-                graph_data["relationships"].append(
-                    {
-                        "from": current_dynamic_location,
-                        "to": reward,
-                        "rel_type": "DROPS",
-                        "properties": properties,
-                    }
-                )
+                graph_data["relationships"][
+                    f"{current_dynamic_location['name']}_{item['name']}"
+                ] = {
+                    "from": current_dynamic_location,
+                    "to": item,
+                    "rel_type": "DROPS",
+                    "properties": properties,
+                }
         else:
             continue
 
@@ -328,55 +396,78 @@ def handle_dynamic_location_rewards(
             json.dump(graph_data, f)
 
     # Store it in age
-    age = AgeDB()
-    total_operations = len(graph_data["dynamic_locations"]) + len(graph_data["rewards"]) + len(graph_data["relationships"])
-    completed = 0
-    
-    print(f"Processing dynamic location rewards: 0% (0/{total_operations} operations)", end="", flush=True)
-    
-    for i, location in enumerate(graph_data["dynamic_locations"]):
-        age.create_node(
-            graph="loot_tables",
-            label="DynamicLocation",
-            properties=location,
+    if clean_and_refill_age:
+        age = AgeDB()
+        total_operations = (
+            len(graph_data["dynamic_locations"])
+            + len(graph_data["items"])
+            + len(graph_data["relationships"])
         )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["dynamic_locations"]) - 1:
-            print(f"\rProcessing dynamic location rewards: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    for i, reward in enumerate(graph_data["rewards"]):
-        age.create_node(
-            graph="loot_tables",
-            label="Reward",
-            properties=reward,
-        )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["rewards"]) - 1:
-            print(f"\rProcessing dynamic location rewards: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+        completed = 0
 
-    for i, rel in enumerate(graph_data["relationships"]):
-        age.create_relationship(
-            graph="loot_tables",
-            from_label="DynamicLocation",
-            from_match=rel["from"],
-            rel_type=rel["rel_type"],
-            to_label="Reward",
-            to_match=rel["to"],
-            rel_props=rel.get("properties", {}),
+        print(
+            f"Processing dynamic location items: 0% (0/{total_operations} operations)",
+            end="",
+            flush=True,
         )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
-            print(f"\rProcessing dynamic location rewards: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    print()  # Move to next line after completion
-    age.close()
+
+        for i, location in enumerate(graph_data["dynamic_locations"].values()):
+            age.create_node(
+                graph="loot_tables",
+                label="DynamicLocation",
+                properties=location,
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["dynamic_locations"]) - 1:
+                print(
+                    f"\rProcessing dynamic location items: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        for i, item in enumerate(graph_data["items"].values()):
+            age.create_node(
+                graph="loot_tables",
+                label="Item",
+                properties=item,
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["items"]) - 1:
+                print(
+                    f"\rProcessing dynamic location items: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        for i, rel in enumerate(graph_data["relationships"].values()):
+            age.create_relationship(
+                graph="loot_tables",
+                from_label="DynamicLocation",
+                from_match=rel["from"],
+                rel_type=rel["rel_type"],
+                to_label="Item",
+                to_match=rel["to"],
+                rel_props=rel.get("properties", {}),
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+                print(
+                    f"\rProcessing dynamic location items: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        print()  # Move to next line after completion
+        age.close()
 
 
 def handle_sorties(
-    row_list: List[List[str]], saved_json_path: Optional[str] = None
+    row_list: List[List[str]],
+    saved_json_path: Optional[str] = None,
+    clean_and_refill_age: bool = True,
 ) -> None:
     # Build the graph
-    graph_data = {"sorties": [{"name": "Sortie"}], "rewards": [], "relationships": []}
+    graph_data = {"sorties": {"name": "Sortie"}, "items": {}, "relationships": {}}
     cursor = 0
     while cursor < len(row_list):
         row = row_list[cursor]
@@ -386,16 +477,14 @@ def handle_sorties(
             prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
             if prob_match:
                 _, p_value = prob_match.groups()
-                reward = {"name": item_name.strip()}
-                graph_data["rewards"].append(reward)
-                graph_data["relationships"].append(
-                    {
-                        "from": {"name": "Sortie"},
-                        "to": reward,
-                        "rel_type": "DROPS",
-                        "properties": {"chance": p_value.strip()},
-                    }
-                )
+                item = {"name": item_name.strip()}
+                graph_data["items"][item_name] = item
+                graph_data["relationships"][f"Sortie_{item_name}"] = {
+                    "from": {"name": "Sortie"},
+                    "to": item,
+                    "rel_type": "DROPS",
+                    "properties": {"chance": p_value.strip()},
+                }
         else:
             continue
 
@@ -407,52 +496,74 @@ def handle_sorties(
             json.dump(graph_data, f)
 
     # Store it in age
-    age = AgeDB()
-    total_operations = len(graph_data["sorties"]) + len(graph_data["rewards"]) + len(graph_data["relationships"])
-    completed = 0
-    
-    print(f"Processing sorties: 0% (0/{total_operations} operations)", end="", flush=True)
-    
-    for i, sortie in enumerate(graph_data["sorties"]):
+    if clean_and_refill_age:
+        age = AgeDB()
+        total_operations = (
+            len(graph_data["sorties"])
+            + len(graph_data["items"])
+            + len(graph_data["relationships"])
+        )
+        completed = 0
+
+        print(
+            f"Processing sorties: 0% (0/{total_operations} operations)",
+            end="",
+            flush=True,
+        )
+
         age.create_node(
             graph="loot_tables",
             label="Sortie",
-            properties=sortie,
+            properties={"name": "Sortie"},
         )
         completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["sorties"]) - 1:
-            print(f"\rProcessing sorties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    for i, reward in enumerate(graph_data["rewards"]):
-        age.create_node(
-            graph="loot_tables",
-            label="Reward",
-            properties=reward,
+        print(
+            f"\rProcessing sorties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+            end="",
+            flush=True,
         )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["rewards"]) - 1:
-            print(f"\rProcessing sorties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
 
-    for i, rel in enumerate(graph_data["relationships"]):
-        age.create_relationship(
-            graph="loot_tables",
-            from_label="Sortie",
-            from_match=rel["from"],
-            rel_type=rel["rel_type"],
-            to_label="Reward",
-            to_match=rel["to"],
-            rel_props=rel.get("properties", {}),
-        )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
-            print(f"\rProcessing sorties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    print()  # Move to next line after completion
-    age.close()
+        for i, item in enumerate(graph_data["items"].values()):
+            age.create_node(
+                graph="loot_tables",
+                label="Item",
+                properties=item,
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["items"]) - 1:
+                print(
+                    f"\rProcessing sorties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        for i, rel in enumerate(graph_data["relationships"].values()):
+            age.create_relationship(
+                graph="loot_tables",
+                from_label="Sortie",
+                from_match=rel["from"],
+                rel_type=rel["rel_type"],
+                to_label="Item",
+                to_match=rel["to"],
+                rel_props=rel.get("properties", {}),
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+                print(
+                    f"\rProcessing sorties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        print()  # Move to next line after completion
+        age.close()
 
 
-def handle_bounty_rewards(
-    row_list: List[List[str]], mission_title: str, saved_json_path: Optional[str] = None
+def handle_bounty_items(
+    row_list: List[List[str]],
+    mission_title: str,
+    saved_json_path: Optional[str] = None,
+    clean_and_refill_age: bool = True,
 ) -> None:
     def parse_stages(s):
         if s.strip() == "Final Stage":
@@ -462,10 +573,10 @@ def handle_bounty_rewards(
 
     # Build the graph
     graph_data = {
-        "bounties": [{"name": mission_title}],
-        "levels": [],
-        "rewards": [],
-        "relationships": [],
+        "bounties": {"name": mission_title},
+        "levels": {},
+        "items": {},
+        "relationships": {},
     }
     cursor = 0
     current_level = {}
@@ -479,15 +590,15 @@ def handle_bounty_rewards(
                 current_rotation = row[0].strip()
             else:
                 current_level = {"name": row[0]}
-                if current_level not in graph_data["levels"]:
-                    graph_data["levels"].append(current_level)
-                    graph_data["relationships"].append(
-                        {
-                            "from": {"name": mission_title},
-                            "to": current_level,
-                            "rel_type": "HAS",
-                        }
-                    )
+                graph_data["levels"][current_level["name"]] = current_level
+                graph_data["relationships"][
+                    f"{mission_title}_{current_level['name']}"
+                ] = {
+                    "from": {"name": mission_title},
+                    "to": current_level,
+                    "rel_type": "HAS",
+                }
+
         elif len(row) == 2:
             current_stages = parse_stages(row[1])
         elif len(row) == 3:
@@ -495,21 +606,21 @@ def handle_bounty_rewards(
             prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
             if prob_match:
                 _, p_value = prob_match.groups()
-                reward = {"name": item_name.strip()}
-                graph_data["rewards"].append(reward)
+                item = {"name": item_name.strip()}
+                graph_data["items"][item["name"]] = item
                 properties = {
                     "chance": p_value.strip(),
                     "rotation": current_rotation.strip(),
                     "stages": current_stages,
                 }
-                graph_data["relationships"].append(
-                    {
-                        "from": current_level,
-                        "to": reward,
-                        "rel_type": "DROPS",
-                        "properties": properties,
-                    }
-                )
+                graph_data["relationships"][
+                    f"{current_level['name']}_{item['name']}"
+                ] = {
+                    "from": current_level,
+                    "to": item,
+                    "rel_type": "DROPS",
+                    "properties": properties,
+                }
         else:
             continue
 
@@ -524,79 +635,101 @@ def handle_bounty_rewards(
             json.dump(graph_data, f)
 
     # Store it in age
-    age = AgeDB()
-    total_operations = len(graph_data["bounties"]) + len(graph_data["levels"]) + len(graph_data["rewards"]) + len(graph_data["relationships"])
-    completed = 0
-    
-    print(f"Processing {mission_title} bounties: 0% (0/{total_operations} operations)", end="", flush=True)
-    
-    for i, bounty in enumerate(graph_data["bounties"]):
+    if clean_and_refill_age:
+        age = AgeDB()
+        total_operations = (
+            len(graph_data["bounties"])
+            + len(graph_data["levels"])
+            + len(graph_data["items"])
+            + len(graph_data["relationships"])
+        )
+        completed = 0
+
+        print(
+            f"Processing {mission_title} bounties: 0% (0/{total_operations} operations)",
+            end="",
+            flush=True,
+        )
+
         age.create_node(
             graph="loot_tables",
             label="Bounty",
-            properties=bounty,
+            properties={"name": mission_title},
         )
         completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["bounties"]) - 1:
-            print(f"\rProcessing {mission_title} bounties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    for i, level in enumerate(graph_data["levels"]):
-        age.create_node(
-            graph="loot_tables",
-            label="Level",
-            properties=level,
-        )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["levels"]) - 1:
-            print(f"\rProcessing {mission_title} bounties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    for i, reward in enumerate(graph_data["rewards"]):
-        age.create_node(
-            graph="loot_tables",
-            label="Reward",
-            properties=reward,
-        )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["rewards"]) - 1:
-            print(f"\rProcessing {mission_title} bounties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
 
-    for i, rel in enumerate(graph_data["relationships"]):
-        if rel["rel_type"] == "HAS":
-            age.create_relationship(
+        for i, level in enumerate(graph_data["levels"].values()):
+            age.create_node(
                 graph="loot_tables",
-                from_label="Bounty",
-                from_match=rel["from"],
-                rel_type=rel["rel_type"],
-                to_label="Level",
-                to_match=rel["to"],
-                rel_props={},
+                label="Level",
+                properties=level,
             )
-        else:
-            age.create_relationship(
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["levels"]) - 1:
+                print(
+                    f"\rProcessing {mission_title} bounties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        for i, item in enumerate(graph_data["items"].values()):
+            age.create_node(
                 graph="loot_tables",
-                from_label="Level",
-                from_match=rel["from"],
-                rel_type=rel["rel_type"],
-                to_label="Reward",
-                to_match=rel["to"],
-                rel_props=rel.get("properties", {}),
+                label="Item",
+                properties=item,
             )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
-            print(f"\rProcessing {mission_title} bounties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    print()  # Move to next line after completion
-    age.close()
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["items"]) - 1:
+                print(
+                    f"\rProcessing {mission_title} bounties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        for i, rel in enumerate(graph_data["relationships"].values()):
+            if rel["rel_type"] == "HAS":
+                age.create_relationship(
+                    graph="loot_tables",
+                    from_label="Bounty",
+                    from_match=rel["from"],
+                    rel_type=rel["rel_type"],
+                    to_label="Level",
+                    to_match=rel["to"],
+                    rel_props=rel.get("properties", {}),
+                )
+            else:
+                age.create_relationship(
+                    graph="loot_tables",
+                    from_label="Level",
+                    from_match=rel["from"],
+                    rel_type=rel["rel_type"],
+                    to_label="Item",
+                    to_match=rel["to"],
+                    rel_props=rel.get("properties", {}),
+                )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+                print(
+                    f"\rProcessing {mission_title} bounties: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        print()
+        age.close()
 
 
 def handle_general_drops(
-    row_list: List[List[str]], title: str, saved_json_path: Optional[str] = None
+    row_list: List[List[str]],
+    title: str,
+    saved_json_path: Optional[str] = None,
+    clean_and_refill_age: bool = True,
 ) -> None:
     # Build the graph
     graph_data = {
-        "sources": [],
-        "drops": [],
-        "relationships": [],
+        "sources": {},
+        "drops": {},
+        "relationships": {},
     }
     cursor = 0
     current_source = {}
@@ -604,33 +737,37 @@ def handle_general_drops(
     while cursor < len(row_list):
         row = row_list[cursor]
         cursor += 1
-        if len(row) == 2:
+        if len(row) == 1:
+            current_source = {"name": row[0].strip()}
+            graph_data["sources"][current_source["name"]] = current_source
+        elif len(row) == 2:
             source, match = row[0], re.search(r"(\d+\.?\d*)%", row[1])
             current_source = {"name": source.strip()}
-            if current_source not in graph_data["sources"]:
-                graph_data["sources"].append(current_source)
+            graph_data["sources"][current_source["name"]] = current_source
             if match:
                 current_global_drop_chance = match.group(0)
         elif len(row) == 3:
+            if row[0] == "Source":
+                continue
             item_name, probability = row[1].strip(), row[2].strip()
             prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
             if prob_match:
                 _, p_value = prob_match.groups()
                 drop = {"name": item_name.strip()}
-                graph_data["drops"].append(drop)
+                graph_data["drops"][drop["name"]] = drop
                 properties = {
                     "chance": p_value.strip(),
                     "global_drop_chance": current_global_drop_chance.strip(),
                     "probability": p_value.strip(),
                 }
-                graph_data["relationships"].append(
-                    {
-                        "from": current_source,
-                        "to": drop,
-                        "rel_type": "DROPS",
-                        "properties": properties,
-                    }
-                )
+                graph_data["relationships"][
+                    f"{current_source['name']}_{drop['name']}"
+                ] = {
+                    "from": current_source,
+                    "to": drop,
+                    "rel_type": "DROPS",
+                    "properties": properties,
+                }
         else:
             continue
 
@@ -644,69 +781,95 @@ def handle_general_drops(
             json.dump(graph_data, f)
 
     # Store it in age
-    age = AgeDB()
-    total_operations = len(graph_data["sources"]) + len(graph_data["drops"]) + len(graph_data["relationships"])
-    completed = 0
-    
-    print(f"Processing {title}: 0% (0/{total_operations} operations)", end="", flush=True)
-    
-    for i, source in enumerate(graph_data["sources"]):
-        age.create_node(
-            graph="loot_tables",
-            label="Source",
-            properties=source,
+    if clean_and_refill_age:
+        age = AgeDB()
+        total_operations = (
+            len(graph_data["sources"])
+            + len(graph_data["drops"])
+            + len(graph_data["relationships"])
         )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["sources"]) - 1:
-            print(f"\rProcessing {title}: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    for i, drop in enumerate(graph_data["drops"]):
-        age.create_node(
-            graph="loot_tables",
-            label="Drop",
-            properties=drop,
-        )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["drops"]) - 1:
-            print(f"\rProcessing {title}: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
+        completed = 0
 
-    for i, rel in enumerate(graph_data["relationships"]):
-        age.create_relationship(
-            graph="loot_tables",
-            from_label="Source",
-            from_match=rel["from"],
-            rel_type=rel["rel_type"],
-            to_label="Drop",
-            to_match=rel["to"],
-            rel_props=rel.get("properties", {}),
+        print(
+            f"Processing {title}: 0% (0/{total_operations} operations)",
+            end="",
+            flush=True,
         )
-        completed += 1
-        if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
-            print(f"\rProcessing {title}: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)", end="", flush=True)
-    
-    print()  # Move to next line after completion
-    age.close()
+
+        for i, source in enumerate(graph_data["sources"].values()):
+            age.create_node(
+                graph="loot_tables",
+                label="Source",
+                properties=source,
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["sources"]) - 1:
+                print(
+                    f"\rProcessing {title}: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        for i, drop in enumerate(graph_data["drops"].values()):
+            age.create_node(
+                graph="loot_tables",
+                label="Item",
+                properties=drop,
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["drops"]) - 1:
+                print(
+                    f"\rProcessing {title}: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        for i, rel in enumerate(graph_data["relationships"].values()):
+            age.create_relationship(
+                graph="loot_tables",
+                from_label="Source",
+                from_match=rel["from"],
+                rel_type=rel["rel_type"],
+                to_label="Item",
+                to_match=rel["to"],
+                rel_props=rel.get("properties", {}),
+            )
+            completed += 1
+            if (i + 1) % 10 == 0 or i == len(graph_data["relationships"]) - 1:
+                print(
+                    f"\rProcessing {title}: {int(completed * 100 / total_operations)}% ({completed}/{total_operations} operations)",
+                    end="",
+                    flush=True,
+                )
+
+        print()
+        age.close()
 
 
 # -------------------------------------------------------------------------------------------------
 
 
 def handle_read_values(
-    title: str, reading_list: list, temp_files_save_path: Optional[str]
+    title: Optional[str],
+    reading_list: list,
+    temp_files_save_path: Optional[str],
+    clean_and_refill_age: bool = True,
 ) -> None:
     if title is None:
         return
 
     if title == "Missions:":
-        handle_missions(reading_list, temp_files_save_path)
+        handle_missions(reading_list, temp_files_save_path, clean_and_refill_age)
     elif title == "Relics:":
-        handle_relics(reading_list, temp_files_save_path)
+        handle_relics(reading_list, temp_files_save_path, clean_and_refill_age)
     elif title == "Keys:":
-        handle_keys(reading_list, temp_files_save_path)
+        handle_keys(reading_list, temp_files_save_path, clean_and_refill_age)
     elif title == "Dynamic Location Rewards:":
-        handle_dynamic_location_rewards(reading_list, temp_files_save_path)
+        handle_dynamic_location_items(
+            reading_list, temp_files_save_path, clean_and_refill_age
+        )
     elif title == "Sorties:":
-        handle_sorties(reading_list, temp_files_save_path)
+        handle_sorties(reading_list, temp_files_save_path, clean_and_refill_age)
     elif title in [
         "Cetus Bounty Rewards:",
         "Orb Vallis Bounty Rewards:",
@@ -715,12 +878,21 @@ def handle_read_values(
         "Albrecht's Laboratories Bounty Rewards:",
         "Hex Bounty Rewards:",
     ]:
-        handle_bounty_rewards(reading_list, title[:-1], temp_files_save_path)
-    elif title in ["Mod Drops by Mod:", "Resource Drops by Resource:"]:
+        handle_bounty_items(
+            reading_list, title[:-1], temp_files_save_path, clean_and_refill_age
+        )
+    elif title in [
+        "Mod Drops by Mod:",
+        "Resource Drops by Resource:",
+        "Blueprint/Item Drops by Blueprint/Item:",
+    ]:
         return
     elif " Drops by " in title:
         handle_general_drops(
-            reading_list, title.replace("/", "-"), temp_files_save_path
+            reading_list,
+            title.replace("/", "-"),
+            temp_files_save_path,
+            clean_and_refill_age,
         )
     else:
         raise ValueError(f"Unknown title: {title}")
@@ -729,16 +901,22 @@ def handle_read_values(
 # -------------------------------------------------------------------------------------------------
 
 
-def compute_drop_tables(temp_files_save_path: Optional[str] = None):
+def compute_drop_tables(
+    temp_files_save_path: Optional[str] = None, clean_and_refill_age: bool = True
+):
+    if temp_files_save_path:
+        os.makedirs(temp_files_save_path, exist_ok=True)
+
     url = "https://www.warframe.com/fr/droptables"
     resp = requests.get(url, timeout=10)
     resp.raise_for_status()
 
-    age = AgeDB()
-    if "loot_tables" in age.list_graphs():
-        age.drop_graph("loot_tables", cascade=True)
-    age.create_graph("loot_tables")
-    age.close()
+    if clean_and_refill_age:
+        age = AgeDB()
+        if "loot_tables" in age.list_graphs():
+            age.drop_graph("loot_tables", cascade=True)
+        age.create_graph("loot_tables")
+        age.close()
 
     soup = BeautifulSoup(resp.text, "lxml")
     tables = soup.find_all("table")
@@ -749,7 +927,9 @@ def compute_drop_tables(temp_files_save_path: Optional[str] = None):
         h3 = table.find_previous("h3")
         title = h3.get_text(strip=True) if h3 else None
         if title != last_header:
-            handle_read_values(last_header, reading_list, temp_files_save_path)
+            handle_read_values(
+                last_header, reading_list, temp_files_save_path, clean_and_refill_age
+            )
             last_header = title
             reading_list = []
         for row in table.find_all("tr"):
@@ -760,16 +940,18 @@ def compute_drop_tables(temp_files_save_path: Optional[str] = None):
                 continue
             reading_list.append(values)
     if last_header:
-        handle_read_values(last_header, reading_list, temp_files_save_path)
+        handle_read_values(
+            last_header, reading_list, temp_files_save_path, clean_and_refill_age
+        )
 
     if temp_files_save_path:
         with open(f"{temp_files_save_path}/output.txt", "w", encoding="utf-8") as file:
+            file_last_header = None
             for table in tables:
                 h3 = table.find_previous("h3")
                 title = h3.get_text(strip=True) if h3 else None
-                if title != last_header:
-                    last_header = title
-                    reading_list = []
+                if title != file_last_header:
+                    file_last_header = title
                 file.write(str(title) + "\n")
                 for row in table.find_all("tr"):
                     cells = row.find_all(["td", "th"])
@@ -783,4 +965,27 @@ def compute_drop_tables(temp_files_save_path: Optional[str] = None):
 # -------------------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    compute_drop_tables()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Compute Warframe drop tables")
+    parser.add_argument(
+        "--output-path",
+        "-o",
+        default="./outputs",
+        help="Output directory path (default: ./outputs)",
+    )
+    parser.add_argument(
+        "--clean-and-refill-age",
+        "-c",
+        type=bool,
+        default=False,
+        help="Clean and refill AGE database (default: False)",
+    )
+
+    args = parser.parse_args()
+    if args.output_path == "None":
+        output_path = None
+    else:
+        output_path = args.output_path
+
+    compute_drop_tables(output_path, args.clean_and_refill_age)

@@ -55,7 +55,7 @@ if docker ps &> /dev/null; then
             SET search_path = ag_catalog, public;
 
             SELECT COUNT(*) FROM cypher('loot_tables', \$\$ MATCH (n) RETURN n \$\$) AS (n agtype);
-        " 2>/dev/null | grep -E '^[0-9]+$' | head -1)
+        " 2>/dev/null | grep -oE '[0-9]+' | head -1)
 
         if [[ "$node_count" =~ ^[0-9]+$ ]] && [ "$node_count" -gt 0 ]; then
             echo "  ✓ Graph has $node_count nodes - Ready for visualization!"

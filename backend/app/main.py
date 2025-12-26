@@ -1,4 +1,3 @@
-import threading
 import time
 import webbrowser
 from contextlib import asynccontextmanager
@@ -23,7 +22,7 @@ async def lifespan(application: FastAPI):
 
 
 # Create app then serve static files
-app = FastAPI(lifespan=lifespan)
+app: FastAPI = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -79,8 +78,6 @@ def open_browser():
 
 
 if __name__ == "__main__":
-    threading.Thread(target=open_browser).start()
-
     uvicorn.run(
         app,
         host="0.0.0.0",

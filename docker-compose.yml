@@ -21,7 +21,9 @@ services:
 
       # Graph is now Postgres (Apache AGE)
       GRAPH_DB_TYPE: postgres_age
-    command: ["python", "app/main.py"]
+    command: ["python", "-u", "app/main.py"]
+    tty: true
+    stdin_open: true
 
   frontend:
     build:

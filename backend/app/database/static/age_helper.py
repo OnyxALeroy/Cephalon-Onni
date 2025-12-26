@@ -4,11 +4,23 @@ from typing import Any, Dict, List, Optional
 
 import psycopg2
 import psycopg2.extras
+from psycopg2 import sql
 
 
-def get_dict_from_agtype(agtype_value: str) -> Dict[str, Any]:
+def get_dict_from_agtype(agtype_value: str) -> Any:
     import json
+    import re
 
+    if not agtype_value:
+        return None
+
+    # Handle arrays: remove suffix from each element
+    if agtype_value.startswith("[") and agtype_value.endswith("]"):
+        # Remove ::edge, ::vertex etc. from each element in the array
+        cleaned = re.sub(r"::\w+", "", agtype_value)
+        return json.loads(cleaned)
+
+    # Handle single values: remove suffix
     json_part = agtype_value.split("::")[0]
     return json.loads(json_part)
 
@@ -52,7 +64,9 @@ class AgeDB:
             if isinstance(v, (int, float)):
                 return str(v)
             if isinstance(v, str):
-                return "'" + v.replace("'", "\\'") + "'"
+                import json
+
+                return json.dumps(v)
             if isinstance(v, list):
                 return "[" + ", ".join(serialize(x) for x in v) + "]"
             if isinstance(v, dict):
@@ -144,22 +158,21 @@ class AgeDB:
         prop_map = self._to_cypher_map(properties)
 
         cypher = f"""
-        CREATE (n:{label} {prop_map})
+        MERGE (n:{label} {prop_map})
         """
 
         if return_node:
-            cypher += " RETURN n"
+            cypher += "\nRETURN n"
 
-        cypher = cypher.replace("%", "%%")
+        sql = f"""
+        SELECT 1
+        FROM cypher(%s, $$
+        {cypher}
+        $$) AS (_ agtype)
+        """
+
         with self.cursor() as cur:
-            cur.execute(
-                f"""
-                SELECT 1
-                FROM cypher(%s, $$ {cypher} $$)
-                AS (_ agtype)
-                """,
-                (graph,),
-            )
+            cur.execute(sql, (graph,))
 
     def create_relationship(
         self,
@@ -180,19 +193,24 @@ class AgeDB:
         cypher = f"""
         MATCH (f:{from_label} {from_map})
         MATCH (t:{to_label} {to_map})
-        CREATE (f)-[:{rel_type} {rel_map}]->(t)
+        MERGE (f)-[r:{rel_type}]->(t)
         """
 
-        cypher = cypher.replace("%", "%%")
+        if rel_props:
+            cypher += f"\nSET r += {rel_map}"
+
+        query = sql.SQL("""
+        SELECT 1
+        FROM cypher({graph}, $$
+        {cypher}
+        $$) AS (_ agtype)
+        """).format(
+            graph=sql.Literal(graph),
+            cypher=sql.SQL(cypher),
+        )
+
         with self.cursor() as cur:
-            cur.execute(
-                f"""
-                SELECT 1
-                FROM cypher(%s, $$ {cypher} $$)
-                AS (_ agtype)
-                """,
-                (graph,),
-            )
+            cur.execute(query)
 
     # ------------------------------------------------------------------
     # Query helpers
