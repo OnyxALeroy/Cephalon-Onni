@@ -104,25 +104,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useGraphApi } from '@/composables/useGraphApi';
+import { usePersistentData } from '@/composables/usePersistentData';
 
 const { createNewNode, createNewEdge, updateGraphStats } = useGraphApi();
+const { getEditorData, setEditorData } = usePersistentData();
 
 const loading = ref(false);
 
+// Initialize from persistent data
+const persistentData = getEditorData();
+
 // Node form data
-const newNode = ref({ type: "", label: "", properties: {} });
-const newNodeProperties = ref<string>("{}");
+const newNode = ref({ ...persistentData.newNode });
+const newNodeProperties = ref<string>(persistentData.newNodeProperties);
 
 // Edge form data
 const newEdge = ref({ 
-  from_node: "", 
-  to_node: "", 
-  relationship_type: "DROPS", 
-  properties: {} 
+  ...persistentData.newEdge
 });
-const newEdgeProperties = ref<string>("{}");
+const newEdgeProperties = ref<string>(persistentData.newEdgeProperties);
+
+// Watch for changes and save to persistent storage
+watch([newNode, newNodeProperties, newEdge, newEdgeProperties], () => {
+  setEditorData({
+    newNode: { ...newNode.value },
+    newNodeProperties: newNodeProperties.value,
+    newEdge: { ...newEdge.value },
+    newEdgeProperties: newEdgeProperties.value
+  });
+}, { deep: true });
 
 // Handle node creation
 async function handleCreateNode() {
@@ -187,6 +199,7 @@ async function handleCreateEdge() {
 function resetCreateForm() {
   newNode.value = { type: "", label: "", properties: {} };
   newNodeProperties.value = "{}";
+  // Persistent data will be updated automatically by the watcher
 }
 
 // Reset edge form
@@ -198,6 +211,7 @@ function resetEdgeForm() {
     properties: {} 
   };
   newEdgeProperties.value = "{}";
+  // Persistent data will be updated automatically by the watcher
 }
 </script>
 
