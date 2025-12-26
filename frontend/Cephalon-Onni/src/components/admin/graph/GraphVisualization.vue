@@ -190,17 +190,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useGraphApi } from "@/composables/useGraphApi";
+import { usePersistentData } from "@/composables/usePersistentData";
 
 const loading = ref(false);
-const searchName = ref("");
-const searchLabel = ref("");
-const selectedNode = ref<any>(null);
-const searchResults = ref<any[]>([]);
-const graphData = ref<any>(null);
-
 const { searchNodes, loadNodeNeighbors } = useGraphApi();
+const { getVisualizationData, setVisualizationData } = usePersistentData();
+
+// Initialize from persistent data
+const persistentData = getVisualizationData();
+
+const searchName = ref(persistentData.searchName);
+const searchLabel = ref(persistentData.searchLabel);
+const selectedNode = ref<any>(persistentData.selectedNode);
+const searchResults = ref<any[]>(persistentData.searchResults);
+const graphData = ref<any>(persistentData.graphData);
+
+// Watch for changes and save to persistent storage
+watch([searchName, searchLabel, selectedNode, searchResults, graphData], () => {
+  setVisualizationData({
+    searchName: searchName.value,
+    searchLabel: searchLabel.value,
+    selectedNode: selectedNode.value,
+    searchResults: searchResults.value,
+    graphData: graphData.value
+  });
+}, { deep: true });
 
 // Search for nodes by name and/or label
 async function handleSearchNodes() {
