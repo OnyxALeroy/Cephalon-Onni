@@ -125,7 +125,9 @@
                         <tr>
                             <th>Node Name</th>
                             <th>Type</th>
-                            <th>Properties</th>
+                            <th>Relationship</th>
+                            <th>Relationship Properties</th>
+                            <th>Node Properties</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -139,13 +141,34 @@
                                     neighbor.type
                                 }}</span>
                             </td>
+                            <td class="relationship-cell">
+                                <span class="relationship-badge">{{
+                                    neighbor.relationship_type
+                                }}</span>
+                            </td>
+                            <td class="relationship-properties-cell">
+                                <div class="properties-list">
+                                    <div
+                                        v-for="(
+                                            value, key
+                                        ) in neighbor.relationship_properties"
+                                        :key="'rel-' + key"
+                                        class="property-item"
+                                    >
+                                        <span class="prop-key">{{ key }}:</span>
+                                        <span class="prop-value">{{
+                                            value
+                                        }}</span>
+                                    </div>
+                                </div>
+                            </td>
                             <td class="properties-cell">
                                 <div class="properties-list">
                                     <div
                                         v-for="(
                                             value, key
                                         ) in neighbor.properties"
-                                        :key="key"
+                                        :key="'node-' + key"
                                         class="property-item"
                                     >
                                         <span class="prop-key">{{ key }}:</span>
@@ -258,8 +281,12 @@ const firstDepthNeighbors = computed(() => {
         return [];
     }
     
-    // Return the neighbors directly from the new API response
-    return graphData.value.neighbors;
+    // Return the neighbors with relationship data from the API response
+    return graphData.value.neighbors.map(neighbor => ({
+        ...neighbor,
+        relationship_type: neighbor.relationship_type || 'Unknown',
+        relationship_properties: neighbor.relationship_properties || {}
+    }));
 });
 </script>
 
@@ -539,6 +566,10 @@ const firstDepthNeighbors = computed(() => {
     text-align: center;
 }
 
+.relationship-cell {
+    text-align: center;
+}
+
 .type-badge {
     background: #38bdf8;
     color: #021019;
@@ -546,6 +577,19 @@ const firstDepthNeighbors = computed(() => {
     border-radius: 12px;
     font-size: 0.8rem;
     font-weight: 600;
+}
+
+.relationship-badge {
+    background: #f59e0b;
+    color: #021019;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.relationship-properties-cell {
+    max-width: 250px;
 }
 
 .properties-cell {
