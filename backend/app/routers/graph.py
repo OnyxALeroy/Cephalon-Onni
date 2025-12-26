@@ -259,10 +259,11 @@ async def get_node_neighbors(
 
         neighbors = []
 
-        # Process the results to collect only the neighbors
+        # Process the results to collect neighbors with relationship info
         for row in result:
             end_node_data = get_dict_from_agtype(row["end_node"])
             end_node_labels = get_dict_from_agtype(row["end_labels"])
+            rel_data = get_dict_from_agtype(row["rel"])
 
             # Add neighbor node
             if isinstance(end_node_data, dict):
@@ -276,11 +277,17 @@ async def get_node_neighbors(
                     elif isinstance(end_node_labels, list) and len(end_node_labels) > 0:
                         end_label = str(end_node_labels[0])
 
+                # Extract relationship information
+                relationship_type = rel_data.get("label", "Unknown") if rel_data else "Unknown"
+                relationship_properties = rel_data.get("properties", {}) if rel_data else {}
+
                 neighbor = {
                     "id": end_id,
                     "name": end_node_data.get("properties", {}).get("name", "Unknown"),
                     "type": end_label,
                     "properties": end_node_data.get("properties", {}),
+                    "relationship_type": relationship_type,
+                    "relationship_properties": relationship_properties,
                 }
 
                 neighbors.append(neighbor)
