@@ -26,15 +26,6 @@ echo "Container Status:"
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "(cephalon|backend|frontend|mongo)" || echo "No containers found with expected names"
 echo ""
 
-# Check backend logs
-echo "Backend Logs (last 20 lines):"
-if docker ps | grep -q backend; then
-    docker logs --tail 20 $(docker ps -q --filter "name=backend") 2>&1
-else
-    echo "Backend container not found"
-fi
-echo ""
-
 # Check frontend logs
 echo "Frontend Logs (last 20 lines):"
 if docker ps | grep -q frontend; then
@@ -83,3 +74,17 @@ echo "Access URLs:"
 echo "Frontend: http://localhost:8080"
 echo "Backend API: http://localhost:8000"
 echo "API Docs: http://localhost:8000/docs"
+echo ""
+
+# Backend logs section - runs indefinitely until Ctrl+C
+echo "Backend Live Logs (Press Ctrl+C to exit):"
+echo "=========================================="
+echo ""
+
+if docker ps | grep -q backend; then
+    # Show last 10 lines then follow live logs indefinitely
+    docker logs --tail 10 -f $(docker ps -q --filter "name=backend") 2>&1
+else
+    echo "Backend container not found"
+    exit 1
+fi

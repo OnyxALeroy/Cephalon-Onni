@@ -99,13 +99,12 @@ export function useGraphApi() {
     }
   }
 
-  // Load node neighbors with specified depth using name and/or label
-  async function loadNodeNeighbors(name: string = "", label: string = "", depth: number = 2) {
+  // Load node neighbors using name and/or label (depth is hardcoded in backend)
+  async function loadNodeNeighbors(name: string = "", label: string = "") {
     try {
       const params = new URLSearchParams();
       if (name) params.append('name', name);
       if (label) params.append('label', label);
-      params.append('depth', depth.toString());
       
       console.log(`Loading neighbors with params: ${params.toString()}`);
       const response = await fetch(`/api/graph/neighbors?${params}`);
