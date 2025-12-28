@@ -19,13 +19,23 @@
           </select>
         </div>
         <div class="form-row">
-          <label>Label/Name:</label>
+          <label>Node Name:</label>
+          <input 
+            v-model="newNode.name" 
+            type="text" 
+            required 
+            class="form-input" 
+            placeholder="Node name" 
+          />
+        </div>
+        <div class="form-row">
+          <label>Label/Type:</label>
           <input 
             v-model="newNode.label" 
             type="text" 
             required 
             class="form-input" 
-            placeholder="Node name" 
+            placeholder="Node label/type" 
           />
         </div>
         <div class="form-row">
@@ -106,7 +116,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { useGraphApi } from '@/composables/useGraphApi';
-import { usePersistentData } from '@/composables/usePersistentData';
+import { usePersistentData, GraphNode, GraphEdge } from '@/composables/usePersistentData';
 
 const { createNewNode, createNewEdge, updateGraphStats } = useGraphApi();
 const { getEditorData, setEditorData } = usePersistentData();
@@ -197,7 +207,7 @@ async function handleCreateEdge() {
 
 // Reset node form
 function resetCreateForm() {
-  newNode.value = { type: "", label: "", properties: {} };
+  newNode.value = { name: "", type: "", label: "", properties: {} };
   newNodeProperties.value = "{}";
   // Persistent data will be updated automatically by the watcher
 }

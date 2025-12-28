@@ -1,27 +1,59 @@
 import { ref, watch } from 'vue'
 
+// API Response Interfaces (matching Pydantic models)
+export interface GraphNode {
+  id?: string
+  name: string
+  type: string
+  label: string
+  properties: Record<string, any>
+}
+
+export interface NodeNeighbor {
+  id: string
+  name: string
+  type: string
+  properties: Record<string, any>
+  relationship_type: string
+  relationship_properties: Record<string, any>
+  relationship_direction: string
+}
+
+export interface NodeSearchResponse {
+  nodes: GraphNode[]
+}
+
+export interface GraphResponse {
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+}
+
+export interface NodeNeighborsResponse {
+  neighbors: NodeNeighbor[]
+  count: number
+}
+
 // Define the data structure for persistence
 interface GraphVisualizationData {
   searchName: string
   searchLabel: string
-  selectedNode: any
-  searchResults: any[]
-  graphData: any
+  selectedNode: GraphNode | null
+  searchResults: GraphNode[]
+  graphData: GraphResponse | null
+}
+
+export interface GraphEdge {
+  id?: string
+  from_node: string
+  to_node: string
+  relationship_type: string
+  properties: Record<string, any>
 }
 
 interface GraphEditorData {
-  newNode: {
-    type: string
-    label: string
-    properties: any
-  }
+  newNode: Omit<GraphNode, 'id'>
   newNodeProperties: string
-  newEdge: {
-    from_node: string
-    to_node: string
-    relationship_type: string
-    properties: any
-  }
+  newEdge: Omit<GraphEdge, 'id'>
   newEdgeProperties: string
 }
 
@@ -43,6 +75,7 @@ const defaultVisualizationData: GraphVisualizationData = {
 
 const defaultEditorData: GraphEditorData = {
   newNode: {
+    name: '',
     type: '',
     label: '',
     properties: {}

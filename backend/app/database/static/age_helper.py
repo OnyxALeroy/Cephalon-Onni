@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import psycopg2
 import psycopg2.extras
+from models.age_models import GraphEdge, GraphNode
 from psycopg2 import sql
 
 
@@ -148,6 +149,36 @@ class AgeDB:
     # Convenience helpers
     # ------------------------------------------------------------------
 
+    def to_graph_node(self, node: dict) -> GraphNode:
+        """
+        Convert an Apache AGE vertex dict into a GraphNode.
+        """
+        props = node.get("properties", {})
+
+        return GraphNode(
+            id=str(node["id"]),
+            name=props.get("name", ""),  # fallback if missing
+            type=node["label"],  # semantic type
+            label=node["label"],  # visual / UI label
+            properties=props,
+        )
+
+    def to_graph_edge(self, edge: dict) -> GraphEdge:
+        """
+        Convert an Apache AGE edge dict into a GraphEdge.
+        """
+        return GraphEdge(
+            id=str(edge["id"]),
+            from_node=str(edge["start_id"]),
+            to_node=str(edge["end_id"]),
+            relationship_type=edge["label"],
+            properties=edge.get("properties", {}),
+        )
+
+    # ------------------------------------------------------------------
+    # Convenience helpers
+    # ------------------------------------------------------------------
+
     def create_node(
         self,
         graph: str,
@@ -211,6 +242,41 @@ class AgeDB:
 
         with self.cursor() as cur:
             cur.execute(query)
+
+    def get_node(self, graph: str, node_name: str) -> GraphNode:
+        where_clause = f"n.name CONTAINS '{node_name}'"
+        query = f"""
+        MATCH (n)
+        WHERE {where_clause}
+        RETURN n, labels(n) as node_labels
+        LIMIT 50
+        """
+
+        result = self.cypher("loot_tables", query, "n agtype, node_labels agtype")[0]
+        node_data = get_dict_from_agtype(result["n"])
+        node_labels = result["node_labels"]
+        node_id = node_data.get("id")
+        node_name = node_data["properties"].get("name")
+        type = node_data["properties"].get("type")
+        properties = node_data.get("properties", {})
+
+        label = "Unknown"
+        if node_labels and len(node_labels) > 0:
+            if isinstance(node_labels, str):
+                label = node_labels.strip('[]"')
+            elif isinstance(node_labels, list):
+                if isinstance(node_labels[0], str):
+                    label = node_labels[0]
+                else:
+                    label = str(node_labels[0])
+
+        return GraphNode(
+            id=str(node_id or ""),
+            name=node_name or "Unknown",
+            type=type or "Unknown",
+            label=label,
+            properties=properties,
+        )
 
     # ------------------------------------------------------------------
     # Query helpers
