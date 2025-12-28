@@ -2,7 +2,7 @@
     <div class="graph-visualization">
         <div class="graph-controls">
             <div class="search-section">
-                <h3>Node Search</h3>
+                <h3>Loot Tables Node Search</h3>
                 <div class="input-group">
                     <div class="input-field">
                         <label for="node-name">Node Name:</label>
@@ -85,38 +85,35 @@
         <div v-else-if="graphData" class="graph-summary-container">
             <div class="graph-stats">
                 <div class="stat-item">
-                    <div class="stat-label">Total Nodes</div>
-                    <div class="stat-value">{{ graphData?.nodes?.length || 0 }}</div>
+                    <div class="stat-label">Total Neighbors</div>
+                    <div class="stat-value">{{ graphData?.neighbors?.length || 0 }}</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">Total Edges</div>
-                    <div class="stat-value">{{ graphData?.edges?.length || 0 }}</div>
+                    <div class="stat-label">Starting Node</div>
+                    <div class="stat-value">{{ graphData?.starting_node?.name || "None" }}</div>
                 </div>
             </div>
 
-            <h3 v-if="selectedNode">
-                Graph for {{ selectedNode.name }} ({{
-                    selectedNode.label
+            <h3 v-if="graphData?.starting_node">
+                Neighbors of {{ graphData.starting_node.name }} ({{
+                    graphData.starting_node.label
                 }})
             </h3>
 
-<!-- Nodes Section -->
-            <div class="section" v-if="graphData?.nodes?.length">
-                <h4>Nodes ({{ graphData.nodes.length }})</h4>
+<!-- Starting Node Section -->
+            <div class="section" v-if="graphData?.starting_node">
+                <h4>Starting Node</h4>
                 <div class="nodes-grid">
                     <div
-                        v-for="node in graphData.nodes"
-                        :key="node.id"
-                        class="node-card"
-                        :class="{ 'selected-node': selectedNode?.id === node.id }"
+                        class="node-card selected-node"
                     >
                         <div class="node-header">
-                            <div class="node-name">{{ node.name }}</div>
-                            <span class="type-badge">{{ node.type }}</span>
+                            <div class="node-name">{{ graphData.starting_node.name }}</div>
+                            <span class="type-badge">{{ graphData.starting_node.type }}</span>
                         </div>
                         <div class="node-properties">
                             <div
-                                v-for="(value, key) in node.properties"
+                                v-for="(value, key) in graphData.starting_node.properties"
                                 :key="key"
                                 class="property-item"
                             >
@@ -128,24 +125,59 @@
                 </div>
             </div>
 
-<!-- Edges Section -->
-            <div class="section" v-if="graphData?.edges?.length">
-                <h4>Edges ({{ graphData.edges.length }})</h4>
+<!-- Neighbors Section -->
+            <div class="section" v-if="graphData?.neighbors?.length">
+                <h4>Neighbors ({{ graphData.neighbors.length }})</h4>
                 <div class="edges-grid">
                     <div
-                        v-for="edge in graphData.edges"
-                        :key="edge.id"
+                        v-for="(neighbor, index) in graphData.neighbors"
+                        :key="neighbor.id"
                         class="edge-card"
                     >
                         <div class="edge-header">
-                            <span class="relationship-badge">{{ edge.relationship_type }}</span>
-                            <div class="edge-direction">
-                                {{ getEdgeDisplay(edge) }}
+                            <span class="relationship-badge">{{ neighbor.relationship_type }}</span>
+                        <div class="edge-direction">
+                            <span class="direction-badge" :class="neighbor.relationship_direction">
+                                {{ neighbor.relationship_direction }}
+                            </span>
+                        </div>
+                        <div class="node-card">
+                            <div class="node-header">
+                                <div class="node-name">{{ neighbor.name }}</div>
+                                <span class="type-badge">{{ neighbor.type }}</span>
+                            </div>
+                            <div class="node-properties">
+                                <div
+                                    v-for="(value, key) in neighbor.properties"
+                                    :key="key"
+                                    class="property-item"
+                                >
+                                    <span class="prop-key">{{ key }}:</span>
+                                    <span class="prop-value">{{ value }}</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="edge-properties">
+                        </div>
+                        <div class="node-card">
+                            <div class="node-header">
+                                <div class="node-name">{{ neighbor.name }}</div>
+                                <span class="type-badge">{{ neighbor.type }}</span>
+                            </div>
+                            <div class="node-properties">
+                                <div
+                                    v-for="(value, key) in neighbor.properties"
+                                    :key="key"
+                                    class="property-item"
+                                >
+                                    <span class="prop-key">{{ key }}:</span>
+                                    <span class="prop-value">{{ value }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="Object.keys(neighbor.relationship_properties).length > 0" class="edge-properties">
+                            <h5>Relationship Properties</h5>
                             <div
-                                v-for="(value, key) in edge.properties"
+                                v-for="(value, key) in neighbor.relationship_properties"
                                 :key="key"
                                 class="property-item"
                             >
@@ -164,41 +196,119 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
-import { useGraphApi } from "@/composables/useGraphApi";
-import {
-    usePersistentData,
-    GraphNode,
-    NodeNeighborsResponse,
-    GraphResponse,
-} from "@/composables/usePersistentData";
+
+interface GraphNode {
+    id: string;
+    name: string;
+    type: string;
+    label: string;
+    properties: Record<string, any>;
+}
+
+interface GraphEdge {
+    id: string;
+    from_node: string;
+    to_node: string;
+    relationship_type: string;
+    properties: Record<string, any>;
+}
+
+interface NodeNeighbor {
+    id: string;
+    name: string;
+    type: string;
+    properties: Record<string, any>;
+    relationship_type: string;
+    relationship_properties: Record<string, any>;
+    relationship_direction: "outgoing" | "incoming";
+}
+
+interface GraphResponse {
+    nodes: GraphNode[];
+    edges: GraphEdge[];
+}
+
+interface NodeNeighborsResponse {
+    starting_node: GraphNode;
+    neighbors: NodeNeighbor[];
+    count: number;
+}
+
+interface NodeSearchResponse {
+    nodes: GraphNode[];
+}
+
+interface ApiResponse<T> {
+    success: boolean;
+    data?: T;
+    error?: string;
+}
 
 const loading = ref(false);
-const { searchNodes, loadNodeNeighbors } = useGraphApi();
-const { getVisualizationData, setVisualizationData } = usePersistentData();
 
-// Initialize from persistent data
-const persistentData = getVisualizationData();
+// Reactive state
+const searchName = ref("");
+const searchLabel = ref("");
+const selectedNode = ref<GraphNode | null>(null);
+const searchResults = ref<GraphNode[]>([]);
+const graphData = ref<NodeNeighborsResponse | null>(null);
 
-const searchName = ref(persistentData.searchName);
-const searchLabel = ref(persistentData.searchLabel);
-const selectedNode = ref<GraphNode | null>(persistentData.selectedNode);
-const searchResults = ref<GraphNode[]>(persistentData.searchResults);
-const graphData = ref<GraphResponse | null>(persistentData.graphData);
-
-// Watch for changes and save to persistent storage
-watch(
-    [searchName, searchLabel, selectedNode, searchResults, graphData],
-    () => {
-        setVisualizationData({
-            searchName: searchName.value,
-            searchLabel: searchLabel.value,
-            selectedNode: selectedNode.value,
-            searchResults: searchResults.value,
-            graphData: graphData.value,
+// API call to search nodes in loottables
+async function searchNodes(name: string, label: string): Promise<ApiResponse<NodeSearchResponse>> {
+    try {
+        const params = new URLSearchParams();
+        if (name) params.append('name', name);
+        if (label) params.append('label', label);
+        
+        const response = await fetch(`/api/loottables/search/nodes?${params}`, {
+            credentials: "include"
         });
-    },
-    { deep: true },
-);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return {
+            success: true,
+            data: data
+        };
+    } catch (error) {
+        console.error('Error searching nodes:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+
+// API call to get node neighbors
+async function loadNodeNeighbors(name: string): Promise<ApiResponse<NodeNeighborsResponse>> {
+    try {
+        const params = new URLSearchParams();
+        params.append('name', name);
+        
+        const response = await fetch(`/api/loottables/neighbors?${params}`, {
+            credentials: "include"
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return {
+            success: true,
+            data: data
+        };
+    } catch (error) {
+        console.error('Error loading node neighbors:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
 
 // Search for nodes by name and/or label
 async function handleSearchNodes() {
@@ -259,7 +369,6 @@ async function handleLoadNodeNeighbors() {
     try {
         const result = await loadNodeNeighbors(
             selectedNode.value.name,
-            selectedNode.value.label,
         );
 
         if (result.success && result.data) {
@@ -275,11 +384,14 @@ async function handleLoadNodeNeighbors() {
     }
 }
 
-// Helper function to get edge display text
-function getEdgeDisplay(edge: any) {
-    const fromNode = graphData.value?.nodes?.find(n => n.id === edge.from_node);
-    const toNode = graphData.value?.nodes?.find(n => n.id === edge.to_node);
-    return `${fromNode?.name || edge.from_node} → ${toNode?.name || edge.to_node}`;
+// Helper function to get neighbor display text
+function getNeighborDisplay(neighbor: NodeNeighbor) {
+    const startNode = graphData.value?.starting_node;
+    if (neighbor.relationship_direction === "outgoing") {
+        return `${startNode?.name || "Unknown"} → ${neighbor.name}`;
+    } else {
+        return `${neighbor.name} → ${startNode?.name || "Unknown"}`;
+    }
 }
 </script>
 

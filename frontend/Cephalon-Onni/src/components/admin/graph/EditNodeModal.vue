@@ -4,6 +4,15 @@
       <h3>Edit Node</h3>
       <form @submit.prevent="handleUpdateNode" class="edit-form">
         <div class="form-row">
+          <label>Node Name:</label>
+          <input 
+            v-model="editingNode.name" 
+            type="text" 
+            required 
+            class="form-input" 
+          />
+        </div>
+        <div class="form-row">
           <label>Node Type:</label>
           <input 
             v-model="editingNode.type" 
@@ -13,7 +22,7 @@
           />
         </div>
         <div class="form-row">
-          <label>Label/Name:</label>
+          <label>Label:</label>
           <input 
             v-model="editingNode.label" 
             type="text" 
@@ -45,13 +54,14 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { useGraphApi } from '@/composables/useGraphApi';
+import { GraphNode } from '@/composables/usePersistentData';
 
 const { updateNode, updateGraphStats } = useGraphApi();
 
 // Props
 const props = defineProps<{
   visible: boolean;
-  node: any;
+  node: GraphNode;
 }>();
 
 // Emits
@@ -61,7 +71,7 @@ const emit = defineEmits<{
 
 // Local state
 const loading = ref(false);
-const editingNode = ref({ id: "", type: "", label: "", properties: {} });
+const editingNode = ref<GraphNode>({ id: "", name: "", type: "", label: "", properties: {} });
 const editingNodeProperties = ref<string>("{}");
 
 // Watch for node prop changes
@@ -82,6 +92,7 @@ async function handleUpdateNode() {
     }
     
     const nodeData = {
+      name: editingNode.value.name,
       type: editingNode.value.type,
       label: editingNode.value.label,
       properties

@@ -1,8 +1,9 @@
 import { ref } from 'vue';
+import { GraphNode, NodeSearchResponse, NodeNeighborsResponse, GraphEdge, GraphResponse } from './usePersistentData';
 
 // Graph API composable for managing graph-related API calls
 export function useGraphApi() {
-  const searchResults = ref<any[]>([]);
+  const searchResults = ref<GraphNode[]>([]);
   const graphStats = ref({
     totalNodes: 0,
     totalEdges: 0,
@@ -15,7 +16,7 @@ export function useGraphApi() {
     if (!query.trim()) return { success: false };
     
     try {
-      const response = await fetch("/api/graph/search", {
+      const response = await fetch("/api/admin/graph/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query, type })
@@ -39,7 +40,7 @@ export function useGraphApi() {
     if (!query.trim()) return { success: false };
     
     try {
-      const response = await fetch("/api/graph/cypher", {
+      const response = await fetch("/api/admin/graph/cypher", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query })
@@ -62,7 +63,7 @@ export function useGraphApi() {
   // Update graph statistics
   async function updateGraphStats() {
     try {
-      const response = await fetch("/api/graph/stats");
+      const response = await fetch("/api/admin/graph/stats");
       if (response.ok) {
         graphStats.value = await response.json();
         return { success: true };
@@ -74,18 +75,20 @@ export function useGraphApi() {
   }
 
   // Search nodes by name and/or label
-  async function searchNodes(name: string = "", label: string = "") {
+  async function searchNodes(name: string = "", label: string = ""): Promise<{ success: boolean; data?: NodeSearchResponse; error?: string }> {
     try {
-      const params = new URLSearchParams();
-      if (name) params.append('name', name);
-      if (label) params.append('label', label);
+      const requestBody: any = { query: name || "", type: "all" };
       
-      console.log(`Searching nodes with params: ${params.toString()}`);
-      const response = await fetch(`/api/graph/search/nodes?${params}`);
+      console.log(`Searching nodes with body:`, requestBody);
+      const response = await fetch("/api/admin/graph/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody)
+      });
       console.log('Search response status:', response.status);
       
       if (response.ok) {
-        const data = await response.json();
+        const data: NodeSearchResponse = await response.json();
         console.log('Search response data:', data);
         return { success: true, data };
       } else {
@@ -95,23 +98,23 @@ export function useGraphApi() {
       }
     } catch (error) {
       console.error("Node search error:", error);
-      return { success: false, error };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
   // Load node neighbors using name and/or label (depth is hardcoded in backend)
-  async function loadNodeNeighbors(name: string = "", label: string = "") {
+  async function loadNodeNeighbors(name: string = "", label: string = ""): Promise<{ success: boolean; data?: GraphResponse; error?: string }> {
     try {
       const params = new URLSearchParams();
       if (name) params.append('name', name);
       if (label) params.append('label', label);
       
       console.log(`Loading neighbors with params: ${params.toString()}`);
-      const response = await fetch(`/api/graph/neighbors?${params}`);
+      const response = await fetch(`/api/admin/graph/neighbors?${params}`);
       console.log('Neighbors response status:', response.status);
       
       if (response.ok) {
-        const data = await response.json();
+        const data: GraphResponse = await response.json();
         console.log('Neighbors response data:', data);
         return { success: true, data };
       } else {
@@ -121,14 +124,14 @@ export function useGraphApi() {
       }
     } catch (error) {
       console.error("Node neighbors load error:", error);
-      return { success: false, error };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
   // Create new node
-  async function createNewNode(nodeData: any) {
+  async function createNewNode(nodeData: Omit<GraphNode, 'id'>) {
     try {
-      const response = await fetch("/api/graph/nodes", {
+      const response = await fetch("/api/admin/graph/nodes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(nodeData)
@@ -147,9 +150,9 @@ export function useGraphApi() {
   }
 
   // Create new edge
-  async function createNewEdge(edgeData: any) {
+  async function createNewEdge(edgeData: Omit<GraphEdge, 'id'>) {
     try {
-      const response = await fetch("/api/graph/edges", {
+      const response = await fetch("/api/admin/graph/edges", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(edgeData)
@@ -168,9 +171,9 @@ export function useGraphApi() {
   }
 
   // Update node
-  async function updateNode(nodeId: string, nodeData: any) {
+  async function updateNode(nodeId: string, nodeData: Omit<GraphNode, 'id'>) {
     try {
-      const response = await fetch(`/api/graph/nodes/${nodeId}`, {
+      const response = await fetch(`/api/admin/graph/nodes/${nodeId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(nodeData)
@@ -191,7 +194,7 @@ export function useGraphApi() {
   // Delete node
   async function deleteNode(nodeId: string) {
     try {
-      const response = await fetch(`/api/graph/nodes/${nodeId}`, {
+      const response = await fetch(`/api/admin/graph/nodes/${nodeId}`, {
         method: "DELETE"
       });
       
