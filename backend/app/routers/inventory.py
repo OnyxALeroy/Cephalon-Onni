@@ -3,7 +3,7 @@ from bson import ObjectId
 from typing import List
 from database.dynamic.db import inventories_collection
 from models.inventories import InventoryPublic
-from database.dynamic.auth import decode_token
+from routers.user import decode_token
 
 router = APIRouter(prefix="/api/inventory")
 

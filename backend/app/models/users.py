@@ -1,12 +1,19 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from datetime import datetime
 from bson import ObjectId
+from enum import Enum
 
 from models.pyobjectid import PyObjectId
 
+class UserRole(str, Enum):
+    TRAVELLER = "Traveller"
+    TENNO = "Tenno"
+    ADMINISTRATOR = "Administrator"
+
 class UserBase(BaseModel):
-    email: EmailStr
+    email: str
     username: str
+    role: UserRole = UserRole.TENNO
 
 class UserCreate(UserBase):
     password: str

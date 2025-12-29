@@ -18,7 +18,7 @@ The goal is to provide Tenno with a clean, fast, and modern interface to view th
 ### Backend
 
 * FastAPI
-* MongoDB / PostgreSQL
+* MongoDB / PostgreSQL with Apache AGE (graph database)
 * OAuth-based authentication system
 * REST API
 
@@ -28,7 +28,7 @@ The goal is to provide Tenno with a clean, fast, and modern interface to view th
 
 ### Backend
 
-The whole backend is encapsulated in a Docker container. To run it locally, install Docker on your machine, and run from the `backend` directory (eventually as a superuser):
+The whole backend is encapsulated in a Docker container. To run it locally, install Docker on your machine, and run from the project root directory:
    ```bash
    docker compose up --build
    ```
@@ -39,7 +39,13 @@ The backend will be available at:
 http://localhost:8000
 ```
 
-Once you're done, stop the container by pressing `Ctrl+C` in the terminal and don't forget to remove the container with `docker compose down`.
+The services include:
+- **Backend API**: FastAPI server (port 8000)
+- **Frontend**: Vue.js application (port 8080) 
+- **PostgreSQL with Apache AGE**: Graph database (port 5432)
+- **MongoDB**: Document database (port 27017)
+
+Once you're done, stop the containers by pressing `Ctrl+C` in the terminal and don't forget to remove them with `docker compose down`.
 
 ### Frontend
 
@@ -76,6 +82,7 @@ http://localhost:5173
 * [ ] Event agenda?
 * [ ] Easy resource map reader (what is available on each planet)
 * [ ] Void relics content searcher
+* [ ] Warframe Market (when looking for something, adding the WM as a source with the average price)
 
 ---
 

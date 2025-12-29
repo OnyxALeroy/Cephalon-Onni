@@ -1,17 +1,21 @@
 import os
+import psycopg2
 
-from neo4j import GraphDatabase
 from pymongo import MongoClient
 from sqlalchemy import create_engine
 
-# Postgres
+# PostgreSQL with Apache AGE
 POSTGRES_URI = f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DB')}"
 sql_engine = create_engine(POSTGRES_URI)
 
+# For AGE operations, use direct psycopg2 connection
+age_conn = psycopg2.connect(
+    user=os.getenv('POSTGRES_USER'),
+    password=os.getenv('POSTGRES_PASSWORD'),
+    database=os.getenv('POSTGRES_DB'),
+    host=os.getenv('POSTGRES_HOST'),
+    port=os.getenv('POSTGRES_PORT')
+)
+
 # MongoDB
 mongo_client = MongoClient(os.getenv("MONGO_URI"))
-
-# Neo4j
-neo4j_driver = GraphDatabase.driver(
-    os.getenv("NEO4J_URI"), auth=(os.getenv("NEO4J_USER"), os.getenv("NEO4J_PASSWORD"))
-)
