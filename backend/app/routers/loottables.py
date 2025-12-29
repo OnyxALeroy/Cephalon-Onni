@@ -123,20 +123,20 @@ async def get_node_neighbors(
         MATCH (start_node)
         WHERE {where_clause}
         MATCH (start_node)-[r]->(end_node)
-        RETURN start_node, labels(start_node) as start_labels, r as rel, end_node, labels(end_node) as end_labels
+        RETURN start_node, labels(start_node) as start_labels, r as rel, end_node, labels(end_node) as end_labels, 'outgoing' as direction
         LIMIT 100
         UNION ALL
         MATCH (start_node)
         WHERE {where_clause}
         MATCH (start_node)<-[r]-(end_node)
-        RETURN start_node, labels(start_node) as start_labels, r as rel, end_node, labels(end_node) as end_labels
+        RETURN start_node, labels(start_node) as start_labels, r as rel, end_node, labels(end_node) as end_labels, 'incoming' as direction
         LIMIT 100
         """
 
         result = age.cypher(
             "loot_tables",
             query,
-            "start_node agtype, start_labels agtype, rel agtype, end_node agtype, end_labels agtype",
+            "start_node agtype, start_labels agtype, rel agtype, end_node agtype, end_labels agtype, direction agtype",
         )
         if not result:
             raise HTTPException(
@@ -180,6 +180,7 @@ async def get_node_neighbors(
             end_node_data = get_dict_from_agtype(row["end_node"])
             end_node_labels = get_dict_from_agtype(row["end_labels"])
             rel_data = get_dict_from_agtype(row["rel"])
+            direction = row["direction"].strip('"')  # Remove extra quotes from agtype string
 
             # Add neighbor node
             if isinstance(end_node_data, dict):
@@ -208,7 +209,7 @@ async def get_node_neighbors(
                     properties=end_node_data.get("properties", {}),
                     relationship_type=relationship_type,
                     relationship_properties=relationship_properties,
-                    relationship_direction="outgoing",
+                    relationship_direction=direction,
                 )
 
                 neighbors.append(neighbor)

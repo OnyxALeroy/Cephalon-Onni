@@ -6,23 +6,14 @@
                 <div class="input-group">
                     <div class="input-field">
                         <label for="node-name">Node Name:</label>
-                        <input
-                            id="node-name"
-                            v-model="searchName"
-                            type="text"
-                            placeholder="Enter node name"
-                            class="node-input"
-                        />
-                    </div>
-                    <div class="input-field">
-                        <label for="node-label">Node Label:</label>
-                        <input
-                            id="node-label"
-                            v-model="searchLabel"
-                            type="text"
-                            placeholder="Enter node label"
-                            class="node-input"
-                        />
+                    <input
+                        id="node-name"
+                        v-model="searchName"
+                        type="text"
+                        placeholder="Enter node name"
+                        class="node-input"
+                        @keyup.enter="handleSearchNodes"
+                    />
                     </div>
                 </div>
                 <div class="search-buttons">
@@ -41,31 +32,29 @@
                 <!-- Search Results -->
                 <div v-if="searchResults.length > 0" class="search-results">
                     <h4>Found Nodes ({{ searchResults.length }})</h4>
-                    <div class="results-list">
-                        <div
-                            v-for="node in searchResults"
-                            :key="node.id"
-                            class="result-item"
-                            @click="selectNode(node)"
-                        >
-                            <div class="node-name">
-                                {{ node.name || "Unknown" }}
-                            </div>
-                            <div class="node-label">
-                                {{
-                                    Array.isArray(node.label)
-                                        ? node.label
-                                        : String(node.label)
-                                }}
-                            </div>
-                            <div class="node-properties">
-                                <div
-                                    v-for="(value, key) in node.properties"
-                                    :key="key"
-                                    class="property-item"
-                                >
-                                    <span class="prop-key">{{ key }}:</span>
-                                    <span class="prop-value">{{ value }}</span>
+                    <div class="results-table">
+                        <div class="table-header">
+                            <div class="header-cell">Name</div>
+                            <div class="header-cell">Type</div>
+                        </div>
+                        <div class="table-body">
+                            <div
+                                v-for="node in searchResults"
+                                :key="node.id"
+                                class="table-row"
+                                @click="selectNode(node)"
+                            >
+                                <div class="table-cell name-cell">
+                                    {{ node.name || "Unknown" }}
+                                </div>
+                                <div class="table-cell type-cell">
+                                    <span class="type-badge">
+                                        {{
+                                            Array.isArray(node.label)
+                                                ? node.label[0]
+                                                : String(node.label)
+                                        }}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -82,73 +71,45 @@
                     neighbors
                 </p>
             </div>
-        <div v-else-if="graphData" class="graph-summary-container">
-            <div class="graph-stats">
-                <div class="stat-item">
-                    <div class="stat-label">Total Neighbors</div>
-                    <div class="stat-value">{{ graphData?.neighbors?.length || 0 }}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Starting Node</div>
-                    <div class="stat-value">{{ graphData?.starting_node?.name || "None" }}</div>
-                </div>
-            </div>
-
-            <h3 v-if="graphData?.starting_node">
-                Neighbors of {{ graphData.starting_node.name }} ({{
-                    graphData.starting_node.label
-                }})
-            </h3>
-
-<!-- Starting Node Section -->
-            <div class="section" v-if="graphData?.starting_node">
-                <h4>Starting Node</h4>
-                <div class="nodes-grid">
-                    <div
-                        class="node-card selected-node"
-                    >
-                        <div class="node-header">
-                            <div class="node-name">{{ graphData.starting_node.name }}</div>
-                            <span class="type-badge">{{ graphData.starting_node.type }}</span>
+            <div v-else-if="graphData" class="graph-summary-container">
+                <div class="graph-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Total Neighbors</div>
+                        <div class="stat-value">
+                            {{ graphData?.neighbors?.length || 0 }}
                         </div>
-                        <div class="node-properties">
-                            <div
-                                v-for="(value, key) in graphData.starting_node.properties"
-                                :key="key"
-                                class="property-item"
-                            >
-                                <span class="prop-key">{{ key }}:</span>
-                                <span class="prop-value">{{ value }}</span>
-                            </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Starting Node</div>
+                        <div class="stat-value">
+                            {{ graphData?.starting_node?.name || "None" }}
                         </div>
                     </div>
                 </div>
-            </div>
 
-<!-- Neighbors Section -->
-            <div class="section" v-if="graphData?.neighbors?.length">
-                <h4>Neighbors ({{ graphData.neighbors.length }})</h4>
-                <div class="edges-grid">
-                    <div
-                        v-for="(neighbor, index) in graphData.neighbors"
-                        :key="neighbor.id"
-                        class="edge-card"
-                    >
-                        <div class="edge-header">
-                            <span class="relationship-badge">{{ neighbor.relationship_type }}</span>
-                        <div class="edge-direction">
-                            <span class="direction-badge" :class="neighbor.relationship_direction">
-                                {{ neighbor.relationship_direction }}
-                            </span>
-                        </div>
-                        <div class="node-card">
+                <h3 v-if="graphData?.starting_node">
+                    Neighbors of {{ graphData.starting_node.name }} ({{
+                        graphData.starting_node.label
+                    }})
+                </h3>
+
+                <!-- Starting Node Section -->
+                <div class="section" v-if="graphData?.starting_node">
+                    <h4>Starting Node</h4>
+                    <div class="nodes-grid">
+                        <div class="node-card selected-node">
                             <div class="node-header">
-                                <div class="node-name">{{ neighbor.name }}</div>
-                                <span class="type-badge">{{ neighbor.type }}</span>
+                                <div class="node-name">
+                                    {{ graphData.starting_node.name }}
+                                </div>
+                                <span class="type-badge">{{
+                                    graphData.starting_node.type
+                                }}</span>
                             </div>
                             <div class="node-properties">
                                 <div
-                                    v-for="(value, key) in neighbor.properties"
+                                    v-for="(value, key) in graphData
+                                        .starting_node.properties"
                                     :key="key"
                                     class="property-item"
                                 >
@@ -157,38 +118,141 @@
                                 </div>
                             </div>
                         </div>
-                        </div>
-                        <div class="node-card">
-                            <div class="node-header">
-                                <div class="node-name">{{ neighbor.name }}</div>
-                                <span class="type-badge">{{ neighbor.type }}</span>
-                            </div>
-                            <div class="node-properties">
+                    </div>
+                </div>
+
+                <!-- Neighbors Tree Section -->
+                <div class="section" v-if="graphData?.neighbors?.length">
+                    <div class="tree-container">
+                        <!-- Incoming Neighbors (Left Side) -->
+                        <div class="tree-side incoming-side">
+                            <h4>
+                                Incoming Connections ({{
+                                    incomingNeighbors.length
+                                }})
+                            </h4>
+                            <div class="tree-nodes">
                                 <div
-                                    v-for="(value, key) in neighbor.properties"
-                                    :key="key"
-                                    class="property-item"
+                                    v-for="neighbor in incomingNeighbors"
+                                    :key="neighbor.id"
+                                    class="tree-node incoming-node"
+                                    @click="selectNeighbor(neighbor)"
                                 >
-                                    <span class="prop-key">{{ key }}:</span>
-                                    <span class="prop-value">{{ value }}</span>
+                                    <div class="tree-node-header">
+                                        <div class="tree-node-name">
+                                            {{ neighbor.name }}
+                                        </div>
+                                        <span class="type-badge">{{
+                                            neighbor.type
+                                        }}</span>
+                                    </div>
+                                    <div class="tree-relationship">
+                                        <span class="relationship-badge">{{
+                                            neighbor.relationship_type
+                                        }}</span>
+                                        <span class="direction-badge incoming"
+                                            >→</span
+                                        >
+                                    </div>
+                                    <div class="tree-node-properties">
+                                        <div
+                                            v-for="(
+                                                value, key
+                                            ) in neighbor.properties"
+                                            :key="key"
+                                            class="property-item"
+                                        >
+                                            <span class="prop-key"
+                                                >{{ key }}:</span
+                                            >
+                                            <span class="prop-value">{{
+                                                value
+                                            }}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div v-if="Object.keys(neighbor.relationship_properties).length > 0" class="edge-properties">
-                            <h5>Relationship Properties</h5>
-                            <div
-                                v-for="(value, key) in neighbor.relationship_properties"
-                                :key="key"
-                                class="property-item"
-                            >
-                                <span class="prop-key">{{ key }}:</span>
-                                <span class="prop-value">{{ value }}</span>
+
+                        <!-- Center Node -->
+                        <div class="tree-center">
+                            <div class="center-node">
+                                <div class="center-node-header">
+                                    <div class="center-node-name">
+                                        {{ graphData.starting_node.name }}
+                                    </div>
+                                    <span class="type-badge center-badge">{{
+                                        graphData.starting_node.type
+                                    }}</span>
+                                </div>
+                                <div class="center-node-properties">
+                                    <div
+                                        v-for="(value, key) in graphData
+                                            .starting_node.properties"
+                                        :key="key"
+                                        class="property-item"
+                                    >
+                                        <span class="prop-key">{{ key }}:</span>
+                                        <span class="prop-value">{{
+                                            value
+                                        }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Outgoing Neighbors (Right Side) -->
+                        <div class="tree-side outgoing-side">
+                            <h4>
+                                Outgoing Connections ({{
+                                    outgoingNeighbors.length
+                                }})
+                            </h4>
+                            <div class="tree-nodes">
+                                <div
+                                    v-for="neighbor in outgoingNeighbors"
+                                    :key="neighbor.id"
+                                    class="tree-node outgoing-node"
+                                    @click="selectNeighbor(neighbor)"
+                                >
+                                    <div class="tree-node-header">
+                                        <div class="tree-node-name">
+                                            {{ neighbor.name }}
+                                        </div>
+                                        <span class="type-badge">{{
+                                            neighbor.type
+                                        }}</span>
+                                    </div>
+                                    <div class="tree-relationship">
+                                        <span class="direction-badge outgoing"
+                                            >→</span
+                                        >
+                                        <span class="relationship-badge">{{
+                                            neighbor.relationship_type
+                                        }}</span>
+                                    </div>
+                                    <div class="tree-node-properties">
+                                        <div
+                                            v-for="(
+                                                value, key
+                                            ) in neighbor.properties"
+                                            :key="key"
+                                            class="property-item"
+                                        >
+                                            <span class="prop-key"
+                                                >{{ key }}:</span
+                                            >
+                                            <span class="prop-value">{{
+                                                value
+                                            }}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
             <div v-else id="graph-canvas" style="display: none"></div>
         </div>
     </div>
@@ -254,58 +318,63 @@ const searchResults = ref<GraphNode[]>([]);
 const graphData = ref<NodeNeighborsResponse | null>(null);
 
 // API call to search nodes in loottables
-async function searchNodes(name: string, label: string): Promise<ApiResponse<NodeSearchResponse>> {
+async function searchNodes(
+    name: string,
+    label: string,
+): Promise<ApiResponse<NodeSearchResponse>> {
     try {
         const params = new URLSearchParams();
-        if (name) params.append('name', name);
-        if (label) params.append('label', label);
-        
+        if (name) params.append("name", name);
+        if (label) params.append("label", label);
+
         const response = await fetch(`/api/loottables/search/nodes?${params}`, {
-            credentials: "include"
+            credentials: "include",
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         return {
             success: true,
-            data: data
+            data: data,
         };
     } catch (error) {
-        console.error('Error searching nodes:', error);
+        console.error("Error searching nodes:", error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? error.message : "Unknown error",
         };
     }
 }
 
 // API call to get node neighbors
-async function loadNodeNeighbors(name: string): Promise<ApiResponse<NodeNeighborsResponse>> {
+async function loadNodeNeighbors(
+    name: string,
+): Promise<ApiResponse<NodeNeighborsResponse>> {
     try {
         const params = new URLSearchParams();
-        params.append('name', name);
-        
+        params.append("name", name);
+
         const response = await fetch(`/api/loottables/neighbors?${params}`, {
-            credentials: "include"
+            credentials: "include",
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         return {
             success: true,
-            data: data
+            data: data,
         };
     } catch (error) {
-        console.error('Error loading node neighbors:', error);
+        console.error("Error loading node neighbors:", error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? error.message : "Unknown error",
         };
     }
 }
@@ -357,8 +426,20 @@ function selectNode(node: GraphNode) {
     selectedNode.value = node;
     searchResults.value = [];
     searchName.value = node.name;
-    searchLabel.value = node.label;
+    searchLabel.value = ""; // Clear label to avoid reuse
     handleLoadNodeNeighbors();
+}
+
+// Select a neighbor node
+function selectNeighbor(neighbor: NodeNeighbor) {
+    const neighborNode: GraphNode = {
+        id: neighbor.id,
+        name: neighbor.name,
+        type: neighbor.type,
+        label: neighbor.type, // Use type as label since it's not provided
+        properties: neighbor.properties,
+    };
+    selectNode(neighborNode);
 }
 
 async function handleLoadNodeNeighbors() {
@@ -367,9 +448,7 @@ async function handleLoadNodeNeighbors() {
     loading.value = true;
 
     try {
-        const result = await loadNodeNeighbors(
-            selectedNode.value.name,
-        );
+        const result = await loadNodeNeighbors(selectedNode.value.name);
 
         if (result.success && result.data) {
             graphData.value = result.data;
@@ -383,6 +462,26 @@ async function handleLoadNodeNeighbors() {
         loading.value = false;
     }
 }
+
+// Computed properties to separate neighbors by direction
+const incomingNeighbors = computed(() => {
+    const neighbors = graphData.value?.neighbors || [];
+    console.log("All neighbors:", neighbors);
+    const incoming = neighbors.filter(
+        (n) => n.relationship_direction === "incoming",
+    );
+    console.log("Incoming neighbors:", incoming);
+    return incoming;
+});
+
+const outgoingNeighbors = computed(() => {
+    const neighbors = graphData.value?.neighbors || [];
+    const outgoing = neighbors.filter(
+        (n) => n.relationship_direction === "outgoing",
+    );
+    console.log("Outgoing neighbors:", outgoing);
+    return outgoing;
+});
 
 // Helper function to get neighbor display text
 function getNeighborDisplay(neighbor: NodeNeighbor) {
@@ -433,7 +532,7 @@ function getNeighborDisplay(neighbor: NodeNeighbor) {
 
 .input-group {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 1rem;
     margin-bottom: 1rem;
 }
@@ -491,47 +590,66 @@ function getNeighborDisplay(neighbor: NodeNeighbor) {
     margin-top: 1rem;
 }
 
-.results-list {
-    max-height: 200px;
+.results-table {
+    max-height: 300px;
     overflow-y: auto;
     border: 1px solid #475569;
     border-radius: 4px;
     background: #0f172a;
 }
 
-.result-item {
+.table-header {
+    display: flex;
+    background: #1e293b;
+    border-bottom: 2px solid #334155;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.header-cell {
+    flex: 1;
     padding: 0.8rem;
+    color: #7dd3fc;
+    font-weight: 600;
+    text-align: left;
+}
+
+.table-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.table-row {
+    display: flex;
     border-bottom: 1px solid #334155;
     cursor: pointer;
     transition: background-color 0.2s;
 }
 
-.result-item:hover {
+.table-row:hover {
     background: #334155;
 }
 
-.result-item:last-child {
+.table-row:last-child {
     border-bottom: none;
 }
 
-.node-name {
+.table-cell {
+    flex: 1;
+    padding: 0.6rem 0.8rem;
     color: #f1f5f9;
-    font-weight: bold;
-    margin-bottom: 0.25rem;
-    font-size: 1rem;
-}
-
-.node-label {
-    color: #38bdf8;
-    font-size: 0.9rem;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-}
-
-.node-properties {
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    align-items: center;
+}
+
+.name-cell {
+    font-weight: 600;
+    color: #38bdf8;
+}
+
+.type-cell {
+    justify-content: flex-start;
 }
 
 .property-item {
@@ -871,6 +989,232 @@ function getNeighborDisplay(neighbor: NodeNeighbor) {
 .btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* Tree Layout Styles */
+.tree-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 2rem;
+    min-height: 400px;
+    padding: 2rem 0;
+}
+
+.tree-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.tree-side h4 {
+    color: #7dd3fc;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.tree-nodes {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.tree-node {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.tree-node:hover {
+    background: #334155;
+    transform: translateX(5px);
+}
+
+.incoming-node:hover {
+    transform: translateX(-5px);
+}
+
+.tree-node-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.tree-node-name {
+    color: #38bdf8;
+    font-weight: bold;
+    font-size: 0.9rem;
+    word-break: break-word;
+}
+
+.tree-relationship {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.tree-node-properties {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.tree-node-properties .property-item {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    background: #0f172a;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+}
+
+.tree-node-properties .prop-key {
+    color: #94a3b8;
+    min-width: 60px;
+    font-weight: 600;
+}
+
+.tree-node-properties .prop-value {
+    color: #38bdf8;
+    word-break: break-word;
+}
+
+.tree-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 300px;
+}
+
+.center-node {
+    background: #1e3a8a;
+    border: 2px solid #38bdf8;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+}
+
+.center-node-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.center-node-name {
+    color: #7dd3fc;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.center-badge {
+    background: #38bdf8;
+    color: #021019;
+    padding: 0.3rem 0.8rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.center-node-properties {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    text-align: left;
+}
+
+.center-node-properties .property-item {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    background: #1e293b;
+    padding: 0.3rem 0.5rem;
+    border-radius: 3px;
+}
+
+.center-node-properties .prop-key {
+    color: #94a3b8;
+    min-width: 70px;
+    font-weight: 600;
+}
+
+.center-node-properties .prop-value {
+    color: #7dd3fc;
+    word-break: break-word;
+}
+
+/* Connection lines visual indicator */
+.incoming-node::after {
+    content: "→";
+    position: absolute;
+    right: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ef4444;
+    font-size: 1.2rem;
+}
+
+.outgoing-node::before {
+    content: "→";
+    position: absolute;
+    left: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #10b981;
+    font-size: 1.2rem;
+}
+
+.debug-info {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.debug-info h4 {
+    color: #7dd3fc;
+    margin-bottom: 0.5rem;
+}
+
+.debug-info p {
+    color: #94a3b8;
+    margin: 0.25rem 0;
+}
+
+.debug-info pre {
+    background: #0f172a;
+    color: #f1f5f9;
+    padding: 1rem;
+    border-radius: 4px;
+    overflow: auto;
+    font-size: 0.8rem;
+    max-height: 300px;
+}
+
+.debug-info details {
+    margin-top: 1rem;
+}
+
+.debug-info summary {
+    color: #38bdf8;
+    cursor: pointer;
+    padding: 0.5rem;
+    background: #0f172a;
+    border-radius: 4px;
+    border: 1px solid #475569;
 }
 
 .primary {
