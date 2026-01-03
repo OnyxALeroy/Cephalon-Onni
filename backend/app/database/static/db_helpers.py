@@ -40,7 +40,7 @@ def drop_tables(session: Session, tables: List[str]) -> None:
             if answer != "y":
                 print(f"[SKIPPED] {table}")
                 continue
-            session.execute(text(f"DROP TABLE IF EXISTS {table}"))
+            session.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE"))
             print(f"[DROPPED] {table}")
         session.commit()
     except Exception as e:
