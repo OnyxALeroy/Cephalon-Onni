@@ -52,8 +52,10 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { useAuth } from "@/composables/useAuth";
 
 const router = useRouter();
+const { fetchUser } = useAuth();
 
 const email = ref("");
 const password = ref("");
@@ -82,7 +84,8 @@ async function handleLogin() {
       throw new Error(errorData.detail || "Login failed");
     }
 
-    // Login successful, redirect to home or admin
+    // Login successful, update user state and redirect
+    await fetchUser();
     const user = await response.json();
     if (user.role === "admin" || user.role === "administrator") {
       router.push("/admin");
