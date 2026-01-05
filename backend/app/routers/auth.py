@@ -87,3 +87,8 @@ async def me(request: Request):
         "username": user["username"],
         "role": user.get("role", UserRole.TENNO)
     }
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("access_token")
+    return {"message": "Successfully logged out"}

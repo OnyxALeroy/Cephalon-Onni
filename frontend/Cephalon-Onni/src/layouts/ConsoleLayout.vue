@@ -24,7 +24,15 @@
             >
             <span v-if="isAdmin" class="divider" />
 
-            <RouterLink to="/profile" class="nav">Profile</RouterLink>
+            <!-- Authentication links -->
+            <template v-if="!isAuthenticated">
+                <RouterLink to="/login" class="nav">Login</RouterLink>
+                <RouterLink to="/register" class="nav">Register</RouterLink>
+            </template>
+            <template v-else>
+                <RouterLink to="/profile" class="nav">My Account</RouterLink>
+                <button @click="logout" class="nav logout-btn">Logout</button>
+            </template>
         </aside>
 
         <main class="main">
@@ -34,36 +42,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { onMounted } from "vue";
 import { RouterLink, RouterView } from "vue-router";
+import { useAuth } from "@/composables/useAuth";
 
-interface User {
-    id: string;
-    username: string;
-    role: string;
-}
-
-const user = ref<User | null>(null);
+const { user, fetchUser, logout, isAdmin, isAuthenticated } = useAuth();
 
 onMounted(async () => {
     await fetchUser();
-});
-
-async function fetchUser() {
-    try {
-        const res = await fetch("/api/auth/me", { credentials: "include" });
-
-        if (res.ok) {
-            user.value = await res.json();
-        }
-    } catch (error) {
-        // User not authenticated, that's fine for layout
-        console.log("User not authenticated");
-    }
-}
-
-const isAdmin = computed(() => {
-    return user.value && user.value.role === "Administrator";
 });
 </script>
 
@@ -102,6 +88,25 @@ const isAdmin = computed(() => {
 
 .nav:hover,
 .router-link-active {
+    background: #08121f;
+    color: #7dd3fc;
+}
+
+.logout-btn {
+    background: none;
+    border: none;
+    color: #c9e5ff;
+    padding: 0.4rem;
+    border-radius: 4px;
+    transition: 0.15s;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.logout-btn:hover {
     background: #08121f;
     color: #7dd3fc;
 }
