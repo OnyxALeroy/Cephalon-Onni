@@ -4,28 +4,28 @@ from database.static.db_init.db_init_models import (
     AnyExportJson,
     AnyExportJsonDirect,
     ExportJsonDict,
-    get_exported_json_dict_key,
+#    get_exported_json_dict_key,
 )
 
 
 class JsonCollector:
     AVAILABLE_JSON_NAMES: List[str] = [
-        "Customs",
-        "Drones",
-        "Flavour",
-        "FusionBundles",
-        "Gear",
-        "Keys",
-        "Recipes",
-        "Regions",
-        "RelicArcane",
-        "Resources",
-        "Sentinels",
-        "SortieRewards",
-        "Upgrades",
-        "Warframes",
-        "Weapons",
-        "Manifest",
+        "ExportCustoms",
+        "ExportDrones",
+        "ExportFlavour",
+        "ExportFusionBundles",
+        "ExportGear",
+        "ExportKeys",
+        "ExportRecipes",
+        "ExportRegions",
+        "ExportRelicArcane",
+        "ExportResources",
+        "ExportSentinels",
+        "ExportSortieRewards",
+        "ExportUpgrades",
+        "ExportWarframes",
+        "ExportWeapons",
+        "ExportManifest",
     ]
 
     LANGUAGE_CODE_LIST: List[str] = [
@@ -72,10 +72,10 @@ class JsonCollector:
     def get_export_json(
         self, index_content: List[str], json_name: str
     ) -> Optional[dict[str, AnyExportJson]]:
-        if json_name != "Manifest":
-            file_match: str = "Export" + json_name + "_"
+        if json_name != "ExportManifest":
+            file_match: str = json_name + "_"
         else:
-            file_match: str = "Export" + json_name + "."
+            file_match: str = json_name + "."
         file_name: str = ""
         for line in index_content:
             if line.startswith(file_match):
@@ -120,13 +120,14 @@ class JsonCollector:
                     f"[WARNING] {name} is not an existing json in the Public Export API"
                 )
         if len(json_names) == 0:
-            print("[ERROR] There no json available in the Public Export API were given")
+            print("[ERROR] No json available in the Public Export API were given")
             return None
 
         index_content = self.get_json_index(language_code)
         if index_content is None:
             return None
         results: ExportJsonDict = {}
+        # results = {}
         from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 
         with ThreadPoolExecutor(max_workers=min(len(json_names), 16)) as executor:
@@ -143,19 +144,14 @@ class JsonCollector:
                     res: dict[str, AnyExportJson] | None = future.result()
                     if isinstance(res, dict):
                         if len(res.keys()) == 1:
-                            key = next(iter(res))
-                            print(f"key = {key}, keys = {list(res.keys())}")
-                            results[get_exported_json_dict_key(name)] = res[
-                                key
+                            results[name] = res[
+                                next(iter(res))
                             ]
                         else:
                             print(f"[ERROR] Unexpected json with {name}")
                 except Exception as e:
-                    print(f"[Error] downloading {name}:  {e}")
+                    print(f"[ERROR] downloading {name}:  {e}")
 
-        print(type(results))
-
-        print(results.keys())
         return results
 
     def load_json(self, path: str) -> Optional[AnyExportJsonDirect]:
