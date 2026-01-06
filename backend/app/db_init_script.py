@@ -42,7 +42,7 @@ def main() -> None:
     jsons_collector = JsonCollector()
 
     try:
-        drop_tables(session, ["translations", "items", "recipes"])
+        # drop_tables(session, ["translations", "items", "recipes"])
 
         if (
             not create_translation_database(session)

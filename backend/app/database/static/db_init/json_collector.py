@@ -97,13 +97,15 @@ class JsonCollector:
             )
             return None
         try:
-            return response.json()[json_name]
+            json_res = response.json()
+            # return json_res[list(json_res.keys())[0]]
+            return json_res
         except Exception as e:
             print(
                 f"[ERROR] While loading json {file_name} from the Public Export API as a json: {e}"
             )
             return None
-
+        
     def get_jsons(
         self, language_code: str, json_names: List[str]
     ) -> Optional[ExportJsonDict]:
@@ -141,14 +143,19 @@ class JsonCollector:
                     res: dict[str, AnyExportJson] | None = future.result()
                     if isinstance(res, dict):
                         if len(res.keys()) == 1:
+                            key = next(iter(res))
+                            print(f"key = {key}, keys = {list(res.keys())}")
                             results[get_exported_json_dict_key(name)] = res[
-                                next(iter(res))
+                                key
                             ]
                         else:
                             print(f"[ERROR] Unexpected json with {name}")
                 except Exception as e:
-                    print(f"Error downloading {name}:  {e}")
+                    print(f"[Error] downloading {name}:  {e}")
 
+        print(type(results))
+
+        print(results.keys())
         return results
 
     def load_json(self, path: str) -> Optional[AnyExportJsonDirect]:
