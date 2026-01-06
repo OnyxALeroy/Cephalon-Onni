@@ -66,7 +66,11 @@ def describe_table(session: Session, table: str) -> None:
         return None
     columns = inspector.get_columns(table)
 
-    print(f"\n--- {table} ---")
+    count_result = session.execute(text(f"SELECT COUNT(*) FROM {table}"))
+    count_row = count_result.fetchone()
+    row_count = count_row[0] if count_row else 0
+
+    print(f"\n--- {table} ({row_count} rows) ---")
     for column in columns:
         name = column["name"]
         col_type = str(column["type"])

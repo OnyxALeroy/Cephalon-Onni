@@ -19,7 +19,7 @@ def create_recipe_database(session: Session) -> bool:
             produced_amount INTEGER NOT NULL DEFAULT 1,
             codex_secret BOOLEAN NOT NULL DEFAULT FALSE,
 
-            result_id INTEGER NOT NULL,
+            result_id INTEGER,
             ingredient_1_id INTEGER,
             ingredient_1_quantity INTEGER NOT NULL DEFAULT 1,
             ingredient_2_id INTEGER,
