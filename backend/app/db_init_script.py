@@ -2,9 +2,6 @@ import os
 from typing import List
 from urllib.parse import quote_plus
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from database.static.db_helpers import (
     describe_table,
     drop_tables,
@@ -16,6 +13,8 @@ from database.static.db_init.items import create_item_database
 from database.static.db_init.json_collector import JsonCollector
 from database.static.db_init.recipes import create_recipe_database, fill_recipes_db
 from database.static.db_init.translations import create_translation_database
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 
 def main() -> None:
