@@ -42,7 +42,7 @@ def main() -> None:
     jsons_collector = JsonCollector()
 
     try:
-        # drop_tables(session, ["translations", "items", "recipes"])
+        drop_tables(session, ["translations", "items", "recipes"])
 
         if (
             not create_translation_database(session)
@@ -53,22 +53,22 @@ def main() -> None:
             return
 
         jsons: List[str] = [
-            # "Customs",
-            # "Drones",
-            # "Flavour",
-            # "FusionBundles",
-            # "Gear",
-            # "Keys",
-            "Recipes",
-            # "Regions",
-            # "RelicArcane",
-            # "Resources",
-            # "Sentinels",
-            # "SortieRewards",
-            # "Upgrades",
-            # "Warframes",
-            # "Weapons",
-            "Manifest",
+            # "ExportCustoms",
+            # "ExportDrones",
+            # "ExportFlavour",
+            # "ExportFusionBundles",
+            # "ExportGear",
+            # "ExportKeys",
+            "ExportRecipes",
+            # "ExportRegions",
+            # "ExportRelicArcane",
+            # "ExportResources",
+            # "ExportSentinels",
+            # "ExportSortieRewards",
+            # "ExportUpgrades",
+            # "ExportWarframes",
+            # "ExportWeapons",
+            "ExportManifest",
         ]
         json_dict = jsons_collector.get_jsons("en", jsons)
         if json_dict is None:
@@ -78,7 +78,7 @@ def main() -> None:
             fill_img_db(session, json_dict["ExportManifest"])
         else:
             print("[ERROR] Could not get ExportManifest")
-        if "Recipes" in json_dict:
+        if "ExportRecipes" in json_dict:
             fill_recipes_db(session, json_dict["ExportRecipes"])
         else:
             print("[ERROR] Could not get ExportRecipes")
