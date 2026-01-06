@@ -46,6 +46,14 @@ class JsonCollector:
         "zh",
     ]
 
+    # Jsons that are known to be a dictionnary with muliple keys
+    MULTI_JSON_LIST: List[str] = [
+        "ExportSortieRewards",
+        "ExportWarframes",
+        "ExportWeapons",
+        "ExportUpgrades"
+    ]
+
     def get_json_index(self, language_code: str) -> Optional[List[str]]:
         url: str = (
             "https://origin.warframe.com/PublicExport/index_"
@@ -147,6 +155,8 @@ class JsonCollector:
                             results[name] = res[
                                 next(iter(res))
                             ]
+                        elif name in self.MULTI_JSON_LIST:
+                            results[name] = res
                         else:
                             print(f"[ERROR] Unexpected json with {name}")
                 except Exception as e:
