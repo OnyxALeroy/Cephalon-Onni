@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import List
+from typing import List, cast
 from urllib.parse import quote_plus
 
 from database.static.db_helpers import (
@@ -9,6 +9,7 @@ from database.static.db_helpers import (
     list_tables,
     preview_table,
 )
+from database.static.db_init.db_init_models import ImgItem, Recipe, Warframe
 from database.static.db_init.images import create_images_database, fill_img_db
 from database.static.db_init.items import create_item_database
 from database.static.db_init.json_collector import JsonCollector
@@ -78,26 +79,25 @@ def main() -> None:
             # "ExportWeapons",
             "ExportManifest",
         ]
-        json_dict = jsons_collector.get_jsons("en", jsons)
-        if json_dict is None:
+        raw_data = jsons_collector.get_jsons("en", jsons)
+        if raw_data is None:
             return
 
         # Save JSONs to disk before database operations
-        if not jsons_collector.save_jsons_to_disk(json_dict):
+        if not jsons_collector.save_to_disk(raw_data):
             print("[ERROR] Failed to save JSONs to disk")
 
-        if "ExportManifest" in json_dict:
-            fill_img_db(session, json_dict["ExportManifest"])
-        else:
-            print("[ERROR] Could not get ExportManifest")
-        if "ExportRecipes" in json_dict:
-            fill_recipes_db(session, json_dict["ExportRecipes"])
-        else:
-            print("[ERROR] Could not get ExportRecipes")
-        if "ExportWarframes" in json_dict:
-            fill_warframe_db(session, json_dict["ExportWarframes"])
-        else:
-            print("[ERROR] Could not get ExportWarframes")
+        # All database fills
+        recipes: List[Recipe] = cast(List[Recipe], raw_data.get("ExportRecipes", []))
+        fill_recipes_db(session, recipes)
+
+        warframes: List[Warframe] = cast(
+            List[Warframe], raw_data.get("ExportWarframes", [])
+        )
+        fill_warframe_db(session, warframes)
+
+        imgs: List[ImgItem] = cast(List[ImgItem], raw_data.get("ExportManifest", []))
+        fill_img_db(session, imgs)
 
         tables = list_tables(session)
         if not tables:

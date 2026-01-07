@@ -1,35 +1,19 @@
+import json
+import lzma
 import os
-from typing import Dict, List, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Dict, List, Optional, TypeVar
 
-from database.static.db_init.db_init_models import (
-    AnyExportJson,
-    AnyExportJsonDirect,
-    ExportJsonDict,
-    #    get_exported_json_dict_key,
-)
+import requests
+
+T = TypeVar("T")
 
 
 class JsonCollector:
-    AVAILABLE_JSON_NAMES: List[str] = [
-        "ExportCustoms",
-        "ExportDrones",
-        "ExportFlavour",
-        "ExportFusionBundles",
-        "ExportGear",
-        "ExportKeys",
-        "ExportRecipes",
-        "ExportRegions",
-        "ExportRelicArcane",
-        "ExportResources",
-        "ExportSentinels",
-        "ExportSortieRewards",
-        "ExportUpgrades",
-        "ExportWarframes",
-        "ExportWeapons",
-        "ExportManifest",
-    ]
+    BASE_URL = "http://content.warframe.com/PublicExport/Manifest/"
+    INDEX_URL = "https://origin.warframe.com/PublicExport/index_"
 
-    LANGUAGE_CODE_LIST: List[str] = [
+    LANGUAGE_CODE_LIST = [
         "de",
         "en",
         "es",
@@ -47,150 +31,87 @@ class JsonCollector:
         "zh",
     ]
 
-    # Jsons that are known to be a dictionnary with muliple keys
-    MULTI_JSON_LIST: List[str] = [
-        "ExportSortieRewards",
-        "ExportWarframes",
-        "ExportWeapons",
-        "ExportUpgrades",
-    ]
+    def __init__(self):
+        self.session = requests.Session()
 
-    def get_json_index(self, language_code: str) -> Optional[List[str]]:
-        url: str = (
-            "https://origin.warframe.com/PublicExport/index_"
-            + language_code.lower()
-            + ".txt.lzma"
-        )
+    def _fetch_lzma_index(self, language_code: str) -> List[str]:
+        """Fetches and decompresses the manifest index."""
+        url = f"{self.INDEX_URL}{language_code.lower()}.txt.lzma"
         try:
-            import requests
-
-            response: requests.Response = requests.get(url, stream=True)
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+            index_file = lzma.decompress(response.content)
+            return index_file.decode("utf-8").splitlines()
         except Exception as e:
-            print(f"[ERROR] While getting index lzma from the Public Export API: {e}")
-            return None
-        try:
-            import lzma
-
-            index_file: bytes = lzma.decompress(response.content)
-            index_content: str = index_file.decode("utf-8")
-            return index_content.splitlines()
-        except Exception as e:
-            print(f"[ERROR] While decompressing index lzma: {e}")
-            return None
+            print(f"[ERROR] Failed to fetch index for {language_code}: {e}")
+            return []
 
     def get_export_json(
         self, index_content: List[str], json_name: str
-    ) -> Optional[dict[str, AnyExportJson]]:
-        if json_name != "ExportManifest":
-            file_match: str = json_name + "_"
-        else:
-            file_match: str = json_name + "."
-        file_name: str = ""
-        for line in index_content:
-            if line.startswith(file_match):
-                file_name = line
-                break
-        if len(file_name) == 0:
-            print(
-                f"[ERROR] No matching json for the name {json_name} in the given index"
-            )
-            return None
-        try:
-            import requests
+    ) -> Optional[Any]:
+        """Finds the filename in index and fetches the JSON content."""
+        # Manifest is the only one ending in .json instead of _<hash>.json usually
+        file_match = (
+            json_name + "." if json_name == "ExportManifest" else json_name + "_"
+        )
 
-            url: str = "http://content.warframe.com/PublicExport/Manifest/" + file_name
-            response: requests.Response = requests.get(url, stream=True)
-        except Exception as e:
-            print(
-                f"[ERROR] While getting json {file_name} from the Public Export API: {e}"
-            )
-            return None
-        try:
-            json_res = response.json()
-            # return json_res[list(json_res.keys())[0]]
-            return json_res
-        except Exception as e:
-            print(
-                f"[ERROR] While loading json {file_name} from the Public Export API as a json: {e}"
-            )
+        file_name = next(
+            (line for line in index_content if line.startswith(file_match)), None
+        )
+
+        if not file_name:
+            print(f"[ERROR] No match for {json_name}")
             return None
 
-    def get_jsons(
-        self, language_code: str, json_names: List[str]
-    ) -> Optional[ExportJsonDict]:
+        try:
+            url = self.BASE_URL + file_name
+            response = self.session.get(url, timeout=20)
+            response.raise_for_status()
+            data = response.json()
+
+            # Auto-unwrap: if dict has exactly 1 key, return the value (the list)
+            # otherwise return the whole dict (for multi-key exports)
+            if isinstance(data, dict) and len(data) == 1:
+                return next(iter(data.values()))
+            return data
+        except Exception as e:
+            print(f"[ERROR] Failed fetching {json_name}: {e}")
+            return None
+
+    def get_jsons(self, language_code: str, json_names: List[str]) -> Dict[str, Any]:
+        """Parallel fetcher for multiple JSON exports."""
         if language_code.lower() not in self.LANGUAGE_CODE_LIST:
-            print(f"[ERROR] {language_code} is not an accepted language code")
-            return None
+            print(f"[ERROR] Invalid language: {language_code}")
+            return {}
 
-        for name in json_names:
-            if name not in self.AVAILABLE_JSON_NAMES:
-                json_names.remove(name)
-                print(
-                    f"[WARNING] {name} is not an existing json in the Public Export API"
-                )
-        if len(json_names) == 0:
-            print("[ERROR] No json available in the Public Export API were given")
-            return None
+        index_content = self._fetch_lzma_index(language_code)
+        if not index_content:
+            return {}
 
-        index_content = self.get_json_index(language_code)
-        if index_content is None:
-            return None
-        results: ExportJsonDict = {}
-        # results = {}
-        from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+        results: Dict[str, Any] = {}
 
-        with ThreadPoolExecutor(max_workers=min(len(json_names), 16)) as executor:
-            future_to_index: Dict[Future[Optional[dict[str, AnyExportJson]]], str] = {
-                executor.submit(
-                    self.get_export_json, index_content, json_name
-                ): json_name
-                for json_name in json_names
+        workers = min(len(json_names), 10)
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            future_to_name = {
+                executor.submit(self.get_export_json, index_content, name): name
+                for name in json_names
             }
 
-            for future in as_completed(future_to_index):
-                name: str = future_to_index[future]
+            for future in as_completed(future_to_name):
+                name = future_to_name[future]
                 try:
-                    res: dict[str, AnyExportJson] | None = future.result()
-                    if isinstance(res, dict):
-                        if len(res.keys()) == 1:
-                            results[name] = res[next(iter(res))]
-                        elif name in self.MULTI_JSON_LIST:
-                            results[name] = res
-                        else:
-                            print(f"[ERROR] Unexpected json with {name}")
+                    data = future.result()
+                    if data is not None:
+                        results[name] = data
                 except Exception as e:
-                    print(f"[ERROR] downloading {name}:  {e}")
+                    print(f"[ERROR] Exception in thread for {name}: {e}")
 
         return results
 
-    def load_json(self, path: str) -> Optional[AnyExportJsonDirect]:
-        import json
-
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except FileNotFoundError:
-            print(f"[ERROR] File not found: {path}")
-            return None
-        except json.JSONDecodeError as e:
-            print(f"[ERROR] Invalid JSON: {e}")
-            return None
-
-    def save_jsons_to_disk(
-        self, json_dict: ExportJsonDict, output_dir: str = "/app/data/json"
-    ) -> bool:
-        import json
-
-        try:
-            os.makedirs(output_dir, exist_ok=True)
-
-            for json_name, json_data in json_dict.items():
-                file_path = os.path.join(output_dir, f"{json_name}.json")
-                with open(file_path, "w", encoding="utf-8") as f:
-                    json.dump(json_data, f, ensure_ascii=False, indent=2)
-                print(f"[INFO] Saved {json_name}.json to {file_path}")
-
-            return True
-        except Exception as e:
-            print(f"[ERROR] While saving JSONs to disk: {e}")
-            return False
+    def save_to_disk(self, data_dict: Dict[str, Any], output_dir: str = "./data"):
+        os.makedirs(output_dir, exist_ok=True)
+        for name, content in data_dict.items():
+            path = os.path.join(output_dir, f"{name}.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(content, f, ensure_ascii=False, indent=2)
+            print(f"[INFO] Saved {path}")
