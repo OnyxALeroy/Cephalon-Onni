@@ -36,7 +36,8 @@ def create_warframe_database(session: Session) -> bool:
                 abilityUniqueName VARCHAR(255) NOT NULL,
                 abilityName VARCHAR(255) NOT NULL,
                 description TEXT,
-                FOREIGN KEY (warframe_uniqueName) REFERENCES warframes(uniqueName)
+                FOREIGN KEY (warframe_uniqueName) REFERENCES warframes(uniqueName),
+                UNIQUE (warframe_uniqueName, abilityUniqueName)
             );
         """)
         )
@@ -51,9 +52,6 @@ def create_warframe_database(session: Session) -> bool:
 def fill_warframe_db(session: Session, warframes: list[Warframe]) -> bool:
     try:
         for warframe in warframes:
-            print(
-                f"Processing warframe: {warframe['uniqueName']} (type: {type(warframe)}"
-            )
             session.execute(
                 text("""
                 INSERT INTO warframes (

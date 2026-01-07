@@ -112,7 +112,6 @@ def main() -> None:
         print(f"[ERROR] While reading DB: {e}")
 
     finally:
-        print("\nDone.")
         session.close()
 
 

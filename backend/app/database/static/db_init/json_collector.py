@@ -50,7 +50,7 @@ class JsonCollector:
         self, index_content: List[str], json_name: str
     ) -> Optional[Any]:
         """Finds the filename in index and fetches the JSON content."""
-        # Manifest is the only one ending in .json instead of _<hash>.json usually
+        # Manifest is the only one ending in .json instead of _<hash>.json
         file_match = (
             json_name + "." if json_name == "ExportManifest" else json_name + "_"
         )
@@ -69,11 +69,24 @@ class JsonCollector:
             response.raise_for_status()
             data = response.json()
 
-            # Auto-unwrap: if dict has exactly 1 key, return the value (the list)
-            # otherwise return the whole dict (for multi-key exports)
-            if isinstance(data, dict) and len(data) == 1:
-                return next(iter(data.values()))
+            # 1. If it's a list (like ExportManifest), return it directly
+            if isinstance(data, list):
+                return data
+
+            # 2. If it's a dictionary, handle the nesting
+            if isinstance(data, dict):
+                # Priority 1: Check if the specific json_name is a key in the dict
+                # (e.g., data["ExportWarframes"] -> [...])
+                if json_name in data:
+                    return data[json_name]
+
+                # Priority 2: Fallback to the "single key" unwrap if it doesn't match the name
+                if len(data) == 1:
+                    return next(iter(data.values()))
+
+            # 3. Return as-is if it's already unwrapped or has multiple complex keys
             return data
+
         except Exception as e:
             print(f"[ERROR] Failed fetching {json_name}: {e}")
             return None
@@ -108,10 +121,17 @@ class JsonCollector:
 
         return results
 
-    def save_to_disk(self, data_dict: Dict[str, Any], output_dir: str = "./data"):
-        os.makedirs(output_dir, exist_ok=True)
-        for name, content in data_dict.items():
-            path = os.path.join(output_dir, f"{name}.json")
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(content, f, ensure_ascii=False, indent=2)
-            print(f"[INFO] Saved {path}")
+    def save_to_disk(
+        self, data_dict: Dict[str, Any], output_dir: str = "./data/json"
+    ) -> bool:
+        try:
+            os.makedirs(output_dir, exist_ok=True)
+            for name, content in data_dict.items():
+                path = os.path.join(output_dir, f"{name}.json")
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(content, f, ensure_ascii=False, indent=2)
+                print(f"[INFO] Saved {path}")
+            return True
+        except Exception as e:
+            print(f"[ERROR] Failed to save JSONs: {e}")
+            return False
