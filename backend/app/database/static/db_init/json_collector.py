@@ -1,10 +1,11 @@
+import os
 from typing import Dict, List, Optional
 
 from database.static.db_init.db_init_models import (
     AnyExportJson,
     AnyExportJsonDirect,
     ExportJsonDict,
-#    get_exported_json_dict_key,
+    #    get_exported_json_dict_key,
 )
 
 
@@ -51,7 +52,7 @@ class JsonCollector:
         "ExportSortieRewards",
         "ExportWarframes",
         "ExportWeapons",
-        "ExportUpgrades"
+        "ExportUpgrades",
     ]
 
     def get_json_index(self, language_code: str) -> Optional[List[str]]:
@@ -113,7 +114,7 @@ class JsonCollector:
                 f"[ERROR] While loading json {file_name} from the Public Export API as a json: {e}"
             )
             return None
-        
+
     def get_jsons(
         self, language_code: str, json_names: List[str]
     ) -> Optional[ExportJsonDict]:
@@ -152,9 +153,7 @@ class JsonCollector:
                     res: dict[str, AnyExportJson] | None = future.result()
                     if isinstance(res, dict):
                         if len(res.keys()) == 1:
-                            results[name] = res[
-                                next(iter(res))
-                            ]
+                            results[name] = res[next(iter(res))]
                         elif name in self.MULTI_JSON_LIST:
                             results[name] = res
                         else:
@@ -176,3 +175,22 @@ class JsonCollector:
         except json.JSONDecodeError as e:
             print(f"[ERROR] Invalid JSON: {e}")
             return None
+
+    def save_jsons_to_disk(
+        self, json_dict: ExportJsonDict, output_dir: str = "/app/data/json"
+    ) -> bool:
+        import json
+
+        try:
+            os.makedirs(output_dir, exist_ok=True)
+
+            for json_name, json_data in json_dict.items():
+                file_path = os.path.join(output_dir, f"{json_name}.json")
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump(json_data, f, ensure_ascii=False, indent=2)
+                print(f"[INFO] Saved {json_name}.json to {file_path}")
+
+            return True
+        except Exception as e:
+            print(f"[ERROR] While saving JSONs to disk: {e}")
+            return False
