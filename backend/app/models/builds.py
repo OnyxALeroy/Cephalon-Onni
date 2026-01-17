@@ -65,5 +65,10 @@ class BuildPublic(BaseModel):
     warframe: Optional[WarframeDetails] = None
 
 
-class BuildWithDetails(BuildPublic):
+class BuildWithDetails(BaseModel):
+    id: str
+    name: str
+    warframe_uniqueName: str
+    created_at: datetime
+    updated_at: datetime
     warframe: WarframeDetails
