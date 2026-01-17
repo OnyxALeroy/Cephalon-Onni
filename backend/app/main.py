@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from motor.motor_asyncio import AsyncIOMotorClient
-from routers import admin_age, auth, inventory, loottables, protected, user
+from routers import admin_age, auth, inventory, loottables, protected, user, builds
 
 
 # Connecting to the db
@@ -37,6 +37,7 @@ app.include_router(inventory.router)
 app.include_router(loottables.router)
 app.include_router(protected.router)
 app.include_router(user.router)
+app.include_router(builds.router)
 
 
 # Serve the main index.html for frontend routes
