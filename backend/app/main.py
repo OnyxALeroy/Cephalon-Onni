@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from motor.motor_asyncio import AsyncIOMotorClient
-from routers import admin_age, auth, inventory, loottables, protected, user, builds
+from routers import admin_age, auth, inventory, loottables, protected, user, builds, warframes
 
 
 # Connecting to the db
@@ -38,6 +38,7 @@ app.include_router(loottables.router)
 app.include_router(protected.router)
 app.include_router(user.router)
 app.include_router(builds.router)
+app.include_router(warframes.router)
 
 
 # Serve the main index.html for frontend routes

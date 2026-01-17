@@ -49,8 +49,8 @@ class StaticDB:
             if result:
                 # Convert RealDictRow to regular dict
                 warframe = dict(result)
-                # Convert abilities from None to empty list if no abilities
-                if warframe['abilities'] == [None]:
+                # Ensure abilities is always a valid array
+                if not warframe.get('abilities') or warframe['abilities'] == [None]:
                     warframe['abilities'] = []
                 return warframe
             return None
@@ -59,11 +59,31 @@ class StaticDB:
         """Get all warframes with basic info"""
         with self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
-                SELECT uniqueName, name, description, health, shield, armor, power, masteryReq
-                FROM warframes
-                ORDER BY name
+                SELECT w.*, 
+                       array_agg(
+                           json_build_object(
+                               'abilityUniqueName', wa.abilityUniqueName,
+                               'abilityName', wa.abilityName,
+                               'description', wa.description
+                           )
+                       ) FILTER (WHERE wa.abilityUniqueName IS NOT NULL) as abilities
+                FROM warframes w
+                LEFT JOIN warframe_abilities wa ON w.uniqueName = wa.warframe_uniqueName
+                GROUP BY w.id, w.uniqueName, w.name, w.parentName, w.description, 
+                         w.health, w.shield, w.armor, w.stamina, w.power, w.codexSecret,
+                         w.masteryReq, w.sprintSpeed, w.passiveDescription, w.exalted, w.productCategory
+                ORDER BY w.name
             """)
-            return [dict(row) for row in cur.fetchall()]
+            warframes = [dict(row) for row in cur.fetchall()]
+            
+            # Ensure abilities is never None
+            for warframe in warframes:
+                if warframe.get('abilities') == [None]:
+                    warframe['abilities'] = []
+                elif warframe.get('abilities') is None:
+                    warframe['abilities'] = []
+                    
+            return warframes
 
     def warframe_exists(self, unique_name: str) -> bool:
         """Check if a warframe with the given uniqueName exists"""
