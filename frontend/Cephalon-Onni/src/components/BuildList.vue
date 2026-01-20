@@ -119,16 +119,30 @@ const emit = defineEmits<{
 
 const router = useRouter()
 
+// Get builds data from props or fallback to composable
+const props = defineProps<{
+  allBuilds?: any[]
+  loading?: boolean
+  error?: string
+  isAuthenticated?: boolean
+}>()
+
 const {
-  builds,
-  localBuilds,
-  allBuilds,
-  loading,
-  error,
-  isAuthenticated,
+  builds: composableBuilds,
+  localBuilds: composableLocalBuilds,
+  allBuilds: composableAllBuilds,
+  loading: composableLoading,
+  error: composableError,
+  isAuthenticated: composableIsAuthenticated,
   deleteBuild,
   syncLocalBuilds
 } = useBuilds()
+
+// Use props if provided, otherwise fallback to composable values
+const allBuilds = computed(() => props.allBuilds || composableAllBuilds.value)
+const loading = computed(() => props.loading !== undefined ? props.loading : composableLoading.value)
+const error = computed(() => props.error !== undefined ? props.error : composableError.value)
+const isAuthenticated = computed(() => props.isAuthenticated !== undefined ? props.isAuthenticated : composableIsAuthenticated.value)
 
 const hasLocalBuilds = computed(() => localBuilds.value.length > 0)
 

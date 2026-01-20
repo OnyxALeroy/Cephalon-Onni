@@ -161,6 +161,8 @@ export function useBuilds() {
         const response = await fetch('/api/builds?include_details=true', {
           credentials: 'include'
         })
+        console.log('Fetch builds URL:', '/api/builds?include_details=true')
+        console.log('Fetch builds response status:', response.status)
 
         if (!response.ok) {
           throw new Error('Failed to fetch builds')
@@ -183,7 +185,16 @@ export function useBuilds() {
       const isAuth = await checkAuthStatus()
       
       if (isAuth) {
+        // Validate build data before sending
+        if (!build.name || build.name.trim() === '') {
+          throw new Error('Build name is required')
+        }
+        if (!build.warframe_uniqueName || build.warframe_uniqueName.trim() === '') {
+          throw new Error('Warframe selection is required')
+        }
+
         // Create on backend
+        console.log('Creating build with data:', build)
         const response = await fetch('/api/builds/', {
           method: 'POST',
           headers: {
@@ -192,6 +203,7 @@ export function useBuilds() {
           credentials: 'include',
           body: JSON.stringify(build)
         })
+        console.log('Create build response status:', response.status)
 
         if (!response.ok) {
           const errorData = await response.json()
@@ -362,6 +374,11 @@ export function useBuilds() {
   // Get warframe details from API
   const getWarframeDetails = async (uniqueName: string): Promise<WarframeDetails | null> => {
     try {
+      if (!uniqueName || uniqueName === 'undefined') {
+        console.warn('Invalid uniqueName passed to getWarframeDetails:', uniqueName)
+        return null
+      }
+      
       const response = await fetch(`/api/warframes/${uniqueName}`, {
         credentials: 'include'
       })
@@ -390,15 +407,23 @@ export function useBuilds() {
       
       const warframes = await response.json()
       
-      // For each warframe, fetch detailed information including abilities
-      const warframesWithDetails = await Promise.all(
-        warframes.map(async (warframe: any) => {
-          const details = await getWarframeDetails(warframe.uniqueName)
-          return details || warframe
-        })
-      )
+      // Filter out any warframes without uniqueName
+      const validWarframes = warframes.filter((warframe: any) => {
+        // Handle both camelCase and lowercase property names
+        const uniqueName = warframe.uniqueName || warframe.uniquename
+        const isValid = uniqueName && uniqueName !== 'undefined'
+        if (!isValid) {
+          console.warn('Warframe missing uniqueName:', warframe)
+        }
+        // Normalize the property name to uniqueName for consistency
+        if (warframe.uniquename && !warframe.uniqueName) {
+          warframe.uniqueName = warframe.uniquename
+        }
+        return isValid
+      })
       
-      return warframesWithDetails
+      console.log(`Filtered ${warframes.length} warframes to ${validWarframes.length} valid ones`)
+      return validWarframes
     } catch (err: any) {
       console.error('Failed to fetch warframes:', err)
       throw err
