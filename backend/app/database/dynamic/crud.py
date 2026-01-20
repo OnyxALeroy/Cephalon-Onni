@@ -49,20 +49,57 @@ async def create_build(user_id: str, build: BuildCreate):
     
     res = await builds_collection.insert_one(doc)
     doc["_id"] = res.inserted_id
+    print(f"DEBUG: Inserted build with user_id: {user_id}, _id: {res.inserted_id}")
     return doc
 
 
 async def get_user_builds(user_id: str, skip: int = 0, limit: int = 30, include_warframe_details: bool = False):
+    print(f"DEBUG: Querying builds for user_id: {user_id}")
+    
+    # Debug: Check all builds in database
+    total_builds = await builds_collection.count_documents({})
+    print(f"DEBUG: Total builds in database: {total_builds}")
+    
+    # Debug: Check builds for this specific user
+    user_build_count = await builds_collection.count_documents({"user_id": user_id})
+    print(f"DEBUG: Builds for user {user_id}: {user_build_count}")
+    
     cursor = builds_collection.find({"user_id": user_id}).sort("created_at", -1).skip(skip).limit(limit)
     builds = []
     static_db = get_static_db() if include_warframe_details else None
     
+    build_count = 0
     async for build in cursor:
+        build_count += 1
         build_dict = dict(build)
         if include_warframe_details and static_db:
             warframe = static_db.get_warframe_by_unique_name(build["warframe_uniqueName"])
-            build_dict["warframe"] = warframe
+            # Only include warframe if found and valid, with field name mapping
+            if warframe and warframe.get("name"):
+                # Transform database field names to match Pydantic model
+                build_dict["warframe"] = {
+                    "uniqueName": warframe.get("uniquename"),
+                    "name": warframe.get("name"),
+                    "parentName": warframe.get("parentname"),
+                    "description": warframe.get("description"),
+                    "health": warframe.get("health"),
+                    "shield": warframe.get("shield"),
+                    "armor": warframe.get("armor"),
+                    "stamina": warframe.get("stamina"),
+                    "power": warframe.get("power"),
+                    "codexSecret": warframe.get("codexsecret"),
+                    "masteryReq": warframe.get("masteryreq"),
+                    "sprintSpeed": warframe.get("sprintspeed"),
+                    "passiveDescription": warframe.get("passivedescription"),
+                    "exalted": warframe.get("exalted"),
+                    "productCategory": warframe.get("productcategory"),
+                    "abilities": warframe.get("abilities", [])
+                }
+            else:
+                build_dict["warframe"] = None
         builds.append(build_dict)
+    
+    print(f"DEBUG: Found {build_count} builds total in database")
     return builds
 
 
@@ -72,7 +109,29 @@ async def get_build_by_id(build_id: str, user_id: str, include_warframe_details:
         if build and include_warframe_details:
             static_db = get_static_db()
             warframe = static_db.get_warframe_by_unique_name(build["warframe_uniqueName"])
-            build["warframe"] = warframe
+            # Only include warframe if found and valid, with field name mapping
+            if warframe and warframe.get("name"):
+                # Transform database field names to match Pydantic model
+                build["warframe"] = {
+                    "uniqueName": warframe.get("uniquename"),
+                    "name": warframe.get("name"),
+                    "parentName": warframe.get("parentname"),
+                    "description": warframe.get("description"),
+                    "health": warframe.get("health"),
+                    "shield": warframe.get("shield"),
+                    "armor": warframe.get("armor"),
+                    "stamina": warframe.get("stamina"),
+                    "power": warframe.get("power"),
+                    "codexSecret": warframe.get("codexsecret"),
+                    "masteryReq": warframe.get("masteryreq"),
+                    "sprintSpeed": warframe.get("sprintspeed"),
+                    "passiveDescription": warframe.get("passivedescription"),
+                    "exalted": warframe.get("exalted"),
+                    "productCategory": warframe.get("productcategory"),
+                    "abilities": warframe.get("abilities", [])
+                }
+            else:
+                build["warframe"] = None
         return build
     except:
         return None

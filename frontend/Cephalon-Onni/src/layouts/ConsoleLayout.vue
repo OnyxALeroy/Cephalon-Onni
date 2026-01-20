@@ -24,7 +24,17 @@
             >
             <span v-if="isAdmin" class="divider" />
 
-            <RouterLink to="/profile" class="nav">Profile</RouterLink>
+            <!-- Authenticated user navigation -->
+            <template v-if="user">
+                <RouterLink to="/profile" class="nav">Profile</RouterLink>
+                <button @click="logout" class="nav logout-btn">Log Off</button>
+            </template>
+            
+            <!-- Unauthenticated user navigation -->
+            <template v-else>
+                <RouterLink to="/login" class="nav">Login</RouterLink>
+                <RouterLink to="/register" class="nav">Register</RouterLink>
+            </template>
         </aside>
 
         <main class="main">
@@ -35,7 +45,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { RouterLink, RouterView } from "vue-router";
+import { RouterLink, RouterView, useRouter } from "vue-router";
 
 interface User {
     id: string;
@@ -44,6 +54,7 @@ interface User {
 }
 
 const user = ref<User | null>(null);
+const router = useRouter();
 
 onMounted(async () => {
     await fetchUser();
@@ -65,6 +76,19 @@ async function fetchUser() {
 const isAdmin = computed(() => {
     return user.value && user.value.role === "Administrator";
 });
+
+async function logout() {
+    try {
+        await fetch("/api/auth/logout", { 
+            method: "POST",
+            credentials: "include" 
+        });
+        user.value = null;
+        router.push("/");
+    } catch (error) {
+        console.error("Logout failed:", error);
+    }
+}
 </script>
 
 <style scoped>
@@ -110,6 +134,19 @@ const isAdmin = computed(() => {
     height: 1px;
     background: #1b2a3a;
     margin: 1rem 0;
+}
+
+.logout-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+}
+
+.logout-btn:hover {
+    background: #08121f;
+    color: #7dd3fc;
 }
 .main {
     padding: 2rem;
