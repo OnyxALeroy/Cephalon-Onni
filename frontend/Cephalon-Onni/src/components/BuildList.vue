@@ -23,7 +23,7 @@
     <div v-if="hasLocalBuilds && !isAuthenticated" class="sync-prompt">
       <div class="sync-info">
         <p>
-          <strong>{{ localBuilds.length }}</strong> local build(s) found.
+          <strong>{{ composableLocalBuilds.length }}</strong> local build(s) found.
           <RouterLink to="/login" class="login-link">Login</RouterLink> or 
           <RouterLink to="/register" class="register-link">Register</RouterLink> 
           to save them to your account.
@@ -144,7 +144,7 @@ const loading = computed(() => props.loading !== undefined ? props.loading : com
 const error = computed(() => props.error !== undefined ? props.error : composableError.value)
 const isAuthenticated = computed(() => props.isAuthenticated !== undefined ? props.isAuthenticated : composableIsAuthenticated.value)
 
-const hasLocalBuilds = computed(() => localBuilds.value.length > 0)
+const hasLocalBuilds = computed(() => composableLocalBuilds.value.length > 0)
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
