@@ -1,49 +1,50 @@
-from sqlalchemy import text
-from sqlalchemy.orm import Session
+from models.static_models import ImgItem
+from pymongo import MongoClient
+from pymongo.errors import PyMongoError
 
-from database.static.db_init.db_init_models import ImgItem
 
-
-def create_images_database(session: Session) -> bool:
+def create_images_database(client: MongoClient, db_name: str = "cephalon_onni") -> bool:
+    """Create images collection in MongoDB."""
     try:
-        session.execute(
-            text("""
-            CREATE TABLE IF NOT EXISTS items (
-                id SERIAL PRIMARY KEY,
-                uniqueName VARCHAR(255) NOT NULL,
-                imageURL VARCHAR(255) NOT NULL
-            );
-        """)
-        )
-        session.commit()
+        db = client[db_name]
+
+        # Create collection with index
+        collection = db["images"]
+
+        # Create unique index on uniqueName
+        collection.create_index("uniqueName", unique=True)
+
+        print("✅ Created images collection")
         return True
-    except Exception as e:
+    except PyMongoError as e:
         print(f"[ERROR] While creating image database: {e}")
-        session.rollback()
         return False
 
 
-def fill_img_db(session: Session, items: list[ImgItem]) -> bool:
+def fill_img_db(
+    client: MongoClient, items: list[ImgItem], db_name: str = "cephalon_onni"
+) -> bool:
+    """Fill images collection with data."""
     try:
+        db = client[db_name]
+        collection = db["images"]
+
+        documents = []
         for item in items:
-            session.execute(
-                text("""
-                INSERT INTO items (uniqueName, imageURL)
-                VALUES(:uniqueName, :imageURL)
-                ON CONFLICT (uniqueName) DO NOTHING
-            """),
-                {
-                    "uniqueName": item.get("uniqueName"),
-                    "imageURL": item.get("textureLocation"),
-                },
-            )
-        session.commit()
+            doc = {
+                "uniqueName": item.get("uniqueName"),
+                "imageURL": item.get("textureLocation"),
+            }
+            documents.append(doc)
+
+        if documents:
+            collection.insert_many(documents)
+            print(f"✅ Inserted {len(documents)} images")
+
         return True
     except KeyError as ke:
         print(f"[ERROR] While loading image database: {ke}")
-        session.rollback()
         return False
-    except Exception as e:
+    except PyMongoError as e:
         print(f"[ERROR] While loading image database: {e}")
-        session.rollback()
         return False
