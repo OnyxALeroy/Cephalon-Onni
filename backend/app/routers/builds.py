@@ -114,10 +114,31 @@ async def update_build_endpoint(request: Request, build_id: str, build_update: B
         raise HTTPException(status_code=404, detail="Build not found")
     
     # Enrich with warframe details for the response
-    from database.static.warframe_helper import get_static_db
-    static_db = get_static_db()
-    warframe = static_db.get_warframe_by_unique_name(updated_build["warframe_uniqueName"])
-    updated_build["warframe"] = warframe
+    from database.dynamic.crud import connect_to_mongodb
+    warframe = None
+    mongo_client = connect_to_mongodb()
+    if mongo_client:
+        try:
+            db = mongo_client["cephalon_onni"]
+            warframes_collection = db["warframes"]
+            abilities_collection = db["warframe_abilities"]
+            warframe = warframes_collection.find_one(
+                {"uniqueName": updated_build["warframe_uniqueName"]}
+            )
+            if warframe and warframe.get("name"):
+                # Fetch abilities for this warframe
+                abilities = list(abilities_collection.find(
+                    {"warframe_uniqueName": updated_build["warframe_uniqueName"]},
+                    {"_id": 0, "abilityUniqueName": 1, "abilityName": 1, "description": 1}
+                ))
+                warframe["abilities"] = abilities
+                updated_build["warframe"] = warframe
+            else:
+                updated_build["warframe"] = None
+        finally:
+            mongo_client.close()
+    else:
+        updated_build["warframe"] = None
     
     # Return dictionary - FastAPI will validate against response_model
     return {
@@ -126,7 +147,7 @@ async def update_build_endpoint(request: Request, build_id: str, build_update: B
         "warframe_uniqueName": updated_build["warframe_uniqueName"],
         "created_at": updated_build["created_at"].isoformat() if updated_build["created_at"] else None,
         "updated_at": updated_build["updated_at"].isoformat() if updated_build["updated_at"] else None,
-        "warframe": warframe
+        "warframe": updated_build.get("warframe")
     }
 
 

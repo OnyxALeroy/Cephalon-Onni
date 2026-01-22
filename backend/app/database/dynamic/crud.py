@@ -101,12 +101,19 @@ async def get_user_builds(
         if include_warframe_details and mongo_client:
             db = mongo_client["cephalon_onni"]
             warframes_collection = db["warframes"]
+            abilities_collection = db["warframe_abilities"]
             warframe = warframes_collection.find_one(
                 {"uniqueName": build["warframe_uniqueName"]}
             )
             # Only include warframe if found and valid, with field name mapping
             if warframe and warframe.get("name"):
-                # Transform database field names to match Pydantic model
+                # Fetch abilities for this warframe
+                abilities = list(abilities_collection.find(
+                    {"warframe_uniqueName": build["warframe_uniqueName"]},
+                    {"_id": 0, "abilityUniqueName": 1, "abilityName": 1, "description": 1}
+                ))
+                # Transform database field names to match the model
+                warframe["abilities"] = abilities
                 build_dict["warframe"] = warframe
             else:
                 build_dict["warframe"] = None
@@ -135,12 +142,19 @@ async def get_build_by_id(
             try:
                 db = mongo_client["cephalon_onni"]
                 warframes_collection = db["warframes"]
+                abilities_collection = db["warframe_abilities"]
                 warframe = warframes_collection.find_one(
                     {"uniqueName": build["warframe_uniqueName"]}
                 )
                 # Only include warframe if found and valid, with field name mapping
                 if warframe and warframe.get("name"):
-                    # Transform database field names to match Pydantic model
+                    # Fetch abilities for this warframe
+                    abilities = list(abilities_collection.find(
+                        {"warframe_uniqueName": build["warframe_uniqueName"]},
+                        {"_id": 0, "abilityUniqueName": 1, "abilityName": 1, "description": 1}
+                    ))
+                    # Transform database field names to match the model
+                    warframe["abilities"] = abilities
                     build["warframe"] = warframe
                 else:
                     build["warframe"] = None
