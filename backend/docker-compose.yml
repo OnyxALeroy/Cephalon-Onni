@@ -6,30 +6,11 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
       - mongodb
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: cephalon_db
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      MONGO_URI: mongodb://mongo:27017
-      GRAPH_DB_TYPE: postgres_age
+      MONGO_URI: mongodb://mongodb:27017
+      GRAPH_DB_TYPE: mongodb
     command: ["python", "app/main.py"]
-
-  postgres:
-    image: postgres:15
-    container_name: cephalon-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: cephalon_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data # persist DB across restarts
 
   mongodb:
     image: mongo:7
@@ -41,5 +22,4 @@ services:
       - mongodata:/data/db
 
 volumes:
-  pgdata:
   mongodata:

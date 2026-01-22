@@ -4,20 +4,22 @@ from typing import List, cast
 from urllib.parse import quote_plus
 
 from database.static.db_helpers import (
+    connect_to_mongodb,
     describe_table,
     drop_tables,
+    list_collections,
+    list_databases,
     list_tables,
     preview_table,
 )
-from database.static.db_init.db_init_models import ImgItem, Recipe, Warframe
 from database.static.db_init.images import create_images_database, fill_img_db
 from database.static.db_init.items import create_item_database
 from database.static.db_init.json_collector import JsonCollector
+from database.static.db_init.mods import create_mods_database, fill_mods_db
 from database.static.db_init.recipes import create_recipe_database, fill_recipes_db
 from database.static.db_init.translations import create_translation_database
 from database.static.db_init.warframes import create_warframe_database, fill_warframe_db
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from models.static_models import ImgItem, Mod, Recipe, Warframe
 
 
 def main() -> None:
@@ -30,10 +32,10 @@ def main() -> None:
         print("  --limit <number>      Same as above")
         print("  -h, --help            Show this help message")
         sys.exit(0)
-    
+
     # Check for -y flag to skip confirmation
     skip_confirmation = "-y" in sys.argv
-    
+
     # Parse limit parameter (default 10)
     limit = 10
     for i, arg in enumerate(sys.argv):
@@ -56,41 +58,36 @@ def main() -> None:
                 print("[ERROR] Invalid limit value. Must be an integer.")
                 sys.exit(1)
 
-    # PostgreSQL connection setup
-    POSTGRES_USER = os.getenv("POSTGRES_USER", "user")
-    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
-    POSTGRES_DB = os.getenv("POSTGRES_DB", "cephalon_db")
-    POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
-    POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
-
-    # URL encode the password for special characters
-    encoded_password = quote_plus(POSTGRES_PASSWORD)
-    DATABASE_URL = f"postgresql://{POSTGRES_USER}:{encoded_password}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-
-    # SQLAlchemy engine and session
-    engine = create_engine(DATABASE_URL)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    print(
-        f"Connecting to PostgreSQL database: {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB} (showing {limit} rows per table)"
-    )
-    session = SessionLocal()
+    # Connect to MongoDB
+    client = connect_to_mongodb()
+    if not client:
+        return
 
     # JSONs collector
     jsons_collector = JsonCollector()
 
+    # Actual operations
     try:
         drop_tables(
-            session,
-            ["translations", "items", "recipes", "warframes", "warframe_abilities"],
+            client,
+            [
+                "translations",
+                "items",
+                "recipes",
+                "warframes",
+                "warframe_abilities",
+                "mods",
+            ],
             confirm=not skip_confirmation,
         )
 
         if (
-            not create_translation_database(session)
-            or not create_item_database(session)
-            or not create_recipe_database(session)
-            or not create_warframe_database(session)
-            or not create_images_database(session)
+            not create_translation_database(client)
+            or not create_item_database(client)
+            or not create_recipe_database(client)
+            or not create_warframe_database(client)
+            or not create_images_database(client)
+            or not create_mods_database(client)
         ):
             return
 
@@ -107,7 +104,7 @@ def main() -> None:
             # "ExportResources",
             # "ExportSentinels",
             # "ExportSortieRewards",
-            # "ExportUpgrades",
+            "ExportUpgrades",
             "ExportWarframes",
             # "ExportWeapons",
             "ExportManifest",
@@ -122,30 +119,33 @@ def main() -> None:
 
         # All database fills
         recipes: List[Recipe] = cast(List[Recipe], raw_data.get("ExportRecipes", []))
-        fill_recipes_db(session, recipes)
+        fill_recipes_db(client, recipes)
 
         warframes: List[Warframe] = cast(
             List[Warframe], raw_data.get("ExportWarframes", [])
         )
-        fill_warframe_db(session, warframes)
+        fill_warframe_db(client, warframes)
 
         imgs: List[ImgItem] = cast(List[ImgItem], raw_data.get("ExportManifest", []))
-        fill_img_db(session, imgs)
+        fill_img_db(client, imgs)
 
-        tables = list_tables(session)
+        mods: List[Mod] = cast(List[Mod], raw_data.get("ExportUpgrades", []))
+        fill_mods_db(client, mods)
+
+        tables = list_tables(client)
         if not tables:
             print("No tables found.")
             return
 
         for table in tables:
-            describe_table(session, table)
-            preview_table(session, table, limit)
+            describe_table(client, table)
+            preview_table(client, table, limit)
 
     except Exception as e:
         print(f"[ERROR] While reading DB: {e}")
 
     finally:
-        session.close()
+        client.close()
 
 
 if __name__ == "__main__":

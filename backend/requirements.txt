@@ -11,15 +11,11 @@ dnspython==2.8.0
 ecdsa==0.19.1
 email-validator==2.3.0
 fastapi==0.123.8
-greenlet==3.3.0
 h11==0.16.0
 idna==3.11
 lxml==6.0.2
 motor==3.7.1
 passlib==1.7.4
-psycopg2-binary==2.9.11
-asyncpg==0.29.0
-SQLAlchemy==2.0.36
 pyasn1==0.6.1
 pydantic==2.12.5
 pydantic_core==2.41.5
@@ -29,9 +25,9 @@ requests==2.32.5
 rsa==4.9
 six==1.17.0
 soupsieve==2.8
-SQLAlchemy==2.0.36
 starlette==0.50.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 urllib3==2.6.2
 uvicorn==0.38.0
+psycopg2-binary==2.9.9

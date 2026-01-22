@@ -1,20 +1,20 @@
-from sqlalchemy import text
-from sqlalchemy.orm import Session
+from pymongo import MongoClient
+from pymongo.errors import PyMongoError
 
 
-def create_item_database(session: Session) -> bool:
+def create_item_database(client: MongoClient, db_name: str = "cephalon_onni") -> bool:
+    """Create items collection in MongoDB."""
     try:
-        session.execute(
-            text("""
-        CREATE TABLE IF NOT EXISTS items (
-            id SERIAL PRIMARY KEY,
-            uniqueName TEXT NOT NULL UNIQUE,
-            imageURL TEXT NOT NULL
-        )""")
-        )
-        session.commit()
+        db = client[db_name]
+
+        # Create collection with index
+        collection = db["items"]
+
+        # Create unique index on uniqueName
+        collection.create_index("uniqueName", unique=True)
+
+        print("✅ Created items collection")
         return True
-    except Exception as e:
+    except PyMongoError as e:
         print(f"[ERROR] While creating item database: {e}")
-        session.rollback()
         return False
