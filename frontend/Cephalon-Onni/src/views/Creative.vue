@@ -15,6 +15,7 @@
                 @create-new="startNewBuild"
                 @view-build="viewBuild"
                 @edit-build="editBuild"
+                @delete-build="handleDeleteBuild"
             />
         </div>
 
@@ -53,12 +54,18 @@
                             {{ warframe.name
                             }}{{
                                 warframe.masteryReq || warframe.masteryreq
-                                    ? ` (MR ${warframe.masteryReq || warframe.masteryreq})`
+                                    ? ` (MR ${
+                                          warframe.masteryReq ||
+                                          warframe.masteryreq
+                                      })`
                                     : ""
                             }}
                         </option>
                     </select>
-                    <div v-if="warframes.length === 0 && !loading" class="error-text">
+                    <div
+                        v-if="warframes.length === 0 && !loading"
+                        class="error-text"
+                    >
                         Unable to load warframes. Please refresh the page.
                     </div>
                 </div>
@@ -173,11 +180,13 @@ const {
     hasUnsavedBuild,
     allBuilds,
     error,
+    isAuthenticated,
     setCurrentBuild,
     clearCurrentBuild,
     saveCurrentBuildAsNew,
     createBuild,
     updateBuild,
+    deleteBuild,
     fetchBuilds,
     checkAuthStatus,
     getAllWarframes,
@@ -199,8 +208,8 @@ const warframeNames: Record<string, string> = {
 };
 
 const getWarframeName = (uniqueName: string) => {
-    const warframe = warframes.value.find((w) => 
-        (w.uniqueName || w.uniquename) === uniqueName
+    const warframe = warframes.value.find(
+        (w) => (w.uniqueName || w.uniquename) === uniqueName,
     );
     return (
         warframe?.name ||
@@ -277,6 +286,21 @@ const editBuild = (build: BuildPublic) => {
     currentView.value = "form";
 };
 
+const handleDeleteBuild = async (id: string) => {
+    console.log('handleDeleteBuild called with id:', id);
+    try {
+        await deleteBuild(id);
+        console.log('Build deleted successfully');
+        // Optionally show a success message, though the reactive list updating is usually enough.
+    } catch (err) {
+        console.error("Failed to delete build:", err);
+        alert(
+            "Failed to delete build: " +
+                (err instanceof Error ? err.message : "Unknown error"),
+        );
+    }
+};
+
 const handleBuildSubmit = async () => {
     if (!isFormValid.value) {
         alert("Please fill in all required fields.");
@@ -286,8 +310,10 @@ const handleBuildSubmit = async () => {
     try {
         // Trim form data before submission
         const submitData = {
-            name: formData.value.name ? formData.value.name.trim() : '',
-            warframe_uniqueName: formData.value.warframe_uniqueName ? formData.value.warframe_uniqueName.trim() : ''
+            name: formData.value.name ? formData.value.name.trim() : "",
+            warframe_uniqueName: formData.value.warframe_uniqueName
+                ? formData.value.warframe_uniqueName.trim()
+                : "",
         };
 
         if (editingBuild.value?.id) {
@@ -308,22 +334,28 @@ const handleBuildSubmit = async () => {
     } catch (err) {
         console.error("Failed to save build:", err);
         let errorMessage = "Failed to save build: ";
-        
+
         if (err instanceof Error) {
             errorMessage += err.message;
         } else {
             errorMessage += "Unknown error";
         }
-        
+
         // Provide more user-friendly error messages
         if (errorMessage.includes("422")) {
-            errorMessage = "Invalid data provided. Please check all fields and try again.";
-        } else if (errorMessage.includes("Warframe") && errorMessage.includes("not found")) {
-            errorMessage = "Selected warframe is not available. Please select a different warframe.";
+            errorMessage =
+                "Invalid data provided. Please check all fields and try again.";
+        } else if (
+            errorMessage.includes("Warframe") &&
+            errorMessage.includes("not found")
+        ) {
+            errorMessage =
+                "Selected warframe is not available. Please select a different warframe.";
         } else if (errorMessage.includes("Maximum number of builds")) {
-            errorMessage = "You've reached the maximum number of builds (30). Please delete some builds first.";
+            errorMessage =
+                "You've reached the maximum number of builds (30). Please delete some builds first.";
         }
-        
+
         alert(errorMessage);
     }
 };

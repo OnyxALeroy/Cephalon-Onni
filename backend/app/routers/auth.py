@@ -1,20 +1,20 @@
 from bson import ObjectId
-from fastapi import APIRouter, HTTPException, Response, Request
-
-from models.users import UserCreate, UserPublic, UserRole
 from database.dynamic.auth import create_token, decode_token
 from database.dynamic.crud import create_user, get_user_by_email
-from database.dynamic.security import hash_password, verify_password
 from database.dynamic.db import users_collection
+from database.dynamic.security import hash_password, verify_password
+from fastapi import APIRouter, HTTPException, Request, Response
+from models.users import UserCreate, UserPublic, UserRole
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
 
 @router.post("/register", response_model=UserPublic)
 async def register(user: UserCreate):
     # Basic email validation
     if "@" not in user.email or "." not in user.email:
         raise HTTPException(400, "Invalid email format")
-    
+
     existing_user = await get_user_by_email(user.email)
     if existing_user:
         raise HTTPException(400, "Email already used")
@@ -29,7 +29,7 @@ async def register(user: UserCreate):
         "id": str(result.inserted_id),
         "email": user.email,
         "username": user.username,
-        "role": data["role"].value if hasattr(data["role"], 'value') else data["role"]
+        "role": data["role"].value if hasattr(data["role"], "value") else data["role"],
     }
 
 
@@ -45,19 +45,15 @@ async def login(data: dict, response: Response):
 
     token = create_token({"sub": str(user["_id"])})
 
-    response.set_cookie(
-        "access_token",
-        token,
-        httponly=True,
-        samesite="lax"
-    )
+    response.set_cookie("access_token", token, httponly=True, samesite="lax")
 
     return {
         "id": str(user["_id"]),
         "email": user["email"],
         "username": user["username"],
-        "role": user.get("role", UserRole.TENNO)
+        "role": user.get("role", UserRole.TENNO),
     }
+
 
 @router.get("/me", response_model=UserPublic)
 async def me(request: Request):
@@ -85,5 +81,11 @@ async def me(request: Request):
         "id": str(user["_id"]),
         "email": user["email"],
         "username": user["username"],
-        "role": user.get("role", UserRole.TENNO)
+        "role": user.get("role", UserRole.TENNO),
     }
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("access_token")
+    return {"message": "Logged out successfully"}

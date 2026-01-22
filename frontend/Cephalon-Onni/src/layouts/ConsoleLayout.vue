@@ -142,6 +142,14 @@ async function logout() {
     cursor: pointer;
     text-align: left;
     width: 100%;
+    margin-bottom: 0.6rem;
+    padding: 0.4rem;
+    border-radius: 4px;
+    transition: 0.15s;
+    text-decoration: none;
+    color: #c9e5ff;
+    font-family: inherit;
+    font-size: inherit;
 }
 
 .logout-btn:hover {
