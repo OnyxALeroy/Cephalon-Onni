@@ -2,6 +2,80 @@ from enum import Enum
 from typing import List, Literal, NotRequired, TypedDict
 
 
+# -------------------------------------------------------------------------------------------------
+
+class Mission(TypedDict):
+    uniqueName: str
+    factionIndex: int
+    masteryReq: int
+    maxEnemyLevel: int
+    minEnemyLevel: int
+    missionIndex: int
+    name: str
+    nodeType: int
+    systemIndex: int
+    systemName: str
+
+
+
+
+# -------------------------------------------------------------------------------------------------
+
+
+class ProductCategory(str, Enum):
+    MELEE = "Melee"
+    OPERATOR_AMPS = "OperatorAmps"
+    SPACE_GUNS = "SpaceGuns"
+    PISTOLS = "Pistols"
+    SPECIAL_ITEMS = "SpecialItems"
+    LONG_GUNS = "LongGuns"
+    SENTINEL_WEAPONS = "SentinelWeapons"
+    SPACE_MELEE = "SpaceMelee"
+
+
+class Weapon(TypedDict):
+    uniqueName: str
+    name: str
+    codexSecret: bool
+    criticalChance: float
+    criticalMultiplier: float
+    damagePerShot: List[int]
+    description: str
+    fireRate: float
+    masteryReq: int
+    omegaAttenuation: float
+    procChance: float
+    productCategory: ProductCategory
+    totalDamage: int
+    accuracy: NotRequired[float]
+    blockingAngle: NotRequired[int]
+    comboDuration: NotRequired[int]
+    excludeFromCodex: NotRequired[bool]
+    followThrough: NotRequired[float]
+    heavyAttackDamage: NotRequired[int]
+    heavySlamAttack: NotRequired[int]
+    heavySlamRadialDamage: NotRequired[int]
+    heavySlamRadius: NotRequired[int]
+    magazineSize: NotRequired[int]
+    maxLevelCap: NotRequired[int]
+    multishot: NotRequired[int]
+    noise: NotRequired[str]
+    primeOmegaAttenuation: NotRequired[float]
+    range: NotRequired[float]
+    reloadTime: NotRequired[float]
+    sentinel: NotRequired[bool]
+    slamAttack: NotRequired[int]
+    slamRadialDamage: NotRequired[int]
+    slamRadius: NotRequired[int]
+    slideAttack: NotRequired[int]
+    slot: NotRequired[int]
+    trigger: NotRequired[str]
+    windUp: NotRequired[float]
+
+
+# -------------------------------------------------------------------------------------------------
+
+
 class ModType(str, Enum):
     NONE = "---"
     SENTINEL = "SENTINEL"
@@ -46,6 +120,9 @@ class Mod(TypedDict):
     availableChallenges: NotRequired[list]
 
 
+# -------------------------------------------------------------------------------------------------
+
+
 class WarframeAbility(TypedDict):
     abilityUniqueName: str
     abilityName: str
@@ -71,14 +148,12 @@ class Warframe(TypedDict):
     productCategory: Literal["Suits", "SpaceSuits", "MechSuits"]
 
 
+# -------------------------------------------------------------------------------------------------
+
+
 class Ingredient(TypedDict):
     ItemType: str
     ItemCount: int
-
-
-class ImgItem(TypedDict):
-    uniqueName: str
-    textureLocation: str
 
 
 class Recipe(TypedDict):
@@ -91,3 +166,11 @@ class Recipe(TypedDict):
     codexSecret: bool
     resultType: str
     ingredients: list[Ingredient]
+
+
+# -------------------------------------------------------------------------------------------------
+
+
+class ImgItem(TypedDict):
+    uniqueName: str
+    textureLocation: str
