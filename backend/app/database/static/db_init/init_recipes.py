@@ -47,7 +47,7 @@ def fill_recipes_db(
                             db_name,
                             "items",
                             "uniqueName",
-                            ingredient.get("ItemType"),
+                            ingredient.get("uniqueName"),
                             "_id",
                         ),
                     }
