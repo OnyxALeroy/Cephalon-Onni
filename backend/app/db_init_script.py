@@ -10,13 +10,16 @@ from database.db import (
     list_tables,
     preview_table,
 )
-from database.static.db_init.images import create_images_database, fill_img_db
-from database.static.db_init.items import create_item_database
+from database.static.db_init.init_images import create_images_database, fill_img_db
+from database.static.db_init.init_items import create_item_database
+from database.static.db_init.init_mods import create_mods_database, fill_mods_db
+from database.static.db_init.init_recipes import create_recipe_database, fill_recipes_db
+from database.static.db_init.init_translations import create_translation_database
+from database.static.db_init.init_warframes import (
+    create_warframe_database,
+    fill_warframe_db,
+)
 from database.static.db_init.json_collector import JsonCollector
-from database.static.db_init.mods import create_mods_database, fill_mods_db
-from database.static.db_init.recipes import create_recipe_database, fill_recipes_db
-from database.static.db_init.translations import create_translation_database
-from database.static.db_init.warframes import create_warframe_database, fill_warframe_db
 from models.static_models import ImgItem, Mod, Recipe, Warframe
 
 
