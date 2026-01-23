@@ -15,7 +15,7 @@ def create_translation_database(
         # Create compound index for id and language
         collection.create_index([("id", 1), ("language", 1)], unique=True)
 
-        print("✅ Created translations collection")
+        print("Created translations collection")
         return True
     except PyMongoError as e:
         print(f"[ERROR] While creating translation database: {e}")

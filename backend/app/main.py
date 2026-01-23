@@ -4,22 +4,36 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi.exceptions import RequestValidationError
-from motor.motor_asyncio import AsyncIOMotorClient
-from routers import admin_age, auth, inventory, loottables, protected, user, builds, warframes
+from routers import (
+    admin_age,
+    auth,
+    builds,
+    inventory,
+    loottables,
+    protected,
+    user,
+    warframes,
+)
 
 
 # Connecting to the db
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     # Initialize MongoDB connection
-    application.state.client = AsyncIOMotorClient("mongodb://mongodb:27017")
-    application.state.db = application.state.client["cephalon_onni"]
+    from database.db import db_manager
+
+    db_manager.initialize()
+
+    # Store references in app state for backward compatibility
+    application.state.client = db_manager.async_client
+    application.state.db = db_manager.async_db
 
     yield
-    application.state.client.close()
+    # Close connections
+    db_manager.close_all()
 
 
 # Create app then serve static files
@@ -32,28 +46,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Add validation error handler for better 422 responses
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     print(f"Validation error for {request.method} {request.url}: {exc.errors()}")
-    
+
     # Extract field-specific errors for better user messages
     error_details = []
     for error in exc.errors():
-        field = error['loc'][-1] if error['loc'] else 'unknown'
-        message = error['msg']
-        
-        if 'name' in field.lower() and ('empty' in message.lower() or 'required' in message.lower()):
+        field = error["loc"][-1] if error["loc"] else "unknown"
+        message = error["msg"]
+
+        if "name" in field.lower() and (
+            "empty" in message.lower() or "required" in message.lower()
+        ):
             error_details.append("Build name is required")
-        elif 'warframe' in field.lower() and ('empty' in message.lower() or 'required' in message.lower()):
+        elif "warframe" in field.lower() and (
+            "empty" in message.lower() or "required" in message.lower()
+        ):
             error_details.append("Warframe selection is required")
         else:
             error_details.append(f"{field}: {message}")
-    
-    return JSONResponse(
-        status_code=422,
-        content={"detail": "; ".join(error_details)}
-    )
+
+    return JSONResponse(status_code=422, content={"detail": "; ".join(error_details)})
+
 
 app.include_router(admin_age.router)
 app.include_router(auth.router)

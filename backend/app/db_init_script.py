@@ -1,9 +1,7 @@
-import os
 import sys
 from typing import List, cast
-from urllib.parse import quote_plus
 
-from database.static.db_helpers import (
+from database.db import (
     connect_to_mongodb,
     describe_table,
     drop_tables,

@@ -13,7 +13,7 @@ def create_item_database(client: MongoClient, db_name: str = "cephalon_onni") ->
         # Create unique index on uniqueName
         collection.create_index("uniqueName", unique=True)
 
-        print("✅ Created items collection")
+        print("Created items collection")
         return True
     except PyMongoError as e:
         print(f"[ERROR] While creating item database: {e}")

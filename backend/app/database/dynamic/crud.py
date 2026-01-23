@@ -4,13 +4,16 @@ from bson import ObjectId
 from models.builds import BuildCreate, BuildUpdate
 from models.users import UserCreate
 
-from database.dynamic.db import builds_collection, users_collection
+from database.db import (
+    connect_to_mongodb,
+    db_manager,
+    does_value_exists,
+)
 from database.dynamic.security import hash_password
-from database.static.db_helpers import connect_to_mongodb, does_value_exists
 
 
 async def create_user(user: UserCreate):
-    existing = await users_collection.find_one({"email": user.email})
+    existing = await db_manager.users.find_one({"email": user.email})
     if existing:
         raise ValueError("Email already registered")
 
@@ -21,18 +24,18 @@ async def create_user(user: UserCreate):
         "role": user.role.value if hasattr(user.role, "value") else user.role,
     }
 
-    res = await users_collection.insert_one(doc)
+    res = await db_manager.users.insert_one(doc)
     doc["_id"] = res.inserted_id
     return doc
 
 
 async def get_user_by_email(email: str):
-    return await users_collection.find_one({"email": email})
+    return await db_manager.users.find_one({"email": email})
 
 
 async def create_build(user_id: str, build: BuildCreate):
     # Check user's existing builds count
-    build_count = await builds_collection.count_documents({"user_id": user_id})
+    build_count = await db_manager.builds.count_documents({"user_id": user_id})
     if build_count >= 30:
         raise ValueError("Maximum number of builds (30) reached")
 
@@ -40,20 +43,18 @@ async def create_build(user_id: str, build: BuildCreate):
     client = connect_to_mongodb()
     if not client:
         raise ValueError("Could not connect to static database to validate warframe.")
-    try:
-        if not does_value_exists(
-            client,
-            "cephalon_onni",
-            "warframes",
-            "uniqueName",
-            build.warframe_uniqueName,
-        ):
-            raise ValueError(
-                f"Warframe with uniqueName '{build.warframe_uniqueName}' not found"
-            )
-    finally:
-        if client:
-            client.close()
+    
+    if not does_value_exists(
+        client,
+        "cephalon_onni",
+        "warframes",
+        "uniqueName",
+        build.warframe_uniqueName,
+    ):
+        raise ValueError(
+            f"Warframe with uniqueName '{build.warframe_uniqueName}' not found"
+        )
+
 
     doc = {
         "name": build.name,
@@ -63,7 +64,7 @@ async def create_build(user_id: str, build: BuildCreate):
         "updated_at": datetime.now(),
     }
 
-    res = await builds_collection.insert_one(doc)
+    res = await db_manager.builds.insert_one(doc)
     doc["_id"] = res.inserted_id
     print(f"DEBUG: Inserted build with user_id: {user_id}, _id: {res.inserted_id}")
     return doc
@@ -78,15 +79,15 @@ async def get_user_builds(
     print(f"DEBUG: Querying builds for user_id: {user_id}")
 
     # Debug: Check all builds in database
-    total_builds = await builds_collection.count_documents({})
+    total_builds = await db_manager.builds.count_documents({})
     print(f"DEBUG: Total builds in database: {total_builds}")
 
     # Debug: Check builds for this specific user
-    user_build_count = await builds_collection.count_documents({"user_id": user_id})
+    user_build_count = await db_manager.builds.count_documents({"user_id": user_id})
     print(f"DEBUG: Builds for user {user_id}: {user_build_count}")
 
     cursor = (
-        builds_collection.find({"user_id": user_id})
+        db_manager.builds.find({"user_id": user_id})
         .sort("created_at", -1)
         .skip(skip)
         .limit(limit)
@@ -108,10 +109,17 @@ async def get_user_builds(
             # Only include warframe if found and valid, with field name mapping
             if warframe and warframe.get("name"):
                 # Fetch abilities for this warframe
-                abilities = list(abilities_collection.find(
-                    {"warframe_uniqueName": build["warframe_uniqueName"]},
-                    {"_id": 0, "abilityUniqueName": 1, "abilityName": 1, "description": 1}
-                ))
+                abilities = list(
+                    abilities_collection.find(
+                        {"warframe_uniqueName": build["warframe_uniqueName"]},
+                        {
+                            "_id": 0,
+                            "abilityUniqueName": 1,
+                            "abilityName": 1,
+                            "description": 1,
+                        },
+                    )
+                )
                 # Transform database field names to match the model
                 warframe["abilities"] = abilities
                 build_dict["warframe"] = warframe
@@ -119,8 +127,7 @@ async def get_user_builds(
                 build_dict["warframe"] = None
         builds.append(build_dict)
 
-    if mongo_client:
-        mongo_client.close()
+
 
     print(f"DEBUG: Found {build_count} builds total in database")
     return builds
@@ -130,7 +137,7 @@ async def get_build_by_id(
     build_id: str, user_id: str, include_warframe_details: bool = False
 ):
     try:
-        build = await builds_collection.find_one(
+        build = await db_manager.builds.find_one(
             {"_id": ObjectId(build_id), "user_id": user_id}
         )
         if build and include_warframe_details:
@@ -139,28 +146,33 @@ async def get_build_by_id(
                 raise ValueError(
                     "Could not connect to static database to validate warframe."
                 )
-            try:
-                db = mongo_client["cephalon_onni"]
-                warframes_collection = db["warframes"]
-                abilities_collection = db["warframe_abilities"]
-                warframe = warframes_collection.find_one(
-                    {"uniqueName": build["warframe_uniqueName"]}
-                )
-                # Only include warframe if found and valid, with field name mapping
-                if warframe and warframe.get("name"):
-                    # Fetch abilities for this warframe
-                    abilities = list(abilities_collection.find(
+            
+            db = mongo_client["cephalon_onni"]
+            warframes_collection = db["warframes"]
+            abilities_collection = db["warframe_abilities"]
+            warframe = warframes_collection.find_one(
+                {"uniqueName": build["warframe_uniqueName"]}
+            )
+            # Only include warframe if found and valid, with field name mapping
+            if warframe and warframe.get("name"):
+                # Fetch abilities for this warframe
+                abilities = list(
+                    abilities_collection.find(
                         {"warframe_uniqueName": build["warframe_uniqueName"]},
-                        {"_id": 0, "abilityUniqueName": 1, "abilityName": 1, "description": 1}
-                    ))
-                    # Transform database field names to match the model
-                    warframe["abilities"] = abilities
-                    build["warframe"] = warframe
-                else:
-                    build["warframe"] = None
-            finally:
-                if mongo_client:
-                    mongo_client.close()
+                        {
+                            "_id": 0,
+                            "abilityUniqueName": 1,
+                            "abilityName": 1,
+                            "description": 1,
+                        },
+                    )
+                )
+                # Transform database field names to match the model
+                warframe["abilities"] = abilities
+                build["warframe"] = warframe
+            else:
+                build["warframe"] = None
+
         return build
     except:
         return None
@@ -177,25 +189,22 @@ async def update_build(build_id: str, user_id: str, build_update: BuildUpdate):
             raise ValueError(
                 "Could not connect to static database to validate warframe."
             )
-        try:
-            if not does_value_exists(
-                client,
-                "cephalon_onni",
-                "warframes",
-                "uniqueName",
-                build_update.warframe_uniqueName,
-            ):
-                raise ValueError(
-                    f"Warframe with uniqueName '{build_update.warframe_uniqueName}' not found"
-                )
-        finally:
-            if client:
-                client.close()
+        
+        if not does_value_exists(
+            client,
+            "cephalon_onni",
+            "warframes",
+            "uniqueName",
+            build_update.warframe_uniqueName,
+        ):
+            raise ValueError(
+                f"Warframe with uniqueName '{build_update.warframe_uniqueName}' not found"
+            )
         update_data["warframe_uniqueName"] = build_update.warframe_uniqueName
 
     if update_data:
         update_data["updated_at"] = datetime.now()
-        await builds_collection.update_one(
+        await db_manager.builds.update_one(
             {"_id": ObjectId(build_id), "user_id": user_id}, {"$set": update_data}
         )
 
@@ -204,7 +213,7 @@ async def update_build(build_id: str, user_id: str, build_update: BuildUpdate):
 
 async def delete_build(build_id: str, user_id: str):
     try:
-        result = await builds_collection.delete_one(
+        result = await db_manager.builds.delete_one(
             {"_id": ObjectId(build_id), "user_id": user_id}
         )
         return result.deleted_count > 0
