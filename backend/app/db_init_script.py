@@ -5,13 +5,15 @@ from database.db import (
     connect_to_mongodb,
     describe_table,
     drop_tables,
-    list_collections,
-    list_databases,
     list_tables,
     preview_table,
 )
 from database.static.db_init.init_images import create_images_database, fill_img_db
 from database.static.db_init.init_items import create_item_database
+from database.static.db_init.init_missions import (
+    create_mission_database,
+    fill_missions_db,
+)
 from database.static.db_init.init_mods import create_mods_database, fill_mods_db
 from database.static.db_init.init_recipes import create_recipe_database, fill_recipes_db
 from database.static.db_init.init_translations import create_translation_database
@@ -19,8 +21,12 @@ from database.static.db_init.init_warframes import (
     create_warframe_database,
     fill_warframe_db,
 )
+from database.static.db_init.init_weapons import (
+    create_weapon_database,
+    fill_weapons_db,
+)
 from database.static.db_init.json_collector import JsonCollector
-from models.static_models import ImgItem, Mod, Recipe, Warframe
+from models.static_models import ImgItem, Mission, Mod, Recipe, Warframe, Weapon
 
 
 def main() -> None:
@@ -78,6 +84,8 @@ def main() -> None:
                 "warframes",
                 "warframe_abilities",
                 "mods",
+                "weapons",
+                "missions",
             ],
             confirm=not skip_confirmation,
         )
@@ -89,6 +97,8 @@ def main() -> None:
             or not create_warframe_database(client)
             or not create_images_database(client)
             or not create_mods_database(client)
+            or not create_weapon_database(client)
+            or not create_mission_database(client)
         ):
             return
 
@@ -118,7 +128,7 @@ def main() -> None:
         if not jsons_collector.save_to_disk(raw_data):
             print("[ERROR] Failed to save JSONs to disk")
 
-        # All database fills
+        # All database fills ----------------------------------------------------------------------
         recipes: List[Recipe] = cast(List[Recipe], raw_data.get("ExportRecipes", []))
         fill_recipes_db(client, recipes)
 
@@ -132,6 +142,12 @@ def main() -> None:
 
         mods: List[Mod] = cast(List[Mod], raw_data.get("ExportUpgrades", []))
         fill_mods_db(client, mods)
+
+        weapons: List[Weapon] = cast(List[Weapon], raw_data.get("ExportWeapons", []))
+        fill_weapons_db(client, weapons)
+
+        missions: List[Mission] = cast(List[Mission], raw_data.get("ExportRegions", []))
+        fill_missions_db(client, missions)
 
         tables = list_tables(client)
         if not tables:
