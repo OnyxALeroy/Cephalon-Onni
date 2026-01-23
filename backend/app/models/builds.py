@@ -1,9 +1,10 @@
-from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
-from bson import ObjectId
-from typing import Optional, List, Dict, Any
+from typing import List, Optional
 
-from .pyobjectid import PyObjectId
+from bson import ObjectId
+from pydantic import BaseModel, Field, field_validator
+
+from models.pyobjectid import PyObjectId
 
 
 class WarframeAbility(BaseModel):
@@ -37,25 +38,25 @@ class BuildBase(BaseModel):
 
 
 class BuildCreate(BuildBase):
-    @field_validator('name', 'warframe_uniqueName', mode='before')
+    @field_validator("name", "warframe_uniqueName", mode="before")
     @classmethod
     def strip_whitespace(cls, v):
         if isinstance(v, str):
             return v.strip()
         return v
-    
-    @field_validator('name')
+
+    @field_validator("name")
     @classmethod
     def name_must_not_be_empty(cls, v):
-        if not v or v.strip() == '':
-            raise ValueError('Name cannot be empty')
+        if not v or v.strip() == "":
+            raise ValueError("Name cannot be empty")
         return v
-    
-    @field_validator('warframe_uniqueName')
+
+    @field_validator("warframe_uniqueName")
     @classmethod
     def warframe_must_not_be_empty(cls, v):
-        if not v or v.strip() == '':
-            raise ValueError('Warframe selection cannot be empty')
+        if not v or v.strip() == "":
+            raise ValueError("Warframe selection cannot be empty")
         return v
 
 
@@ -82,35 +83,35 @@ class BuildPublic(BaseModel):
     created_at: datetime
     updated_at: datetime
     warframe: Optional[WarframeDetails] = None
-    
-    @field_validator('id')
+
+    @field_validator("id")
     @classmethod
     def validate_id(cls, v):
         if not v or not isinstance(v, str):
-            raise ValueError('Build ID must be a non-empty string')
+            raise ValueError("Build ID must be a non-empty string")
         return v
-    
-    @field_validator('name')
+
+    @field_validator("name")
     @classmethod
     def validate_name(cls, v):
-        if not v or not isinstance(v, str) or v.strip() == '':
-            raise ValueError('Build name must be a non-empty string')
+        if not v or not isinstance(v, str) or v.strip() == "":
+            raise ValueError("Build name must be a non-empty string")
         return v.strip()
-    
-    @field_validator('warframe_uniqueName')
+
+    @field_validator("warframe_uniqueName")
     @classmethod
     def validate_warframe_unique_name(cls, v):
-        if not v or not isinstance(v, str) or v.strip() == '':
-            raise ValueError('Warframe unique name must be a non-empty string')
+        if not v or not isinstance(v, str) or v.strip() == "":
+            raise ValueError("Warframe unique name must be a non-empty string")
         return v.strip()
-    
-    @field_validator('warframe')
+
+    @field_validator("warframe")
     @classmethod
     def validate_warframe(cls, v):
         if v is not None:
             # Ensure warframe has required fields if present
-            if not hasattr(v, 'name') or not v.name:
-                raise ValueError('Warframe details must have a valid name')
+            if not hasattr(v, "name") or not v.name:
+                raise ValueError("Warframe details must have a valid name")
         return v
 
 

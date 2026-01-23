@@ -1,11 +1,15 @@
-from bson import ObjectId
-from fastapi import APIRouter, HTTPException, Request, Depends, status
-from pydantic import ValidationError
 from typing import List
 
-from models.builds import BuildCreate, BuildPublic, BuildUpdate, BuildWithDetails
-from database.dynamic.crud import create_build, get_user_builds, get_build_by_id, update_build, delete_build
 from database.dynamic.auth import decode_token
+from database.dynamic.crud import (
+    create_build,
+    delete_build,
+    get_build_by_id,
+    get_user_builds,
+    update_build,
+)
+from fastapi import APIRouter, HTTPException, Request
+from models.builds import BuildCreate, BuildPublic, BuildUpdate, BuildWithDetails
 
 router = APIRouter(prefix="/api/builds", tags=["builds"])
 
@@ -13,18 +17,18 @@ router = APIRouter(prefix="/api/builds", tags=["builds"])
 async def get_current_user_id(request: Request) -> str:
     """Extract user_id from JWT token"""
     token = request.cookies.get("access_token")
-    
+
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
+
     try:
         payload = decode_token(token)
         user_id = payload.get("sub")
-        
+
         if user_id is None:
             raise HTTPException(401, "Invalid token")
         return user_id
-            
+
     except Exception:
         raise HTTPException(status_code=401, detail="Token expired or invalid")
 
@@ -33,21 +37,29 @@ async def get_current_user_id(request: Request) -> str:
 async def create_build_endpoint(request: Request, build: BuildCreate):
     """Create a new build"""
     user_id = await get_current_user_id(request)
-    
+
     # Log the build data for debugging
-    print(f"Creating build - User: {user_id}, Name: '{build.name}', Warframe: '{build.warframe_uniqueName}'")
-    
+    print(
+        f"Creating build - User: {user_id}, Name: '{build.name}', Warframe: '{build.warframe_uniqueName}'"
+    )
+
     try:
         new_build = await create_build(user_id, build)
-        print(f"DEBUG: Build created with _id: {new_build.get('_id')}, user_id: {new_build.get('user_id')}")
-        
+        print(
+            f"DEBUG: Build created with _id: {new_build.get('_id')}, user_id: {new_build.get('user_id')}"
+        )
+
         return {
             "id": str(new_build["_id"]),
             "name": new_build["name"],
             "warframe_uniqueName": new_build["warframe_uniqueName"],
             "user_id": new_build["user_id"],
-            "created_at": new_build["created_at"].isoformat() if new_build["created_at"] else None,
-            "updated_at": new_build["updated_at"].isoformat() if new_build["updated_at"] else None
+            "created_at": new_build["created_at"].isoformat()
+            if new_build["created_at"]
+            else None,
+            "updated_at": new_build["updated_at"].isoformat()
+            if new_build["updated_at"]
+            else None,
         }
     except ValueError as e:
         print(f"Validation error: {e}")
@@ -59,27 +71,33 @@ async def create_build_endpoint(request: Request, build: BuildCreate):
 
 @router.get("/", response_model=List[BuildPublic])
 @router.get("", response_model=List[BuildPublic])
-async def get_user_builds_endpoint(request: Request, skip: int = 0, limit: int = 30, include_details: bool = False):
+async def get_user_builds_endpoint(
+    request: Request, skip: int = 0, limit: int = 30, include_details: bool = False
+):
     """Get all builds for the current user"""
     user_id = await get_current_user_id(request)
     print(f"DEBUG: Getting builds for user_id: {user_id}")
-    
+
     builds = await get_user_builds(user_id, skip, limit, include_details)
     print(f"DEBUG: Found {len(builds)} builds for user {user_id}")
-    
+
     # Build response and debug it
     response_data = [
         {
             "id": str(build["_id"]),
             "name": build["name"],
             "warframe_uniqueName": build["warframe_uniqueName"],
-            "created_at": build["created_at"].isoformat() if build["created_at"] else None,
-            "updated_at": build["updated_at"].isoformat() if build["updated_at"] else None,
-            "warframe": build.get("warframe")
+            "created_at": build["created_at"].isoformat()
+            if build["created_at"]
+            else None,
+            "updated_at": build["updated_at"].isoformat()
+            if build["updated_at"]
+            else None,
+            "warframe": build.get("warframe"),
         }
         for build in builds
     ]
-    
+
     print(f"DEBUG: Response data: {response_data}")
     return response_data
 
@@ -88,11 +106,11 @@ async def get_user_builds_endpoint(request: Request, skip: int = 0, limit: int =
 async def get_build_endpoint(request: Request, build_id: str):
     """Get a specific build by ID with full warframe details"""
     user_id = await get_current_user_id(request)
-    
+
     build = await get_build_by_id(build_id, user_id, include_warframe_details=True)
     if not build:
         raise HTTPException(status_code=404, detail="Build not found")
-    
+
     # Return dictionary - FastAPI will validate against response_model
     return {
         "id": str(build["_id"]),
@@ -100,54 +118,65 @@ async def get_build_endpoint(request: Request, build_id: str):
         "warframe_uniqueName": build["warframe_uniqueName"],
         "created_at": build["created_at"].isoformat() if build["created_at"] else None,
         "updated_at": build["updated_at"].isoformat() if build["updated_at"] else None,
-        "warframe": build["warframe"]
+        "warframe": build["warframe"],
     }
 
 
 @router.put("/{build_id}", response_model=BuildWithDetails)
-async def update_build_endpoint(request: Request, build_id: str, build_update: BuildUpdate):
+async def update_build_endpoint(
+    request: Request, build_id: str, build_update: BuildUpdate
+):
     """Update a specific build and return with full warframe details"""
     user_id = await get_current_user_id(request)
-    
+
     updated_build = await update_build(build_id, user_id, build_update)
     if not updated_build:
         raise HTTPException(status_code=404, detail="Build not found")
-    
+
     # Enrich with warframe details for the response
-    from database.dynamic.crud import connect_to_mongodb
+    from database.db import connect_to_mongodb
+
     warframe = None
     mongo_client = connect_to_mongodb()
     if mongo_client:
-        try:
-            db = mongo_client["cephalon_onni"]
-            warframes_collection = db["warframes"]
-            abilities_collection = db["warframe_abilities"]
-            warframe = warframes_collection.find_one(
-                {"uniqueName": updated_build["warframe_uniqueName"]}
-            )
-            if warframe and warframe.get("name"):
-                # Fetch abilities for this warframe
-                abilities = list(abilities_collection.find(
+        db = mongo_client["cephalon_onni"]
+        warframes_collection = db["warframes"]
+        abilities_collection = db["warframe_abilities"]
+        warframe = warframes_collection.find_one(
+            {"uniqueName": updated_build["warframe_uniqueName"]}
+        )
+        if warframe and warframe.get("name"):
+            # Fetch abilities for this warframe
+            abilities = list(
+                abilities_collection.find(
                     {"warframe_uniqueName": updated_build["warframe_uniqueName"]},
-                    {"_id": 0, "abilityUniqueName": 1, "abilityName": 1, "description": 1}
-                ))
-                warframe["abilities"] = abilities
-                updated_build["warframe"] = warframe
-            else:
-                updated_build["warframe"] = None
-        finally:
-            mongo_client.close()
+                    {
+                        "_id": 0,
+                        "abilityUniqueName": 1,
+                        "abilityName": 1,
+                        "description": 1,
+                    },
+                )
+            )
+            warframe["abilities"] = abilities
+            updated_build["warframe"] = warframe
+        else:
+            updated_build["warframe"] = None
     else:
         updated_build["warframe"] = None
-    
+
     # Return dictionary - FastAPI will validate against response_model
     return {
         "id": str(updated_build["_id"]),
         "name": updated_build["name"],
         "warframe_uniqueName": updated_build["warframe_uniqueName"],
-        "created_at": updated_build["created_at"].isoformat() if updated_build["created_at"] else None,
-        "updated_at": updated_build["updated_at"].isoformat() if updated_build["updated_at"] else None,
-        "warframe": updated_build.get("warframe")
+        "created_at": updated_build["created_at"].isoformat()
+        if updated_build["created_at"]
+        else None,
+        "updated_at": updated_build["updated_at"].isoformat()
+        if updated_build["updated_at"]
+        else None,
+        "warframe": updated_build.get("warframe"),
     }
 
 
@@ -155,7 +184,7 @@ async def update_build_endpoint(request: Request, build_id: str, build_update: B
 async def delete_build_endpoint(request: Request, build_id: str):
     """Delete a specific build"""
     user_id = await get_current_user_id(request)
-    
+
     deleted = await delete_build(build_id, user_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Build not found")

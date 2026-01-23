@@ -20,7 +20,7 @@ def create_warframe_database(
             [("warframe_uniqueName", 1), ("abilityUniqueName", 1)], unique=True
         )
 
-        print("✅ Created warframes and warframe_abilities collections")
+        print("Created warframes and warframe_abilities collections")
         return True
     except PyMongoError as e:
         print(f"[ERROR] While creating warframe database: {e}")
@@ -80,12 +80,12 @@ def fill_warframe_db(
         # Insert warframes
         if warframe_docs:
             warframes_collection.insert_many(warframe_docs)
-            print(f"✅ Inserted {len(warframe_docs)} warframes")
+            print(f"Inserted {len(warframe_docs)} warframes")
 
         # Insert abilities
         if ability_docs:
             abilities_collection.insert_many(ability_docs)
-            print(f"✅ Inserted {len(ability_docs)} warframe abilities")
+            print(f"Inserted {len(ability_docs)} warframe abilities")
 
         return True
     except KeyError as ke:

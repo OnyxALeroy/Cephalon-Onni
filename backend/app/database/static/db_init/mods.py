@@ -14,7 +14,7 @@ def create_mods_database(client: MongoClient, db_name: str = "cephalon_onni") ->
         # Create unique index on uniqueName
         collection.create_index("uniqueName", unique=True)
 
-        print("✅ Created mods collection")
+        print("Created mods collection")
         return True
     except PyMongoError as e:
         print(f"[ERROR] While creating mods database: {e}")
@@ -59,7 +59,7 @@ def fill_mods_db(
 
         if documents:
             collection.insert_many(documents)
-            print(f"✅ Inserted {len(documents)} mods")
+            print(f"Inserted {len(documents)} mods")
 
         return True
     except KeyError as ke:

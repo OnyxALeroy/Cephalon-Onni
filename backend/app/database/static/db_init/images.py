@@ -14,7 +14,7 @@ def create_images_database(client: MongoClient, db_name: str = "cephalon_onni") 
         # Create unique index on uniqueName
         collection.create_index("uniqueName", unique=True)
 
-        print("✅ Created images collection")
+        print("Created images collection")
         return True
     except PyMongoError as e:
         print(f"[ERROR] While creating image database: {e}")
@@ -39,7 +39,7 @@ def fill_img_db(
 
         if documents:
             collection.insert_many(documents)
-            print(f"✅ Inserted {len(documents)} images")
+            print(f"Inserted {len(documents)} images")
 
         return True
     except KeyError as ke:

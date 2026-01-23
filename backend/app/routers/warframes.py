@@ -1,22 +1,10 @@
 from typing import Any, Dict, List
 
-from database.static.db_helpers import connect_to_mongodb
+from dependencies import get_static_db_client
 from fastapi import APIRouter, Depends, HTTPException
 from pymongo import MongoClient
 
 router = APIRouter(prefix="/api/warframes", tags=["warframes"])
-
-
-# Dependency to get MongoDB client
-def get_static_db_client():
-    client = connect_to_mongodb()
-    if not client:
-        raise HTTPException(status_code=500, detail="Failed to connect to the database")
-    try:
-        yield client
-    finally:
-        if client:
-            client.close()
 
 
 @router.get("/", response_model=List[Dict[str, Any]])

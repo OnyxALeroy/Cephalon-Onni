@@ -2,7 +2,7 @@ from models.static_models import Recipe
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 
-from database.static.db_helpers import get_value_by_field
+from database.db import get_value_by_field
 
 
 def create_recipe_database(client: MongoClient, db_name: str = "cephalon_onni") -> bool:
@@ -16,7 +16,7 @@ def create_recipe_database(client: MongoClient, db_name: str = "cephalon_onni") 
         # Create unique index on recipe_name
         collection.create_index("recipe_name", unique=True)
 
-        print("✅ Created recipes collection")
+        print("Created recipes collection")
         return True
     except PyMongoError as e:
         print(f"[ERROR] While creating recipe database: {e}")
@@ -78,7 +78,7 @@ def fill_recipes_db(
 
         if documents:
             collection.insert_many(documents)
-            print(f"✅ Inserted {len(documents)} recipes")
+            print(f"Inserted {len(documents)} recipes")
 
         return True
     except KeyError as ke:
