@@ -49,9 +49,9 @@ def fill_mods_db(
                 "compatName": mod.get("compatName"),
                 "modSet": mod.get("modSet"),
                 "modSetValues": mod.get("modSetValues"),
-                "isUtility": mod.get("isUtility"),
+                "isUtility": mod.get("isUtility", False),
                 "description": mod.get("description"),
-                "levelStats": mod.get("levelStats"),
+                "levelStats": mod.get("levelStats", []),
                 "upgradeEntries": mod.get("upgradeEntries"),
                 "availableChallenges": mod.get("availableChallenges"),
             }
