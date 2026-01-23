@@ -35,6 +35,7 @@ def main() -> None:
         print("Usage: python db_init_script.py [options]")
         print("Options:")
         print("  -y                    Skip confirmation prompts")
+        print("  --save-json, -sj      Save JSON files to disk (default: False)")
         print("  --limit=<number>      Number of lines to show per table (default: 10)")
         print("  --limit <number>      Same as above")
         print("  -h, --help            Show this help message")
@@ -42,6 +43,9 @@ def main() -> None:
 
     # Check for -y flag to skip confirmation
     skip_confirmation = "-y" in sys.argv
+    
+    # Check for --save-json flag
+    save_json_to_disk = "--save-json" in sys.argv or "-sj" in sys.argv
 
     # Parse limit parameter (default 10)
     limit = 10
@@ -125,10 +129,12 @@ def main() -> None:
             return
 
         # Save JSONs to disk before database operations
-        if not jsons_collector.save_to_disk(raw_data):
-            print("[ERROR] Failed to save JSONs to disk")
+        if save_json_to_disk:
+            if not jsons_collector.save_to_disk(raw_data):
+                print("[ERROR] Failed to save JSONs to disk")
 
         # All database fills ----------------------------------------------------------------------
+
         recipes: List[Recipe] = cast(List[Recipe], raw_data.get("ExportRecipes", []))
         fill_recipes_db(client, recipes)
 
@@ -148,6 +154,8 @@ def main() -> None:
 
         missions: List[Mission] = cast(List[Mission], raw_data.get("ExportRegions", []))
         fill_missions_db(client, missions)
+
+        # -----------------------------------------------------------------------------------------
 
         tables = list_tables(client)
         if not tables:

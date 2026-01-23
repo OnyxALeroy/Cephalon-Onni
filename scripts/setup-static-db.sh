@@ -6,6 +6,10 @@ source "$SCRIPT_DIR/docker-common.sh"
 
 print_status "Running database initialization script..."
 
+# Remove the output folder entirely
+print_status "Removing existing data folder..."
+rm -rf ./data/
+
 # Check if backend container is running
 if ! docker ps --filter "name=cephalon-onni-backend" --filter "status=running" | grep -q "cephalon-onni-backend"; then
     print_error "Backend container is not running"
