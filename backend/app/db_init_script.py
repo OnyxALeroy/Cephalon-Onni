@@ -100,14 +100,14 @@ def main() -> None:
             # "ExportGear",
             # "ExportKeys",
             "ExportRecipes",
-            # "ExportRegions",
-            # "ExportRelicArcane",
+            "ExportRegions",
+            "ExportRelicArcane",
             # "ExportResources",
             # "ExportSentinels",
             # "ExportSortieRewards",
             "ExportUpgrades",
             "ExportWarframes",
-            # "ExportWeapons",
+            "ExportWeapons",
             "ExportManifest",
         ]
         raw_data = jsons_collector.get_jsons("en", jsons)
