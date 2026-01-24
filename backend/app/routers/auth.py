@@ -1,7 +1,7 @@
 from bson import ObjectId
+from database.db import db_manager
 from database.dynamic.auth import create_token, decode_token
 from database.dynamic.crud import get_user_by_email
-from database.dynamic.db import users_collection
 from database.dynamic.security import hash_password, verify_password
 from fastapi import APIRouter, HTTPException, Request, Response
 from models.users import UserCreate, UserPublic, UserRole
@@ -23,7 +23,7 @@ async def register(user: UserCreate):
     data["hashed_password"] = hash_password(data.pop("password"))
     data["role"] = UserRole.TENNO  # Default role matching UserRole enum
 
-    result = await users_collection.insert_one(data)
+    result = await db_manager.users.insert_one(data)
 
     return {
         "id": str(result.inserted_id),
@@ -35,7 +35,7 @@ async def register(user: UserCreate):
 
 @router.post("/login", response_model=UserPublic)
 async def login(data: dict, response: Response):
-    user = await users_collection.find_one({"email": data.get("email")})
+    user = await db_manager.users.find_one({"email": data.get("email")})
     if not user:
         raise HTTPException(401, "Invalid credentials")
 
@@ -72,7 +72,7 @@ async def me(request: Request):
     except Exception:
         raise HTTPException(status_code=401, detail="Token expired or invalid")
 
-    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    user = await db_manager.users.find_one({"_id": ObjectId(user_id)})
 
     if not user:
         raise HTTPException(status_code=401, detail="Account not found")
@@ -88,4 +88,4 @@ async def me(request: Request):
 @router.post("/logout")
 async def logout(response: Response):
     response.delete_cookie("access_token")
-    return {"message": "Successfully logged out"}
+    return {"message": "Logged out successfully"}

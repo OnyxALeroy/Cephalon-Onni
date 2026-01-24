@@ -24,14 +24,16 @@
             >
             <span v-if="isAdmin" class="divider" />
 
-            <!-- Authentication links -->
-            <template v-if="!isAuthenticated">
+            <!-- Authenticated user navigation -->
+            <template v-if="user">
+                <RouterLink to="/profile" class="nav">Profile</RouterLink>
+                <button @click="logout" class="nav logout-btn">Log Off</button>
+            </template>
+            
+            <!-- Unauthenticated user navigation -->
+            <template v-else>
                 <RouterLink to="/login" class="nav">Login</RouterLink>
                 <RouterLink to="/register" class="nav">Register</RouterLink>
-            </template>
-            <template v-else>
-                <RouterLink to="/profile" class="nav">My Account</RouterLink>
-                <button @click="logout" class="nav logout-btn">Logout</button>
             </template>
         </aside>
 
@@ -42,15 +44,51 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { RouterLink, RouterView } from "vue-router";
-import { useAuth } from "@/composables/useAuth";
+import { ref, onMounted, computed } from "vue";
+import { RouterLink, RouterView, useRouter } from "vue-router";
 
-const { user, fetchUser, logout, isAdmin, isAuthenticated } = useAuth();
+interface User {
+    id: string;
+    username: string;
+    role: string;
+}
+
+const user = ref<User | null>(null);
+const router = useRouter();
 
 onMounted(async () => {
     await fetchUser();
 });
+
+async function fetchUser() {
+    try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+
+        if (res.ok) {
+            user.value = await res.json();
+        }
+    } catch (error) {
+        // User not authenticated, that's fine for layout
+        console.log("User not authenticated");
+    }
+}
+
+const isAdmin = computed(() => {
+    return user.value && user.value.role === "Administrator";
+});
+
+async function logout() {
+    try {
+        await fetch("/api/auth/logout", { 
+            method: "POST",
+            credentials: "include" 
+        });
+        user.value = null;
+        router.push("/");
+    } catch (error) {
+        console.error("Logout failed:", error);
+    }
+}
 </script>
 
 <style scoped>
@@ -115,6 +153,27 @@ onMounted(async () => {
     height: 1px;
     background: #1b2a3a;
     margin: 1rem 0;
+}
+
+.logout-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    margin-bottom: 0.6rem;
+    padding: 0.4rem;
+    border-radius: 4px;
+    transition: 0.15s;
+    text-decoration: none;
+    color: #c9e5ff;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.logout-btn:hover {
+    background: #08121f;
+    color: #7dd3fc;
 }
 .main {
     padding: 2rem;
