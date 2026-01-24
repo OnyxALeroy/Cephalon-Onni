@@ -1,5 +1,5 @@
 from models.static_models import Weapon
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
 
 
@@ -12,7 +12,7 @@ def create_weapon_database(client: MongoClient, db_name: str = "cephalon_onni") 
         collection = db["weapons"]
 
         # Create unique index on weapon_name
-        collection.create_index("weapon_name", unique=True)
+        collection.create_index("uniqueName", unique=True)
 
         print("Created weapons collection")
         return True
@@ -29,11 +29,11 @@ def fill_weapons_db(
         db = client[db_name]
         collection = db["weapons"]
 
-        documents = []
+        ops = []
+
         for weapon in weapons:
-            # Create document
             doc = {
-                "weapon_name": weapon.get("uniqueName"),
+                "uniqueName": weapon.get("uniqueName"),
                 "name": weapon.get("name"),
                 "description": weapon.get("description"),
                 "product_category": weapon.get("productCategory"),
@@ -73,16 +73,20 @@ def fill_weapons_db(
                 "wind_up": weapon.get("windUp"),
             }
 
-            documents.append(doc)
+            ops.append(
+                UpdateOne(
+                    {"uniqueName": doc["uniqueName"]},
+                    {"$set": doc},
+                    upsert=True,
+                )
+            )
 
-        if documents:
-            collection.insert_many(documents)
-            print(f"Inserted {len(documents)} weapons")
+        if ops:
+            collection.bulk_write(ops, ordered=False)
+            print(f"Upserted {len(ops)} weapons")
 
         return True
-    except KeyError as ke:
-        print(f"[ERROR] While loading weapon database: {ke}")
-        return False
+
     except PyMongoError as e:
         print(f"[ERROR] While loading weapon database: {e}")
         return False

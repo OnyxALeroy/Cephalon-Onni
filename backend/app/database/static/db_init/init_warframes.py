@@ -1,5 +1,5 @@
 from models.static_models import Warframe
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
 
 
@@ -36,8 +36,8 @@ def fill_warframe_db(
         warframes_collection = db["warframes"]
         abilities_collection = db["warframe_abilities"]
 
-        warframe_docs = []
-        ability_docs = []
+        warframe_ops = []
+        ability_ops = []
 
         for warframe in warframes:
             # Warframe document
@@ -58,7 +58,14 @@ def fill_warframe_db(
                 "exalted": warframe.get("exalted", []),
                 "productCategory": warframe["productCategory"],
             }
-            warframe_docs.append(warframe_doc)
+
+            warframe_ops.append(
+                UpdateOne(
+                    {"uniqueName": warframe_doc["uniqueName"]},
+                    {"$set": warframe_doc},
+                    upsert=True,
+                )
+            )
 
             # Abilities documents
             abilities = warframe.get("abilities", [])
@@ -75,22 +82,29 @@ def fill_warframe_db(
                     "abilityName": ability.get("abilityName", ""),
                     "description": ability.get("description", ""),
                 }
-                ability_docs.append(ability_doc)
+
+                ability_ops.append(
+                    UpdateOne(
+                        {
+                            "warframe_uniqueName": ability_doc["warframe_uniqueName"],
+                            "abilityUniqueName": ability_doc["abilityUniqueName"],
+                        },
+                        {"$set": ability_doc},
+                        upsert=True,
+                    )
+                )
 
         # Insert warframes
-        if warframe_docs:
-            warframes_collection.insert_many(warframe_docs)
-            print(f"Inserted {len(warframe_docs)} warframes")
+        if warframe_ops:
+            warframes_collection.bulk_write(warframe_ops, ordered=False)
+            print(f"Upserted {len(warframe_ops)} warframes")
 
         # Insert abilities
-        if ability_docs:
-            abilities_collection.insert_many(ability_docs)
-            print(f"Inserted {len(ability_docs)} warframe abilities")
+        if ability_ops:
+            abilities_collection.bulk_write(ability_ops, ordered=False)
+            print(f"Upserted {len(ability_ops)} warframe abilities")
 
         return True
-    except KeyError as ke:
-        print(f"[ERROR] While loading warframe database: key error {ke}")
-        return False
     except PyMongoError as e:
         print(f"[ERROR] While loading warframe database: {e}")
         return False

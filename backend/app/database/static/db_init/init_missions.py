@@ -1,5 +1,5 @@
-from models.static_models import Mission
-from pymongo import MongoClient
+from models.static_models import FetchedMission
+from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
 
 
@@ -24,14 +24,17 @@ def create_mission_database(
 
 
 def fill_missions_db(
-    client: MongoClient, missions: list[Mission], db_name: str = "cephalon_onni"
+    client: MongoClient,
+    missions: list[FetchedMission],
+    db_name: str = "cephalon_onni",
 ) -> bool:
     """Fill missions collection with data."""
     try:
         db = client[db_name]
         collection = db["missions"]
 
-        documents = []
+        ops = []
+
         for mission in missions:
             # Create document
             doc = {
@@ -45,18 +48,22 @@ def fill_missions_db(
                 "node_type": mission.get("nodeType"),
                 "system_index": mission.get("systemIndex"),
                 "system_name": mission.get("systemName"),
+                "drops": [],  # NOTE: Is later added by "init_loot_tables.py"
             }
 
-            documents.append(doc)
+            ops.append(
+                UpdateOne(
+                    {"mission_name": doc["mission_name"]},
+                    {"$set": doc},
+                    upsert=True,
+                )
+            )
 
-        if documents:
-            collection.insert_many(documents)
-            print(f"Inserted {len(documents)} missions")
+        if ops:
+            collection.bulk_write(ops, ordered=False)
+            print(f"Upserted {len(ops)} missions")
 
         return True
-    except KeyError as ke:
-        print(f"[ERROR] While loading mission database: {ke}")
-        return False
     except PyMongoError as e:
         print(f"[ERROR] While loading mission database: {e}")
         return False
