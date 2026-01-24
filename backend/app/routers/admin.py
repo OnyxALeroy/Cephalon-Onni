@@ -39,8 +39,11 @@ async def get_current_admin_user(request: Request):
 
 
 @router.get("/users", response_model=List[UserPublic])
-async def get_all_users(current_admin: dict = Depends(get_current_admin_user)):
-    """Get all users (admin only)"""
+async def get_all_users(
+    search: Optional[str] = None,
+    current_admin: dict = Depends(get_current_admin_user)
+):
+    """Get all users (admin only) with optional search"""
     users = []
     cursor = db_manager.users.find({})
 
