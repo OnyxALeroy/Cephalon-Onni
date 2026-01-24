@@ -1,10 +1,10 @@
 from enum import Enum
 from typing import List, Literal, NotRequired, TypedDict
 
-
 # -------------------------------------------------------------------------------------------------
 
-class Mission(TypedDict):
+
+class FetchedMission(TypedDict):
     uniqueName: str
     factionIndex: int
     masteryReq: int
@@ -15,8 +15,6 @@ class Mission(TypedDict):
     nodeType: int
     systemIndex: int
     systemName: str
-
-
 
 
 # -------------------------------------------------------------------------------------------------

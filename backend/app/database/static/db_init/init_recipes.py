@@ -1,5 +1,5 @@
 from models.static_models import Recipe
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
 
 from database.db import get_value_by_field
@@ -31,7 +31,7 @@ def fill_recipes_db(
         db = client[db_name]
         collection = db["recipes"]
 
-        documents = []
+        ops = []
         for recipe in recipes:
             # Ingredients
             ingredients = recipe.get("ingredients", [])
@@ -74,16 +74,19 @@ def fill_recipes_db(
                 "ingredients": ingredient_data,
             }
 
-            documents.append(doc)
+            ops.append(
+                UpdateOne(
+                    {"recipe_name": doc["recipe_name"]},
+                    {"$set": doc},
+                    upsert=True,
+                )
+            )
 
-        if documents:
-            collection.insert_many(documents)
-            print(f"Inserted {len(documents)} recipes")
+        if ops:
+            collection.bulk_write(ops, ordered=False)
+            print(f"Upserted {len(ops)} recipes")
 
         return True
-    except KeyError as ke:
-        print(f"[ERROR] While loading recipe database: {ke}")
-        return False
     except PyMongoError as e:
         print(f"[ERROR] While loading recipe database: {e}")
         return False

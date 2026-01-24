@@ -10,6 +10,7 @@ from database.db import (
 )
 from database.static.db_init.init_images import create_images_database, fill_img_db
 from database.static.db_init.init_items import create_item_database
+from database.static.db_init.init_loot_tables import init_loot_tables
 from database.static.db_init.init_missions import (
     create_mission_database,
     fill_missions_db,
@@ -26,7 +27,7 @@ from database.static.db_init.init_weapons import (
     fill_weapons_db,
 )
 from database.static.db_init.json_collector import JsonCollector
-from models.static_models import ImgItem, Mission, Mod, Recipe, Warframe, Weapon
+from models.static_models import FetchedMission, ImgItem, Mod, Recipe, Warframe, Weapon
 
 
 def main() -> None:
@@ -43,7 +44,7 @@ def main() -> None:
 
     # Check for -y flag to skip confirmation
     skip_confirmation = "-y" in sys.argv
-    
+
     # Check for --save-json flag
     save_json_to_disk = "--save-json" in sys.argv or "-sj" in sys.argv
 
@@ -152,8 +153,15 @@ def main() -> None:
         weapons: List[Weapon] = cast(List[Weapon], raw_data.get("ExportWeapons", []))
         fill_weapons_db(client, weapons)
 
-        missions: List[Mission] = cast(List[Mission], raw_data.get("ExportRegions", []))
+        missions: List[FetchedMission] = cast(
+            List[FetchedMission], raw_data.get("ExportRegions", [])
+        )
         fill_missions_db(client, missions)
+
+        # -----------------------------------------------------------------------------------------
+
+        loot_table_url = "https://www.warframe.com/fr/droptables"
+        init_loot_tables(client, loot_table_url)
 
         # -----------------------------------------------------------------------------------------
 

@@ -1,5 +1,5 @@
 from models.static_models import ImgItem
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
 
 
@@ -29,22 +29,27 @@ def fill_img_db(
         db = client[db_name]
         collection = db["images"]
 
-        documents = []
+        ops = []
+
         for item in items:
             doc = {
                 "uniqueName": item.get("uniqueName"),
                 "imageURL": item.get("textureLocation"),
             }
-            documents.append(doc)
 
-        if documents:
-            collection.insert_many(documents)
-            print(f"Inserted {len(documents)} images")
+            ops.append(
+                UpdateOne(
+                    {"uniqueName": doc["uniqueName"]},
+                    {"$set": doc},
+                    upsert=True,
+                )
+            )
+
+        if ops:
+            collection.bulk_write(ops, ordered=False)
+            print(f"Upserted {len(ops)} images")
 
         return True
-    except KeyError as ke:
-        print(f"[ERROR] While loading image database: {ke}")
-        return False
     except PyMongoError as e:
         print(f"[ERROR] While loading image database: {e}")
         return False

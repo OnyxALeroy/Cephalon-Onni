@@ -1,5 +1,5 @@
 from models.static_models import Mod
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
 
 
@@ -29,7 +29,7 @@ def fill_mods_db(
         db = client[db_name]
         collection = db["mods"]
 
-        documents = []
+        ops = []
         for mod in mods:
             if "upgradeEntries" in mod or "availableChallenges" in mod:
                 print(f"Mod {mod['uniqueName']} (true name: {mod['name']}) is Riven")
@@ -55,16 +55,20 @@ def fill_mods_db(
                 "upgradeEntries": mod.get("upgradeEntries"),
                 "availableChallenges": mod.get("availableChallenges"),
             }
-            documents.append(doc)
 
-        if documents:
-            collection.insert_many(documents)
-            print(f"Inserted {len(documents)} mods")
+            ops.append(
+                UpdateOne(
+                    {"uniqueName": doc["uniqueName"]},
+                    {"$set": doc},
+                    upsert=True,
+                )
+            )
+
+        if ops:
+            collection.bulk_write(ops, ordered=False)
+            print(f"Upserted {len(ops)} mods")
 
         return True
-    except KeyError as ke:
-        print(f"[ERROR] While loading mods database: key error {ke}")
-        return False
     except PyMongoError as e:
         print(f"[ERROR] While loading mods database: {e}")
         return False
