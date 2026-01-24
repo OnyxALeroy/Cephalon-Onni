@@ -10,11 +10,8 @@ def create_recipe_database(client: MongoClient, db_name: str = "cephalon_onni") 
     try:
         db = client[db_name]
 
-        # Create collection with index
         collection = db["recipes"]
-
-        # Create unique index on recipe_name
-        collection.create_index("recipe_name", unique=True)
+        collection.create_index("uniqueName", unique=True)
 
         print("Created recipes collection")
         return True
@@ -55,7 +52,7 @@ def fill_recipes_db(
 
             # Create document
             doc = {
-                "recipe_name": recipe.get("uniqueName"),
+                "uniqueName": recipe.get("uniqueName"),
                 "build_price": recipe.get("buildPrice", 0),
                 "build_time": recipe.get("buildTime", 0),
                 "skip_build_time_price": recipe.get("skipBuildTimePrice", 0),
@@ -76,7 +73,7 @@ def fill_recipes_db(
 
             ops.append(
                 UpdateOne(
-                    {"recipe_name": doc["recipe_name"]},
+                    {"uniqueName": doc["uniqueName"]},
                     {"$set": doc},
                     upsert=True,
                 )

@@ -1,5 +1,5 @@
 import sys
-from typing import List, cast
+from typing import List, Union, cast
 
 from database.db import (
     connect_to_mongodb,
@@ -17,6 +17,7 @@ from database.static.db_init.init_missions import (
 )
 from database.static.db_init.init_mods import create_mods_database, fill_mods_db
 from database.static.db_init.init_recipes import create_recipe_database, fill_recipes_db
+from database.static.db_init.init_relics import create_relic_database, fill_relic_db
 from database.static.db_init.init_translations import create_translation_database
 from database.static.db_init.init_warframes import (
     create_warframe_database,
@@ -27,7 +28,16 @@ from database.static.db_init.init_weapons import (
     fill_weapons_db,
 )
 from database.static.db_init.json_collector import JsonCollector
-from models.static_models import FetchedMission, ImgItem, Mod, Recipe, Warframe, Weapon
+from models.static_models import (
+    Arcana,
+    FetchedMission,
+    ImgItem,
+    Mod,
+    Recipe,
+    Relic,
+    Warframe,
+    Weapon,
+)
 
 
 def main() -> None:
@@ -91,6 +101,7 @@ def main() -> None:
                 "mods",
                 "weapons",
                 "missions",
+                "relics",
             ],
             confirm=not skip_confirmation,
         )
@@ -104,6 +115,7 @@ def main() -> None:
             or not create_mods_database(client)
             or not create_weapon_database(client)
             or not create_mission_database(client)
+            or not create_relic_database(client)
         ):
             return
 
@@ -157,6 +169,11 @@ def main() -> None:
             List[FetchedMission], raw_data.get("ExportRegions", [])
         )
         fill_missions_db(client, missions)
+
+        relics: List[Union[Relic, Arcana]] = cast(
+            List[Union[Relic, Arcana]], raw_data.get("ExportRelicArcane", [])
+        )
+        fill_relic_db(client, relics)
 
         # -----------------------------------------------------------------------------------------
 
