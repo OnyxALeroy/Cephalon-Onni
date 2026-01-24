@@ -19,7 +19,7 @@ async def register(user: UserCreate):
     if existing_user:
         raise HTTPException(400, "Email already used")
 
-    data = user.dict()
+    data = user.model_dump()
     data["hashed_password"] = hash_password(data.pop("password"))
     data["role"] = UserRole.TENNO  # Default role matching UserRole enum
 

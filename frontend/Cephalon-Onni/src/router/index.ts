@@ -22,11 +22,10 @@ const router = createRouter({
         { path: "loottables", component: LootTables },
         { path: "creative", component: Creative },
         { path: "admin", component: Admin },
+        { path: "login", component: Login },
+        { path: "register", component: Register },
       ],
     },
-
-    { path: "/login", component: Login },
-    { path: "/register", component: Register },
 
     {
       path: "/:pathMatch(.*)*",

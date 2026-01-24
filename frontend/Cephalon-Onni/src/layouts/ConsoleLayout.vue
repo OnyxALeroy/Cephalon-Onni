@@ -130,6 +130,25 @@ async function logout() {
     color: #7dd3fc;
 }
 
+.logout-btn {
+    background: none;
+    border: none;
+    color: #c9e5ff;
+    padding: 0.4rem;
+    border-radius: 4px;
+    transition: 0.15s;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.logout-btn:hover {
+    background: #08121f;
+    color: #7dd3fc;
+}
+
 .divider {
     height: 1px;
     background: #1b2a3a;

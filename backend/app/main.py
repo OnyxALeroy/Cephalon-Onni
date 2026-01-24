@@ -46,32 +46,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# Add validation error handler for better 422 responses
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    print(f"Validation error for {request.method} {request.url}: {exc.errors()}")
-
-    # Extract field-specific errors for better user messages
-    error_details = []
-    for error in exc.errors():
-        field = error["loc"][-1] if error["loc"] else "unknown"
-        message = error["msg"]
-
-        if "name" in field.lower() and (
-            "empty" in message.lower() or "required" in message.lower()
-        ):
-            error_details.append("Build name is required")
-        elif "warframe" in field.lower() and (
-            "empty" in message.lower() or "required" in message.lower()
-        ):
-            error_details.append("Warframe selection is required")
-        else:
-            error_details.append(f"{field}: {message}")
-
-    return JSONResponse(status_code=422, content={"detail": "; ".join(error_details)})
-
-
+app.include_router(admin.router)
 app.include_router(admin_age.router)
 app.include_router(auth.router)
 app.include_router(inventory.router)
