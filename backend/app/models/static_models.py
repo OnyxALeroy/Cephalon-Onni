@@ -4,6 +4,36 @@ from typing import List, Literal, NotRequired, TypedDict
 # -------------------------------------------------------------------------------------------------
 
 
+class RelicReward(TypedDict):
+    rewardName: str
+    rarity: str
+    tier: int
+    itemCount: int
+
+
+class Relic(TypedDict):
+    uniqueName: str
+    name: str
+    codexSecret: bool
+    description: str
+    relicRewards: List[RelicReward]
+
+
+class ArcanaLevelStat(TypedDict):
+    stats: List[str]
+
+
+class Arcana(TypedDict):
+    uniqueName: str
+    name: str
+    codexSecret: bool
+    rarity: NotRequired[str]
+    levelStats: List[ArcanaLevelStat]
+
+
+# -------------------------------------------------------------------------------------------------
+
+
 class FetchedMission(TypedDict):
     uniqueName: str
     factionIndex: int
