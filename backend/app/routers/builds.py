@@ -7,6 +7,10 @@ from database.dynamic.crud import (
     get_build_by_id,
     get_user_builds,
     update_build,
+    get_available_warframes,
+    get_available_weapons,
+    get_available_mods,
+    get_available_arcanes,
 )
 from fastapi import APIRouter, HTTPException, Request
 from models.builds import BuildCreate, BuildPublic, BuildUpdate, BuildWithDetails
@@ -53,6 +57,11 @@ async def create_build_endpoint(request: Request, build: BuildCreate):
             "id": str(new_build["_id"]),
             "name": new_build["name"],
             "warframe_uniqueName": new_build["warframe_uniqueName"],
+            "warframe_mods": new_build.get("warframe_mods", []),
+            "warframe_arcanes": new_build.get("warframe_arcanes", []),
+            "primary_weapon": new_build.get("primary_weapon"),
+            "secondary_weapon": new_build.get("secondary_weapon"),
+            "melee_weapon": new_build.get("melee_weapon"),
             "user_id": new_build["user_id"],
             "created_at": new_build["created_at"].isoformat()
             if new_build["created_at"]
@@ -87,6 +96,11 @@ async def get_user_builds_endpoint(
             "id": str(build["_id"]),
             "name": build["name"],
             "warframe_uniqueName": build["warframe_uniqueName"],
+            "warframe_mods": build.get("warframe_mods", []),
+            "warframe_arcanes": build.get("warframe_arcanes", []),
+            "primary_weapon": build.get("primary_weapon"),
+            "secondary_weapon": build.get("secondary_weapon"),
+            "melee_weapon": build.get("melee_weapon"),
             "created_at": build["created_at"].isoformat()
             if build["created_at"]
             else None,
@@ -116,6 +130,11 @@ async def get_build_endpoint(request: Request, build_id: str):
         "id": str(build["_id"]),
         "name": build["name"],
         "warframe_uniqueName": build["warframe_uniqueName"],
+        "warframe_mods": build.get("warframe_mods", []),
+        "warframe_arcanes": build.get("warframe_arcanes", []),
+        "primary_weapon": build.get("primary_weapon"),
+        "secondary_weapon": build.get("secondary_weapon"),
+        "melee_weapon": build.get("melee_weapon"),
         "created_at": build["created_at"].isoformat() if build["created_at"] else None,
         "updated_at": build["updated_at"].isoformat() if build["updated_at"] else None,
         "warframe": build["warframe"],
@@ -170,6 +189,11 @@ async def update_build_endpoint(
         "id": str(updated_build["_id"]),
         "name": updated_build["name"],
         "warframe_uniqueName": updated_build["warframe_uniqueName"],
+        "warframe_mods": updated_build.get("warframe_mods", []),
+        "warframe_arcanes": updated_build.get("warframe_arcanes", []),
+        "primary_weapon": updated_build.get("primary_weapon"),
+        "secondary_weapon": updated_build.get("secondary_weapon"),
+        "melee_weapon": updated_build.get("melee_weapon"),
         "created_at": updated_build["created_at"].isoformat()
         if updated_build["created_at"]
         else None,
@@ -188,3 +212,51 @@ async def delete_build_endpoint(request: Request, build_id: str):
     deleted = await delete_build(build_id, user_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Build not found")
+
+
+@router.get("/available/warframes")
+async def get_available_warframes_endpoint():
+    """Get all available warframes for build creation"""
+    try:
+        warframes = await get_available_warframes()
+        return warframes
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/available/weapons")
+async def get_available_weapons_endpoint():
+    """Get all available weapons for build creation"""
+    try:
+        weapons = await get_available_weapons()
+        return weapons
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/available/mods")
+async def get_available_mods_endpoint():
+    """Get all available mods for build creation"""
+    try:
+        mods = await get_available_mods()
+        return mods
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/available/arcanes")
+async def get_available_arcanes_endpoint():
+    """Get all available arcanes for build creation"""
+    try:
+        arcanes = await get_available_arcanes()
+        return arcanes
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")

@@ -80,8 +80,10 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
+import { useAuth } from "@/composables/useAuth";
 
 const router = useRouter();
+const { register, login, isAdmin } = useAuth();
 
 const username = ref("");
 const email = ref("");
@@ -111,57 +113,27 @@ async function handleRegister() {
   success.value = "";
 
   try {
-    const response = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        username: username.value.trim(),
-        email: email.value.trim(),
-        password: password.value,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Registration failed");
-    }
-
+    await register(username.value.trim(), email.value.trim(), password.value);
+    
     // Registration successful
-    success.value = "Account created successfully! Redirecting to login...";
+    success.value = "Account created successfully! Logging you in...";
     
     // Auto-login after successful registration
     setTimeout(async () => {
       try {
-        const loginResponse = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            email: email.value.trim(),
-            password: password.value,
-          }),
-        });
-
-        if (loginResponse.ok) {
-          const user = await loginResponse.json();
-          if (user.role === "admin" || user.role === "administrator") {
-            router.push("/admin");
-          } else {
-            router.push("/");
-          }
+        await login(email.value.trim(), password.value);
+        
+        // Login successful, redirect based on user role
+        if (isAdmin.value) {
+          router.push("/admin");
         } else {
-          // If auto-login fails, redirect to login page
-          router.push("/login");
+          router.push("/");
         }
       } catch {
+        // If auto-login fails, redirect to login page
         router.push("/login");
       }
-    }, 2000);
+    }, 1500);
   } catch (err: any) {
     error.value = err.message || "An error occurred during registration";
   } finally {

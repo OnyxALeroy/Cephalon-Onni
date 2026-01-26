@@ -196,10 +196,15 @@ const currentView = ref<ViewType>("list");
 const editingBuild = ref<BuildCreate & { id?: string }>();
 const selectedBuild = ref<BuildPublic>();
 const warframes = ref<WarframeDetails[]>([]);
-const formData = ref<BuildCreate>({
+ const formData = ref<BuildCreate>({
     name: "",
     warframe_uniqueName: "",
-});
+    warframe_mods: [],
+    warframe_arcanes: [],
+    primary_weapon: null,
+    secondary_weapon: null,
+    melee_weapon: null,
+ });
 
 // Mock warframe name mapping (in real app, this would come from API)
 const warframeNames: Record<string, string> = {
@@ -273,15 +278,25 @@ const viewBuild = (build: BuildPublic) => {
     currentView.value = "details";
 };
 
-const editBuild = (build: BuildPublic) => {
+ const editBuild = (build: BuildPublic) => {
     editingBuild.value = {
         id: build.id,
         name: build.name,
         warframe_uniqueName: build.warframe_uniqueName,
+        warframe_mods: build.warframe_mods || [],
+        warframe_arcanes: build.warframe_arcanes || [],
+        primary_weapon: build.primary_weapon || null,
+        secondary_weapon: build.secondary_weapon || null,
+        melee_weapon: build.melee_weapon || null,
     };
     formData.value = {
         name: build.name,
         warframe_uniqueName: build.warframe_uniqueName,
+        warframe_mods: build.warframe_mods || [],
+        warframe_arcanes: build.warframe_arcanes || [],
+        primary_weapon: build.primary_weapon || null,
+        secondary_weapon: build.secondary_weapon || null,
+        melee_weapon: build.melee_weapon || null,
     };
     currentView.value = "form";
 };
@@ -314,6 +329,11 @@ const handleBuildSubmit = async () => {
             warframe_uniqueName: formData.value.warframe_uniqueName
                 ? formData.value.warframe_uniqueName.trim()
                 : "",
+            warframe_mods: formData.value.warframe_mods,
+            warframe_arcanes: formData.value.warframe_arcanes,
+            primary_weapon: formData.value.primary_weapon,
+            secondary_weapon: formData.value.secondary_weapon,
+            melee_weapon: formData.value.melee_weapon,
         };
 
         if (editingBuild.value?.id) {
@@ -321,6 +341,11 @@ const handleBuildSubmit = async () => {
             await updateBuild(editingBuild.value.id, {
                 name: submitData.name,
                 warframe_uniqueName: submitData.warframe_uniqueName,
+                warframe_mods: submitData.warframe_mods,
+                warframe_arcanes: submitData.warframe_arcanes,
+                primary_weapon: submitData.primary_weapon,
+                secondary_weapon: submitData.secondary_weapon,
+                melee_weapon: submitData.melee_weapon,
             });
             alert("Build updated successfully!");
         } else {
