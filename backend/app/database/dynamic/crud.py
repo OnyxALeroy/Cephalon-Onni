@@ -443,7 +443,8 @@ async def update_build(build_id: str, user_id: str, build_update: BuildUpdate):
         (build_update.melee_weapon, "melee_weapon"),
     ]:
         if weapon_field is not None:
-            if weapon_field is None:
+            # Check if weapon has empty weapon_uniqueName
+            if not weapon_field.weapon_uniqueName or weapon_field.weapon_uniqueName.strip() == "":
                 update_data[weapon_key] = None
             else:
                 if not client:

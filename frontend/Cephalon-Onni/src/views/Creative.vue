@@ -20,81 +20,13 @@
         </div>
 
         <!-- Build Form View -->
-        <div v-else-if="currentView === 'form'" class="build-form-simple">
-            <h3>{{ editingBuild?.id ? "Edit Build" : "Create New Build" }}</h3>
-
-            <form @submit.prevent="handleBuildSubmit" class="form">
-                <div class="form-group">
-                    <label for="build-name">Build Name</label>
-                    <input
-                        id="build-name"
-                        v-model="formData.name"
-                        type="text"
-                        required
-                        placeholder="My Awesome Build"
-                        :disabled="loading"
-                        maxlength="50"
-                    />
-                </div>
-
-                <div class="form-group">
-                    <label for="warframe-select">Warframe</label>
-                    <select
-                        id="warframe-select"
-                        v-model="formData.warframe_uniqueName"
-                        required
-                        :disabled="loading || warframes.length === 0"
-                    >
-                        <option value="">Select a Warframe</option>
-                        <option
-                            v-for="warframe in warframes"
-                            :key="warframe.uniqueName || warframe.uniquename"
-                            :value="warframe.uniqueName || warframe.uniquename"
-                        >
-                            {{ warframe.name
-                            }}{{
-                                warframe.masteryReq || warframe.masteryreq
-                                    ? ` (MR ${
-                                          warframe.masteryReq ||
-                                          warframe.masteryreq
-                                      })`
-                                    : ""
-                            }}
-                        </option>
-                    </select>
-                    <div
-                        v-if="warframes.length === 0 && !loading"
-                        class="error-text"
-                    >
-                        Unable to load warframes. Please refresh the page.
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button
-                        type="submit"
-                        class="btn-primary"
-                        :disabled="loading || !isFormValid"
-                    >
-                        <span v-if="loading">Saving...</span>
-                        <span v-else
-                            >{{
-                                editingBuild?.id ? "Update" : "Save"
-                            }}
-                            Build</span
-                        >
-                    </button>
-
-                    <button
-                        type="button"
-                        class="btn-secondary"
-                        @click="backToList"
-                        :disabled="loading"
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </form>
+        <div v-else-if="currentView === 'form'">
+            <BuildForm
+                :build="editingBuild"
+                :is-editing="!!editingBuild?.id"
+                @submit="handleBuildSubmit"
+                @cancel="backToList"
+            />
         </div>
 
         <!-- Build Details View -->
@@ -161,16 +93,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import BuildList from "@/components/BuildList.vue";
-import BuildDetails from "@/components/BuildDetails.vue";
-import {
-    useBuilds,
-    type BuildPublic,
-    type BuildCreate,
-    type BuildUpdate,
-    type WarframeDetails,
-} from "@/composables/useBuilds";
+ import { ref, computed, onMounted } from "vue";
+ import BuildList from "@/components/BuildList.vue";
+ import BuildDetails from "@/components/BuildDetails.vue";
+ import BuildForm from "@/components/BuildForm.vue";
+ import {
+     useBuilds,
+     type BuildPublic,
+     type BuildCreate,
+     type BuildUpdate,
+     type WarframeDetails,
+ } from "@/composables/useBuilds";
 
 type ViewType = "list" | "form" | "details";
 
@@ -192,19 +125,10 @@ const {
     getAllWarframes,
 } = useBuilds();
 
-const currentView = ref<ViewType>("list");
-const editingBuild = ref<BuildCreate & { id?: string }>();
-const selectedBuild = ref<BuildPublic>();
-const warframes = ref<WarframeDetails[]>([]);
- const formData = ref<BuildCreate>({
-    name: "",
-    warframe_uniqueName: "",
-    warframe_mods: [],
-    warframe_arcanes: [],
-    primary_weapon: null,
-    secondary_weapon: null,
-    melee_weapon: null,
- });
+ const currentView = ref<ViewType>("list");
+ const editingBuild = ref<BuildCreate & { id?: string }>();
+ const selectedBuild = ref<BuildPublic>();
+ const warframes = ref<WarframeDetails[]>([]);
 
 // Mock warframe name mapping (in real app, this would come from API)
 const warframeNames: Record<string, string> = {
@@ -212,7 +136,7 @@ const warframeNames: Record<string, string> = {
     "/Lotus/Powersuits/Mag/MagBaseSuit": "Mag",
 };
 
-const getWarframeName = (uniqueName: string) => {
+ const getWarframeName = (uniqueName: string) => {
     const warframe = warframes.value.find(
         (w) => (w.uniqueName || w.uniquename) === uniqueName,
     );
@@ -222,15 +146,6 @@ const getWarframeName = (uniqueName: string) => {
         "Unknown"
     );
 };
-
-const isFormValid = computed(() => {
-    return (
-        formData.value.name &&
-        formData.value.name.trim() !== "" &&
-        formData.value.warframe_uniqueName &&
-        formData.value.warframe_uniqueName.trim() !== ""
-    );
-});
 
 const loadWarframes = async () => {
     try {
@@ -242,9 +157,8 @@ const loadWarframes = async () => {
     }
 };
 
-const startNewBuild = () => {
+ const startNewBuild = () => {
     editingBuild.value = undefined;
-    formData.value = { name: "", warframe_uniqueName: "" };
     currentView.value = "form";
 };
 
@@ -278,18 +192,9 @@ const viewBuild = (build: BuildPublic) => {
     currentView.value = "details";
 };
 
- const editBuild = (build: BuildPublic) => {
+  const editBuild = (build: BuildPublic) => {
     editingBuild.value = {
         id: build.id,
-        name: build.name,
-        warframe_uniqueName: build.warframe_uniqueName,
-        warframe_mods: build.warframe_mods || [],
-        warframe_arcanes: build.warframe_arcanes || [],
-        primary_weapon: build.primary_weapon || null,
-        secondary_weapon: build.secondary_weapon || null,
-        melee_weapon: build.melee_weapon || null,
-    };
-    formData.value = {
         name: build.name,
         warframe_uniqueName: build.warframe_uniqueName,
         warframe_mods: build.warframe_mods || [],
@@ -316,41 +221,17 @@ const handleDeleteBuild = async (id: string) => {
     }
 };
 
-const handleBuildSubmit = async () => {
-    if (!isFormValid.value) {
-        alert("Please fill in all required fields.");
-        return;
-    }
-
+ const handleBuildSubmit = async (buildData: BuildCreate | BuildUpdate) => {
     try {
-        // Trim form data before submission
-        const submitData = {
-            name: formData.value.name ? formData.value.name.trim() : "",
-            warframe_uniqueName: formData.value.warframe_uniqueName
-                ? formData.value.warframe_uniqueName.trim()
-                : "",
-            warframe_mods: formData.value.warframe_mods,
-            warframe_arcanes: formData.value.warframe_arcanes,
-            primary_weapon: formData.value.primary_weapon,
-            secondary_weapon: formData.value.secondary_weapon,
-            melee_weapon: formData.value.melee_weapon,
-        };
-
+        console.log("Submitting build data:", buildData);
+        
         if (editingBuild.value?.id) {
             // Update existing build
-            await updateBuild(editingBuild.value.id, {
-                name: submitData.name,
-                warframe_uniqueName: submitData.warframe_uniqueName,
-                warframe_mods: submitData.warframe_mods,
-                warframe_arcanes: submitData.warframe_arcanes,
-                primary_weapon: submitData.primary_weapon,
-                secondary_weapon: submitData.secondary_weapon,
-                melee_weapon: submitData.melee_weapon,
-            });
+            await updateBuild(editingBuild.value.id, buildData);
             alert("Build updated successfully!");
         } else {
             // Create new build
-            await createBuild(submitData);
+            await createBuild(buildData as BuildCreate);
             alert("Build created successfully!");
         }
 
@@ -362,12 +243,15 @@ const handleBuildSubmit = async () => {
 
         if (err instanceof Error) {
             errorMessage += err.message;
+        } else if (err && typeof err === 'object' && 'detail' in err) {
+            // Handle FastAPI validation errors
+            errorMessage += JSON.stringify(err.detail, null, 2);
         } else {
             errorMessage += "Unknown error";
         }
 
         // Provide more user-friendly error messages
-        if (errorMessage.includes("422")) {
+        if (errorMessage.includes("422") || errorMessage.includes("Validation failed")) {
             errorMessage =
                 "Invalid data provided. Please check all fields and try again.";
         } else if (
@@ -561,104 +445,5 @@ onMounted(async () => {
     font-size: 1.1rem;
 }
 
-.build-form-simple {
-    background: #050b16;
-    border: 1px solid #1b2a3a;
-    border-radius: 8px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-}
 
-.build-form-simple h3 {
-    color: #38bdf8;
-    margin-bottom: 1.5rem;
-    font-size: 1.5rem;
-}
-
-.form {
-    max-width: 500px;
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-group label {
-    display: block;
-    color: #c9e5ff;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-.form-group input,
-.form-group select {
-    width: 100%;
-    background: #08121f;
-    border: 1px solid #1b2a3a;
-    border-radius: 4px;
-    padding: 0.75rem;
-    color: #c9e5ff;
-    font-size: 1rem;
-    transition: border-color 0.2s;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-    outline: none;
-    border-color: #38bdf8;
-}
-
-.form-group input:disabled,
-.form-group select:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.form-actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 2rem;
-}
-
-.btn-primary,
-.btn-secondary {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-primary {
-    background: #38bdf8;
-    color: #021019;
-}
-
-.btn-primary:hover:not(:disabled) {
-    background: #0ea5e9;
-}
-
-.btn-secondary {
-    background: #374151;
-    color: #e5e7eb;
-}
-
-.btn-secondary:hover:not(:disabled) {
-    background: #4b5563;
-}
-
-.btn-primary:disabled,
-.btn-secondary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.error-text {
-    color: #dc2626;
-    font-size: 0.9rem;
-    margin-top: 0.5rem;
-}
 </style>
