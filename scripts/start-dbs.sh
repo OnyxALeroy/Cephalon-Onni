@@ -5,13 +5,12 @@ source "$(dirname "$0")/docker-common.sh"
 print_status "Starting database services only..."
 cd "$PROJECT_ROOT"
 
-compose down postgres mongodb 2>/dev/null || true
+compose down mongodb 2>/dev/null || true
 
-compose up -d postgres mongodb
+compose up -d mongodb
 sleep 8
 
 services=(
-  "PostgreSQL:cephalon-onni-postgres"
   "MongoDB:cephalon-onni-mongo"
 )
 
