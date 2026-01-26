@@ -19,24 +19,14 @@
           />
         </div>
 
-        <div class="form-group">
-          <label for="warframe-select">Warframe</label>
-          <select
-            id="warframe-select"
-            v-model="formData.warframe_uniqueName"
-            required
-            :disabled="loading || warframes.length === 0"
-          >
-            <option value="">Select a Warframe</option>
-            <option
-              v-for="warframe in warframes"
-              :key="warframe.uniqueName"
-              :value="warframe.uniqueName"
-            >
-              {{ warframe.name }}{{ warframe.masteryReq ? ` (MR ${warframe.masteryReq})` : '' }}
-            </option>
-          </select>
-        </div>
+         <div class="form-group">
+           <label for="warframe-select">Warframe</label>
+           <SearchableSelect
+             :options="warframes"
+             placeholder="Search for a warframe..."
+             v-model="formData.warframe_uniqueName"
+           />
+         </div>
       </div>
 
       <div class="form-section">
@@ -50,20 +40,12 @@
               :key="index"
               class="mod-slot"
             >
-              <select 
-                v-model="mod.uniqueName" 
-                :disabled="loading || availableMods.length === 0"
-                @change="updateModPolarity(index, mod.uniqueName)"
-              >
-                <option value="">No Mod</option>
-                <option
-                  v-for="availableMod in availableMods"
-                  :key="availableMod.uniqueName"
-                  :value="availableMod.uniqueName"
-                >
-                  {{ availableMod.name }} ({{ availableMod.type }})
-                </option>
-              </select>
+               <SearchableSelect
+                 :options="availableMods"
+                 placeholder="Search for mod..."
+                 v-model="mod.uniqueName"
+                 @update:modelValue="updateModPolarity(index, mod.uniqueName)"
+               />
               <input 
                 v-model.number="mod.level" 
                 type="number" 
@@ -100,19 +82,11 @@
               :key="index"
               class="arcane-slot"
             >
-              <select 
-                v-model="formData.warframe_arcanes[index]" 
-                :disabled="loading || availableArcanes.length === 0"
-              >
-                <option value="">No Arcane</option>
-                <option
-                  v-for="availableArcane in availableArcanes"
-                  :key="availableArcane.uniqueName"
-                  :value="availableArcane.uniqueName"
-                >
-                  {{ availableArcane.name }} ({{ availableArcane.rarity }})
-                </option>
-              </select>
+<SearchableSelect
+                 :options="availableArcanes"
+                 placeholder="Search for arcane..."
+                 v-model="formData.warframe_arcanes[index]"
+               />
               <button 
                 type="button" 
                 @click="removeWarframeArcane(index)"
@@ -137,47 +111,31 @@
       <div class="form-section">
         <h4>Weapons Configuration</h4>
         
-        <div v-for="(weapon, weaponType) in weaponSlots" :key="weaponType" class="weapon-section">
-          <div class="form-group">
-            <label>{{ (weapon as any).label }}</label>
-            <select
-              v-model="formData[weaponType as keyof typeof weaponSlots].weapon_uniqueName"
-              :disabled="loading || availableWeapons.length === 0"
-              @change="clearWeaponMods(weaponType as keyof typeof weaponSlots)"
-            >
-              <option value="">No {{ weapon.label }}</option>
-              <option
-                v-for="availableWeapon in availableWeapons"
-                :key="availableWeapon.uniqueName"
-                :value="availableWeapon.uniqueName"
-              >
-                {{ availableWeapon.name }} ({{ availableWeapon.productCategory }})
-              </option>
-            </select>
-          </div>
+         <div v-for="(weapon, weaponType) in weaponSlots" :key="weaponType" class="weapon-section">
+            <div class="form-group">
+              <label>{{ (weapon as any).label }}</label>
+              <SearchableSelect
+                :options="availableWeapons"
+                :placeholder="`Search for ${weapon.label.toLowerCase()}...`"
+                :model-value="formData[weaponType as keyof typeof weaponSlots]?.weapon_uniqueName"
+                @update:modelValue="(value) => setWeaponUniqueName(weaponType as keyof typeof weaponSlots, value)"
+              />
+            </div>
 
-          <div v-if="formData[weaponType].weapon_uniqueName" class="weapon-details">
+           <div v-if="formData[weaponType as keyof typeof weaponSlots]?.weapon_uniqueName" class="weapon-details">
             <div class="form-group">
               <label>{{ (weapon as any).label }} Mods (Max: 9)</label>
               <div class="mods-container">
-                <div 
-                  v-for="(mod, index) in formData[weaponType].mods" 
-                  :key="index"
-                  class="mod-slot"
-                >
-                  <select 
-                    v-model="mod.uniqueName" 
-                    :disabled="loading || availableMods.length === 0"
-                  >
-                    <option value="">No Mod</option>
-                    <option
-                      v-for="availableMod in availableMods"
-                      :key="availableMod.uniqueName"
-                      :value="availableMod.uniqueName"
-                    >
-                      {{ availableMod.name }}
-                    </option>
-                  </select>
+                 <div 
+                   v-for="(mod, index) in formData[weaponType as keyof typeof weaponSlots]?.mods || []" 
+                   :key="index"
+                   class="mod-slot"
+                 >
+                   <SearchableSelect
+                     :options="availableMods"
+                     placeholder="Search for mod..."
+                     v-model="mod.uniqueName"
+                   />
                   <input 
                     v-model.number="mod.level" 
                     type="number" 
@@ -198,7 +156,7 @@
                 <button 
                   type="button" 
                   @click="addWeaponMod(weaponType as keyof typeof weaponSlots)" 
-                  :disabled="loading || formData[weaponType as keyof typeof weaponSlots].mods.length >= 9"
+                  :disabled="loading || (formData[weaponType as keyof typeof weaponSlots]?.mods?.length || 0) >= 9"
                   class="btn-add"
                 >
                   + Add Mod
@@ -208,19 +166,12 @@
 
             <div class="form-group">
               <label>{{ (weapon as any).label }} Arcane</label>
-              <select
-                v-model="formData[weaponType as keyof typeof weaponSlots].arcane_uniqueName"
-                :disabled="loading || availableArcanes.length === 0"
-              >
-                <option value="">No Arcane</option>
-                <option
-                  v-for="availableArcane in availableArcanes"
-                  :key="availableArcane.uniqueName"
-                  :value="availableArcane.uniqueName"
-                >
-                  {{ availableArcane.name }}
-                </option>
-              </select>
+              <SearchableSelect
+                :options="availableArcanes"
+                placeholder="Search for arcane..."
+                :model-value="formData[weaponType as keyof typeof weaponSlots]?.arcane_uniqueName"
+                @update:modelValue="(value) => setWeaponArcane(weaponType as keyof typeof weaponSlots, value)"
+              />
             </div>
           </div>
         </div>
@@ -245,18 +196,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
-import { 
-  useBuilds, 
-  type BuildCreate, 
-  type BuildUpdate, 
-  type WarframeDetails,
-  type WeaponDetails,
-  type ModDetails,
-  type ArcaneDetails,
-  type EquippedMod,
-  type WeaponBuild
-} from '@/composables/useBuilds'
+ import { ref, computed, watch, onMounted } from 'vue'
+ import { 
+   useBuilds, 
+   type BuildCreate, 
+   type BuildUpdate, 
+   type WarframeDetails,
+   type WeaponDetails,
+   type ModDetails,
+   type ArcaneDetails,
+   type EquippedMod,
+   type WeaponBuild
+ } from '@/composables/useBuilds'
+ import SearchableSelect from './SearchableSelect.vue'
 
 interface Props {
   build?: BuildCreate & { id?: string }
@@ -306,6 +258,7 @@ const weaponSlots: Record<string, { label: string }> = {
 }
 
 const isFormValid = computed(() => {
+  // Only require name and warframe - weapons are optional and can be incomplete
   return formData.value.name.trim() !== '' && formData.value.warframe_uniqueName !== ''
 })
 
@@ -364,18 +317,36 @@ const initializeWeaponSlot = (weaponType: keyof typeof weaponSlots): WeaponBuild
   }
 }
 
+const setWeaponUniqueName = (weaponType: keyof typeof weaponSlots, value: string) => {
+  if (!formData.value[weaponType]) {
+    formData.value[weaponType] = initializeWeaponSlot(weaponType)
+  }
+  formData.value[weaponType]!.weapon_uniqueName = value
+  clearWeaponMods(weaponType)
+}
+
+const setWeaponArcane = (weaponType: keyof typeof weaponSlots, value: string | undefined) => {
+  if (!formData.value[weaponType]) {
+    formData.value[weaponType] = initializeWeaponSlot(weaponType)
+  }
+  formData.value[weaponType]!.arcane_uniqueName = value
+}
+
 const clearWeaponMods = (weaponType: string) => {
   const typedWeaponType = weaponType as keyof typeof weaponSlots
   if (formData.value[typedWeaponType]) {
-    formData.value[typedWeaponType].mods = []
-    formData.value[typedWeaponType].arcane_uniqueName = undefined
+    formData.value[typedWeaponType] = {
+      weapon_uniqueName: formData.value[typedWeaponType]?.weapon_uniqueName || '',
+      mods: [],
+      arcane_uniqueName: undefined
+    }
   }
 }
 
 const addWeaponMod = (weaponType: string) => {
   const typedWeaponType = weaponType as keyof typeof weaponSlots
   const weapon = formData.value[typedWeaponType]
-  if (weapon && weapon.mods.length < 9) {
+  if (weapon && weapon.mods && weapon.mods.length < 9) {
     weapon.mods.push({ uniqueName: '', level: 0 })
   }
 }
@@ -383,22 +354,50 @@ const addWeaponMod = (weaponType: string) => {
 const removeWeaponMod = (weaponType: string, modIndex: number) => {
   const typedWeaponType = weaponType as keyof typeof weaponSlots
   const weapon = formData.value[typedWeaponType]
-  if (weapon) {
+  if (weapon && weapon.mods) {
     weapon.mods.splice(modIndex, 1)
   }
+}
+
+const validateWeaponData = (weapon: WeaponBuild | null): boolean => {
+  if (!weapon) return true; // null is valid for optional fields
+  return weapon.weapon_uniqueName && weapon.weapon_uniqueName.trim() !== '';
+}
+
+const cleanWeaponData = (weapon: WeaponBuild | null): WeaponBuild | null => {
+  if (!weapon || !weapon.weapon_uniqueName || weapon.weapon_uniqueName.trim() === '') {
+    return null;
+  }
+  
+  // Filter out empty mods
+  const cleanedMods = weapon.mods.filter(mod => 
+    mod.uniqueName && mod.uniqueName.trim() !== ''
+  );
+  
+  return {
+    weapon_uniqueName: weapon.weapon_uniqueName.trim(),
+    mods: cleanedMods,
+    arcane_uniqueName: weapon.arcane_uniqueName || undefined
+  };
 }
 
 const handleSubmit = async () => {
   if (!isFormValid.value) return
 
   try {
-    // Ensure weapon slots are properly initialized
+    // Log data for debugging
+    console.log('Submitting build data:', JSON.stringify(formData.value, null, 2))
+    
+    // Clean weapon data to remove empty mods and validate weapon names
     const submitData: BuildCreate | BuildUpdate = {
       ...formData.value,
-      primary_weapon: formData.value.primary_weapon?.weapon_uniqueName ? formData.value.primary_weapon : null,
-      secondary_weapon: formData.value.secondary_weapon?.weapon_uniqueName ? formData.value.secondary_weapon : null,
-      melee_weapon: formData.value.melee_weapon?.weapon_uniqueName ? formData.value.melee_weapon : null
+      primary_weapon: cleanWeaponData(formData.value.primary_weapon),
+      secondary_weapon: cleanWeaponData(formData.value.secondary_weapon),
+      melee_weapon: cleanWeaponData(formData.value.melee_weapon)
     }
+
+    // Log final submit data
+    console.log('Final submit data:', JSON.stringify(submitData, null, 2))
 
     emit('submit', submitData)
   } catch (err) {
