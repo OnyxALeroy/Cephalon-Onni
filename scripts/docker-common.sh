@@ -71,10 +71,6 @@ check_service_health() {
 test_database_connections() {
     print_status "Testing database connections..."
 
-    docker exec cephalon-onni-postgres pg_isready -U user -d cephalon_db >/dev/null &&
-        print_success "PostgreSQL OK" ||
-        print_error "PostgreSQL failed"
-
     docker exec cephalon-onni-mongo mongosh --eval "db.adminCommand('ping')" >/dev/null &&
         print_success "MongoDB OK" ||
         print_error "MongoDB failed"

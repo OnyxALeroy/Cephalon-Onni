@@ -44,51 +44,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
-import { RouterLink, RouterView, useRouter } from "vue-router";
+import { onMounted } from "vue";
+import { RouterLink, RouterView } from "vue-router";
+import { useAuth } from "@/composables/useAuth";
 
-interface User {
-    id: string;
-    username: string;
-    role: string;
-}
-
-const user = ref<User | null>(null);
-const router = useRouter();
+const { user, fetchUser, logout, isAdmin, isInitialized } = useAuth();
 
 onMounted(async () => {
     await fetchUser();
 });
-
-async function fetchUser() {
-    try {
-        const res = await fetch("/api/auth/me", { credentials: "include" });
-
-        if (res.ok) {
-            user.value = await res.json();
-        }
-    } catch (error) {
-        // User not authenticated, that's fine for layout
-        console.log("User not authenticated");
-    }
-}
-
-const isAdmin = computed(() => {
-    return user.value && user.value.role === "Administrator";
-});
-
-async function logout() {
-    try {
-        await fetch("/api/auth/logout", { 
-            method: "POST",
-            credentials: "include" 
-        });
-        user.value = null;
-        router.push("/");
-    } catch (error) {
-        console.error("Logout failed:", error);
-    }
-}
 </script>
 
 <style scoped>

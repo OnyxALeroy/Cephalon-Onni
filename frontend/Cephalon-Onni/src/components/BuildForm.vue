@@ -3,71 +3,175 @@
     <h3>{{ isEditing ? 'Edit Build' : 'Create New Build' }}</h3>
     
     <form @submit.prevent="handleSubmit" class="form">
-      <div class="form-group">
-        <label for="build-name">Build Name</label>
-        <input
-          id="build-name"
-          v-model="formData.name"
-          type="text"
-          required
-          placeholder="My Awesome Build"
-          :disabled="loading"
-          maxlength="50"
-        />
-      </div>
-
-      <div class="form-group">
-        <label for="warframe-select">Warframe</label>
-        <select
-          id="warframe-select"
-          v-model="formData.warframe_uniqueName"
-          required
-          :disabled="loading || warframes.length === 0"
-        >
-          <option value="">Select a Warframe</option>
-          <option
-            v-for="warframe in warframes"
-            :key="warframe.uniqueName"
-            :value="warframe.uniqueName"
-          >
-            {{ warframe.name }}{{ warframe.masteryReq ? ` (MR ${warframe.masteryReq})` : '' }}
-          </option>
-        </select>
-      </div>
-
-      <div v-if="selectedWarframe" class="warframe-preview">
-        <h4>{{ selectedWarframe.name }}</h4>
-        <p class="warframe-description">{{ selectedWarframe.description }}</p>
+      <div class="form-section">
+        <h4>Basic Information</h4>
         
-        <div class="warframe-stats">
-          <div class="stat">
-            <span class="stat-label">Health:</span>
-            <span class="stat-value">{{ selectedWarframe.health }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Shield:</span>
-            <span class="stat-value">{{ selectedWarframe.shield }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Armor:</span>
-            <span class="stat-value">{{ selectedWarframe.armor }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Power:</span>
-            <span class="stat-value">{{ selectedWarframe.power }}</span>
+        <div class="form-group">
+          <label for="build-name">Build Name</label>
+          <input
+            id="build-name"
+            v-model="formData.name"
+            type="text"
+            required
+            placeholder="My Awesome Build"
+            :disabled="loading"
+            maxlength="50"
+          />
+        </div>
+
+         <div class="form-group">
+           <label for="warframe-select">Warframe</label>
+           <SearchableSelect
+             :options="warframes"
+             placeholder="Search for a warframe..."
+             v-model="formData.warframe_uniqueName"
+           />
+         </div>
+      </div>
+
+      <div class="form-section">
+        <h4>Warframe Configuration</h4>
+        
+        <div class="form-group">
+          <label>Warframe Mods (Max: 10)</label>
+          <div class="mods-container">
+            <div 
+              v-for="(mod, index) in formData.warframe_mods" 
+              :key="index"
+              class="mod-slot"
+            >
+               <SearchableSelect
+                 :options="availableMods"
+                 placeholder="Search for mod..."
+                 v-model="mod.uniqueName"
+                 @update:modelValue="updateModPolarity(index, mod.uniqueName)"
+               />
+              <input 
+                v-model.number="mod.level" 
+                type="number" 
+                min="0" 
+                max="10" 
+                placeholder="Lvl"
+                :disabled="loading || !mod.uniqueName"
+              />
+              <button 
+                type="button" 
+                @click="removeWarframeMod(index)"
+                :disabled="loading"
+                class="btn-remove"
+              >
+                ×
+              </button>
+            </div>
+            <button 
+              type="button" 
+              @click="addWarframeMod" 
+              :disabled="loading || formData.warframe_mods.length >= 10"
+              class="btn-add"
+            >
+              + Add Mod
+            </button>
           </div>
         </div>
 
-        <div v-if="selectedWarframe.abilities && selectedWarframe.abilities.length > 0" class="abilities">
-          <h5>Abilities:</h5>
-          <div class="ability-list">
-            <div
-              v-for="ability in selectedWarframe.abilities"
-              :key="ability.abilityUniqueName"
-              class="ability"
+        <div class="form-group">
+          <label>Warframe Arcanes (Max: 2)</label>
+          <div class="arcanes-container">
+            <div 
+              v-for="(arcane, index) in formData.warframe_arcanes" 
+              :key="index"
+              class="arcane-slot"
             >
-              <h6>{{ ability.abilityName }}</h6>
-              <p>{{ ability.description }}</p>
+<SearchableSelect
+                 :options="availableArcanes"
+                 placeholder="Search for arcane..."
+                 v-model="formData.warframe_arcanes[index]"
+               />
+              <button 
+                type="button" 
+                @click="removeWarframeArcane(index)"
+                :disabled="loading"
+                class="btn-remove"
+              >
+                ×
+              </button>
+            </div>
+            <button 
+              type="button" 
+              @click="addWarframeArcane" 
+              :disabled="loading || formData.warframe_arcanes.length >= 2"
+              class="btn-add"
+            >
+              + Add Arcane
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h4>Weapons Configuration</h4>
+        
+         <div v-for="(weapon, weaponType) in weaponSlots" :key="weaponType" class="weapon-section">
+            <div class="form-group">
+              <label>{{ (weapon as any).label }}</label>
+              <SearchableSelect
+                :options="availableWeapons"
+                :placeholder="`Search for ${weapon.label.toLowerCase()}...`"
+                :model-value="formData[weaponType as keyof typeof weaponSlots]?.weapon_uniqueName"
+                @update:modelValue="(value) => setWeaponUniqueName(weaponType as keyof typeof weaponSlots, value)"
+              />
+            </div>
+
+           <div v-if="formData[weaponType as keyof typeof weaponSlots]?.weapon_uniqueName" class="weapon-details">
+            <div class="form-group">
+              <label>{{ (weapon as any).label }} Mods (Max: 9)</label>
+              <div class="mods-container">
+                 <div 
+                   v-for="(mod, index) in formData[weaponType as keyof typeof weaponSlots]?.mods || []" 
+                   :key="index"
+                   class="mod-slot"
+                 >
+                   <SearchableSelect
+                     :options="availableMods"
+                     placeholder="Search for mod..."
+                     v-model="mod.uniqueName"
+                   />
+                  <input 
+                    v-model.number="mod.level" 
+                    type="number" 
+                    min="0" 
+                    max="10" 
+                    placeholder="Lvl"
+                    :disabled="loading || !mod.uniqueName"
+                  />
+                  <button 
+                    type="button" 
+                    @click="removeWeaponMod(weaponType, index)"
+                    :disabled="loading"
+                    class="btn-remove"
+                  >
+                    ×
+                  </button>
+                </div>
+                <button 
+                  type="button" 
+                  @click="addWeaponMod(weaponType as keyof typeof weaponSlots)" 
+                  :disabled="loading || (formData[weaponType as keyof typeof weaponSlots]?.mods?.length || 0) >= 9"
+                  class="btn-add"
+                >
+                  + Add Mod
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>{{ (weapon as any).label }} Arcane</label>
+              <SearchableSelect
+                :options="availableArcanes"
+                placeholder="Search for arcane..."
+                :model-value="formData[weaponType as keyof typeof weaponSlots]?.arcane_uniqueName"
+                @update:modelValue="(value) => setWeaponArcane(weaponType as keyof typeof weaponSlots, value)"
+              />
             </div>
           </div>
         </div>
@@ -92,8 +196,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
-import { useBuilds, type BuildCreate, type BuildUpdate, type WarframeDetails } from '@/composables/useBuilds'
+ import { ref, computed, watch, onMounted } from 'vue'
+ import { 
+   useBuilds, 
+   type BuildCreate, 
+   type BuildUpdate, 
+   type WarframeDetails,
+   type WeaponDetails,
+   type ModDetails,
+   type ArcaneDetails,
+   type EquippedMod,
+   type WeaponBuild
+ } from '@/composables/useBuilds'
+ import SearchableSelect from './SearchableSelect.vue'
 
 interface Props {
   build?: BuildCreate & { id?: string }
@@ -109,49 +224,180 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const { loading, error, getAllWarframes } = useBuilds()
+const { 
+  loading, 
+  error, 
+  getAvailableWarframes, 
+  getAvailableWeapons, 
+  getAvailableMods, 
+  getAvailableArcanes 
+} = useBuilds()
 
 // Form data
 const formData = ref<BuildCreate>({
   name: '',
-  warframe_uniqueName: ''
+  warframe_uniqueName: '',
+  warframe_mods: [],
+  warframe_arcanes: [],
+  primary_weapon: null,
+  secondary_weapon: null,
+  melee_weapon: null
 })
 
-// Warframes data (in real app, this would come from API)
+// Available data from API
 const warframes = ref<WarframeDetails[]>([])
+const availableWeapons = ref<WeaponDetails[]>([])
+const availableMods = ref<ModDetails[]>([])
+const availableArcanes = ref<ArcaneDetails[]>([])
 
-const selectedWarframe = computed(() => {
-  if (!formData.value.warframe_uniqueName) return null
-  
-  // Find warframe with case-insensitive comparison
-  const found = warframes.value.find(w => {
-    if (!w || !w.uniqueName) return false
-    return w.uniqueName.toString() === formData.value.warframe_uniqueName.toString()
-  })
-  
-  return found || null
-})
+// Weapon slots configuration
+const weaponSlots: Record<string, { label: string }> = {
+  primary_weapon: { label: 'Primary Weapon' },
+  secondary_weapon: { label: 'Secondary Weapon' },
+  melee_weapon: { label: 'Melee Weapon' }
+}
 
 const isFormValid = computed(() => {
+  // Only require name and warframe - weapons are optional and can be incomplete
   return formData.value.name.trim() !== '' && formData.value.warframe_uniqueName !== ''
 })
 
-// Load warframes data
-const loadWarframes = async () => {
+// Load all available data
+const loadData = async () => {
   try {
-    warframes.value = await getAllWarframes()
+    const [warframesData, weaponsData, modsData, arcanesData] = await Promise.all([
+      getAvailableWarframes(),
+      getAvailableWeapons(),
+      getAvailableMods(),
+      getAvailableArcanes()
+    ])
+    
+    warframes.value = warframesData
+    availableWeapons.value = weaponsData
+    availableMods.value = modsData
+    availableArcanes.value = arcanesData
   } catch (err) {
-    console.error('Failed to load warframes:', err)
+    console.error('Failed to load available data:', err)
   }
+}
+
+// Warframe mod management
+const addWarframeMod = () => {
+  if (formData.value.warframe_mods.length < 10) {
+    formData.value.warframe_mods.push({ uniqueName: '', level: 0 })
+  }
+}
+
+const removeWarframeMod = (index: number) => {
+  formData.value.warframe_mods.splice(index, 1)
+}
+
+const updateModPolarity = (index: number, modUniqueName: string) => {
+  // This could be used to update polarity display if needed
+  console.log(`Updated mod ${index} to ${modUniqueName}`)
+}
+
+// Warframe arcane management
+const addWarframeArcane = () => {
+  if (formData.value.warframe_arcanes.length < 2) {
+    formData.value.warframe_arcanes.push('')
+  }
+}
+
+const removeWarframeArcane = (index: number) => {
+  formData.value.warframe_arcanes.splice(index, 1)
+}
+
+// Weapon management
+const initializeWeaponSlot = (weaponType: keyof typeof weaponSlots): WeaponBuild => {
+  return {
+    weapon_uniqueName: '',
+    mods: [],
+    arcane_uniqueName: undefined
+  }
+}
+
+const setWeaponUniqueName = (weaponType: keyof typeof weaponSlots, value: string) => {
+  if (!formData.value[weaponType]) {
+    formData.value[weaponType] = initializeWeaponSlot(weaponType)
+  }
+  formData.value[weaponType]!.weapon_uniqueName = value
+  clearWeaponMods(weaponType)
+}
+
+const setWeaponArcane = (weaponType: keyof typeof weaponSlots, value: string | undefined) => {
+  if (!formData.value[weaponType]) {
+    formData.value[weaponType] = initializeWeaponSlot(weaponType)
+  }
+  formData.value[weaponType]!.arcane_uniqueName = value
+}
+
+const clearWeaponMods = (weaponType: string) => {
+  const typedWeaponType = weaponType as keyof typeof weaponSlots
+  if (formData.value[typedWeaponType]) {
+    formData.value[typedWeaponType] = {
+      weapon_uniqueName: formData.value[typedWeaponType]?.weapon_uniqueName || '',
+      mods: [],
+      arcane_uniqueName: undefined
+    }
+  }
+}
+
+const addWeaponMod = (weaponType: string) => {
+  const typedWeaponType = weaponType as keyof typeof weaponSlots
+  const weapon = formData.value[typedWeaponType]
+  if (weapon && weapon.mods && weapon.mods.length < 9) {
+    weapon.mods.push({ uniqueName: '', level: 0 })
+  }
+}
+
+const removeWeaponMod = (weaponType: string, modIndex: number) => {
+  const typedWeaponType = weaponType as keyof typeof weaponSlots
+  const weapon = formData.value[typedWeaponType]
+  if (weapon && weapon.mods) {
+    weapon.mods.splice(modIndex, 1)
+  }
+}
+
+const validateWeaponData = (weapon: WeaponBuild | null): boolean => {
+  if (!weapon) return true; // null is valid for optional fields
+  return weapon.weapon_uniqueName && weapon.weapon_uniqueName.trim() !== '';
+}
+
+const cleanWeaponData = (weapon: WeaponBuild | null): WeaponBuild | null => {
+  if (!weapon || !weapon.weapon_uniqueName || weapon.weapon_uniqueName.trim() === '') {
+    return null;
+  }
+  
+  // Filter out empty mods
+  const cleanedMods = weapon.mods.filter(mod => 
+    mod.uniqueName && mod.uniqueName.trim() !== ''
+  );
+  
+  return {
+    weapon_uniqueName: weapon.weapon_uniqueName.trim(),
+    mods: cleanedMods,
+    arcane_uniqueName: weapon.arcane_uniqueName || undefined
+  };
 }
 
 const handleSubmit = async () => {
   if (!isFormValid.value) return
 
   try {
-    const submitData = props.isEditing 
-      ? { name: formData.value.name, warframe_uniqueName: formData.value.warframe_uniqueName } as BuildUpdate
-      : { ...formData.value } as BuildCreate
+    // Log data for debugging
+    console.log('Submitting build data:', JSON.stringify(formData.value, null, 2))
+    
+    // Clean weapon data to remove empty mods and validate weapon names
+    const submitData: BuildCreate | BuildUpdate = {
+      ...formData.value,
+      primary_weapon: cleanWeaponData(formData.value.primary_weapon),
+      secondary_weapon: cleanWeaponData(formData.value.secondary_weapon),
+      melee_weapon: cleanWeaponData(formData.value.melee_weapon)
+    }
+
+    // Log final submit data
+    console.log('Final submit data:', JSON.stringify(submitData, null, 2))
 
     emit('submit', submitData)
   } catch (err) {
@@ -164,15 +410,28 @@ watch(() => props.build, (newBuild) => {
   if (newBuild) {
     formData.value = {
       name: newBuild.name,
-      warframe_uniqueName: newBuild.warframe_uniqueName
+      warframe_uniqueName: newBuild.warframe_uniqueName,
+      warframe_mods: [...(newBuild.warframe_mods || [])],
+      warframe_arcanes: [...(newBuild.warframe_arcanes || [])],
+      primary_weapon: newBuild.primary_weapon ? { ...newBuild.primary_weapon } : null,
+      secondary_weapon: newBuild.secondary_weapon ? { ...newBuild.secondary_weapon } : null,
+      melee_weapon: newBuild.melee_weapon ? { ...newBuild.melee_weapon } : null
     }
   } else {
-    formData.value = { name: '', warframe_uniqueName: '' }
+    formData.value = {
+      name: '',
+      warframe_uniqueName: '',
+      warframe_mods: [],
+      warframe_arcanes: [],
+      primary_weapon: null,
+      secondary_weapon: null,
+      melee_weapon: null
+    }
   }
 }, { immediate: true })
 
 onMounted(() => {
-  loadWarframes()
+  loadData()
 })
 </script>
 
@@ -189,6 +448,25 @@ onMounted(() => {
   color: #38bdf8;
   margin-bottom: 1.5rem;
   font-size: 1.5rem;
+}
+
+.form-section {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #1b2a3a;
+}
+
+.form-section h4 {
+  color: #38bdf8;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.weapon-section {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(27, 42, 58, 0.3);
+  border-radius: 4px;
 }
 
 .form-group {
@@ -345,6 +623,78 @@ onMounted(() => {
 .btn-secondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.mods-container,
+.arcanes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mod-slot,
+.arcane-slot {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.mod-slot select,
+.arcane-slot select {
+  flex: 1;
+  min-width: 200px;
+}
+
+.mod-slot input {
+  width: 60px;
+  text-align: center;
+}
+
+.btn-add,
+.btn-remove {
+  padding: 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+.btn-add {
+  background: #10b981;
+  color: white;
+}
+
+.btn-add:hover:not(:disabled) {
+  background: #059669;
+}
+
+.btn-remove {
+  background: #ef4444;
+  color: white;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-remove:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn-add:disabled,
+.btn-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.weapon-details {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(27, 42, 58, 0.2);
+  border-radius: 4px;
+  border-left: 3px solid #38bdf8;
 }
 
 .error-message {
