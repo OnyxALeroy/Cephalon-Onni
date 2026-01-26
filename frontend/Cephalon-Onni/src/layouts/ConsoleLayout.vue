@@ -24,14 +24,16 @@
             >
             <span v-if="isAdmin" class="divider" />
 
-            <!-- Authentication links -->
-            <template v-if="!isAuthenticated">
+            <!-- Authenticated user navigation -->
+            <template v-if="user">
+                <RouterLink to="/profile" class="nav">Profile</RouterLink>
+                <button @click="logout" class="nav logout-btn">Log Off</button>
+            </template>
+            
+            <!-- Unauthenticated user navigation -->
+            <template v-else>
                 <RouterLink to="/login" class="nav">Login</RouterLink>
                 <RouterLink to="/register" class="nav">Register</RouterLink>
-            </template>
-            <template v-else>
-                <RouterLink to="/profile" class="nav">My Account</RouterLink>
-                <button @click="logout" class="nav logout-btn">Logout</button>
             </template>
         </aside>
 
@@ -46,7 +48,7 @@ import { onMounted } from "vue";
 import { RouterLink, RouterView } from "vue-router";
 import { useAuth } from "@/composables/useAuth";
 
-const { user, fetchUser, logout, isAdmin, isAuthenticated } = useAuth();
+const { user, fetchUser, logout, isAdmin, isInitialized } = useAuth();
 
 onMounted(async () => {
     await fetchUser();
@@ -115,6 +117,27 @@ onMounted(async () => {
     height: 1px;
     background: #1b2a3a;
     margin: 1rem 0;
+}
+
+.logout-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    margin-bottom: 0.6rem;
+    padding: 0.4rem;
+    border-radius: 4px;
+    transition: 0.15s;
+    text-decoration: none;
+    color: #c9e5ff;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.logout-btn:hover {
+    background: #08121f;
+    color: #7dd3fc;
 }
 .main {
     padding: 2rem;
