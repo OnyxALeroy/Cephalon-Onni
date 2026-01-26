@@ -3,22 +3,38 @@ import webbrowser
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from motor.motor_asyncio import AsyncIOMotorClient
-from routers import admin, admin_age, auth, inventory, loottables, protected, user
+from fastapi.responses import FileResponse, JSONResponse
+from routers import (
+    admin,
+    admin_age,
+    auth,
+    builds,
+    inventory,
+    loottables,
+    protected,
+    user,
+    warframes,
+)
 
 
 # Connecting to the db
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     # Initialize MongoDB connection
-    application.state.client = AsyncIOMotorClient("mongodb://mongodb:27017")
-    application.state.db = application.state.client["cephalon_onni"]
+    from database.db import db_manager
+
+    db_manager.initialize()
+
+    # Store references in app state for backward compatibility
+    application.state.client = db_manager.async_client
+    application.state.db = db_manager.async_db
 
     yield
-    application.state.client.close()
+    # Close connections
+    db_manager.close_all()
 
 
 # Create app then serve static files
@@ -31,6 +47,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add exception handler for validation errors
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print(f"Validation error: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": "Validation failed",
+            "errors": exc.errors()
+        }
+    )
+
 app.include_router(admin.router)
 app.include_router(admin_age.router)
 app.include_router(auth.router)
@@ -38,6 +66,8 @@ app.include_router(inventory.router)
 app.include_router(loottables.router)
 app.include_router(protected.router)
 app.include_router(user.router)
+app.include_router(builds.router)
+app.include_router(warframes.router)
 
 
 # Serve the main index.html for frontend routes

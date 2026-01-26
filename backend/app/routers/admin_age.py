@@ -1,12 +1,12 @@
 import logging
 
 from database.static.age_helper import AgeDB, get_dict_from_agtype
+from dependencies import get_age_helper
 from fastapi import APIRouter, Depends, HTTPException
 from models.age_models import (
     CypherRequest,
     GraphEdge,
     GraphNode,
-    GraphResponse,
     NodeNeighbor,
     NodeNeighborsResponse,
     NodeSearchResponse,
@@ -15,15 +15,6 @@ from models.age_models import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin/graph", tags=["graph"])
-
-
-def get_age_helper():
-    try:
-        return AgeDB()
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to initialize graph connection: {e}"
-        )
 
 
 @router.post("/cypher")

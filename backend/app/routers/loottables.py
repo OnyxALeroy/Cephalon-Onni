@@ -1,6 +1,7 @@
 import logging
 
 from database.static.age_helper import AgeDB, get_dict_from_agtype
+from dependencies import get_age_helper
 from fastapi import APIRouter, Depends, HTTPException
 from models.age_models import (
     GraphNode,
@@ -11,15 +12,6 @@ from models.age_models import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/loottables", tags=["loottables"])
-
-
-def get_age_helper() -> AgeDB:
-    try:
-        return AgeDB()
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to initialize graph connection: {e}"
-        )
 
 
 @router.get("/search/nodes", response_model=NodeSearchResponse)
@@ -180,7 +172,9 @@ async def get_node_neighbors(
             end_node_data = get_dict_from_agtype(row["end_node"])
             end_node_labels = get_dict_from_agtype(row["end_labels"])
             rel_data = get_dict_from_agtype(row["rel"])
-            direction = row["direction"].strip('"')  # Remove extra quotes from agtype string
+            direction = row["direction"].strip(
+                '"'
+            )  # Remove extra quotes from agtype string
 
             # Add neighbor node
             if isinstance(end_node_data, dict):

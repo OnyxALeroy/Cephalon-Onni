@@ -55,7 +55,7 @@ import { useRouter } from "vue-router";
 import { useAuth } from "@/composables/useAuth";
 
 const router = useRouter();
-const { fetchUser } = useAuth();
+const { login, user, isAdmin } = useAuth();
 
 const email = ref("");
 const password = ref("");
@@ -67,27 +67,10 @@ async function handleLogin() {
   error.value = "";
 
   try {
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        email: email.value,
-        password: password.value,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Login failed");
-    }
-
-    // Login successful, update user state and redirect
-    await fetchUser();
-    const user = await response.json();
-    if (user.role === "admin" || user.role === "administrator") {
+    await login(email.value, password.value);
+    
+    // Login successful, redirect based on user role
+    if (isAdmin.value) {
       router.push("/admin");
     } else {
       router.push("/");
