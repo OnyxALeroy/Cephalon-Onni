@@ -26,14 +26,81 @@ export interface WarframeDetails {
   productCategory: string;
 }
 
+export interface ModDetails {
+  uniqueName: string;
+  name: string;
+  polarity: string;
+  rarity: string;
+  type?: string;
+  subtype?: string;
+  codexSecret: boolean;
+  baseDrain: number;
+  fusionLimit: number;
+  compatName?: string;
+  modSet?: string;
+  isUtility?: boolean;
+  description?: string[];
+}
+
+export interface WeaponDetails {
+  uniqueName: string;
+  name: string;
+  codexSecret: boolean;
+  criticalChance: number;
+  criticalMultiplier: number;
+  damagePerShot: number[];
+  description: string;
+  fireRate: number;
+  masteryReq: number;
+  omegaAttenuation: number;
+  procChance: number;
+  productCategory: string;
+  totalDamage: number;
+  accuracy?: number;
+  magazineSize?: number;
+  reloadTime?: number;
+  multishot?: number;
+  noise?: string;
+  trigger?: string;
+}
+
+export interface ArcaneDetails {
+  uniqueName: string;
+  name: string;
+  codexSecret: boolean;
+  rarity?: string;
+  levelStats: object[];
+}
+
+export interface EquippedMod {
+  uniqueName: string;
+  level: number;
+}
+
+export interface WeaponBuild {
+  weapon_uniqueName: string;
+  mods: EquippedMod[];
+  arcane_uniqueName?: string;
+}
+
 export interface BuildCreate {
   name: string;
   warframe_uniqueName: string;
+  warframe_mods: EquippedMod[];
+  warframe_arcanes: string[];
+  primary_weapon?: WeaponBuild | null;
+  secondary_weapon?: WeaponBuild | null;
+  melee_weapon?: WeaponBuild | null;
 }
 
 export interface BuildUpdate {
   name?: string;
   warframe_uniqueName?: string;
+  warframe_mods?: EquippedMod[];
+  warframe_arcanes?: string[];
+  primary_weapon?: WeaponBuild | null;
+  secondary_weapon?: WeaponBuild | null;
+  melee_weapon?: WeaponBuild | null;
 }
 
 export interface BuildPublic {
@@ -43,6 +110,11 @@ export interface BuildPublic {
   created_at: string;
   updated_at: string;
   warframe?: WarframeDetails;
+  warframe_mods: EquippedMod[];
+  warframe_arcanes: string[];
+  primary_weapon?: WeaponBuild | null;
+  secondary_weapon?: WeaponBuild | null;
+  melee_weapon?: WeaponBuild | null;
   isLocal?: boolean;
 }
 
@@ -53,6 +125,17 @@ export interface BuildWithDetails {
   created_at: string;
   updated_at: string;
   warframe: WarframeDetails;
+  warframe_mods: EquippedMod[];
+  warframe_arcanes: ArcaneDetails[];
+  primary_weapon?: WeaponBuild | null;
+  secondary_weapon?: WeaponBuild | null;
+  melee_weapon?: WeaponBuild | null;
+  primary_weapon_details?: WeaponDetails | null;
+  secondary_weapon_details?: WeaponDetails | null;
+  melee_weapon_details?: WeaponDetails | null;
+  primary_arcane_details?: ArcaneDetails | null;
+  secondary_arcane_details?: ArcaneDetails | null;
+  melee_arcane_details?: ArcaneDetails | null;
 }
 
 // Local Storage Interface for unauthenticated users
@@ -70,6 +153,11 @@ const CURRENT_BUILD_KEY = "currentCreativeBuild";
 const defaultCurrentBuild: BuildCreate = {
   name: "",
   warframe_uniqueName: "",
+  warframe_mods: [],
+  warframe_arcanes: [],
+  primary_weapon: null,
+  secondary_weapon: null,
+  melee_weapon: null,
 };
 
 // --- Singleton State ---
@@ -86,7 +174,12 @@ export function useBuilds() {
   const hasUnsavedBuild = computed(() => {
     return (
       currentBuild.value.name !== "" ||
-      currentBuild.value.warframe_uniqueName !== ""
+      currentBuild.value.warframe_uniqueName !== "" ||
+      currentBuild.value.warframe_mods.length > 0 ||
+      currentBuild.value.warframe_arcanes.length > 0 ||
+      currentBuild.value.primary_weapon !== null ||
+      currentBuild.value.secondary_weapon !== null ||
+      currentBuild.value.melee_weapon !== null
     );
   });
 
@@ -375,6 +468,11 @@ export function useBuilds() {
       const newBuild = await createBuild({
         name: buildToPush.name,
         warframe_uniqueName: buildToPush.warframe_uniqueName,
+        warframe_mods: buildToPush.warframe_mods || [],
+        warframe_arcanes: buildToPush.warframe_arcanes || [],
+        primary_weapon: buildToPush.primary_weapon || null,
+        secondary_weapon: buildToPush.secondary_weapon || null,
+        melee_weapon: buildToPush.melee_weapon || null,
       });
 
       if (newBuild) {
@@ -410,6 +508,11 @@ export function useBuilds() {
           await createBuild({
             name: localBuild.name,
             warframe_uniqueName: localBuild.warframe_uniqueName,
+            warframe_mods: localBuild.warframe_mods || [],
+            warframe_arcanes: localBuild.warframe_arcanes || [],
+            primary_weapon: localBuild.primary_weapon || null,
+            secondary_weapon: localBuild.secondary_weapon || null,
+            melee_weapon: localBuild.melee_weapon || null,
           });
         } catch (err) {
           console.warn(`Failed to sync local build "${localBuild.name}":`, err);
@@ -505,9 +608,82 @@ export function useBuilds() {
       console.log(
         `Filtered ${warframes.length} warframes to ${validWarframes.length} valid ones`,
       );
+
       return validWarframes;
     } catch (err: any) {
       console.error("Failed to fetch warframes:", err);
+      throw err;
+    }
+  };
+
+  // Get available warframes for build creation
+  const getAvailableWarframes = async () => {
+    try {
+      const response = await fetch("/api/builds/available/warframes", {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch available warframes");
+      }
+
+      return await response.json();
+    } catch (err: any) {
+      console.error("Failed to fetch available warframes:", err);
+      throw err;
+    }
+  };
+
+  // Get available weapons for build creation
+  const getAvailableWeapons = async () => {
+    try {
+      const response = await fetch("/api/builds/available/weapons", {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch available weapons");
+      }
+
+      return await response.json();
+    } catch (err: any) {
+      console.error("Failed to fetch available weapons:", err);
+      throw err;
+    }
+  };
+
+  // Get available mods for build creation
+  const getAvailableMods = async () => {
+    try {
+      const response = await fetch("/api/builds/available/mods", {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch available mods");
+      }
+
+      return await response.json();
+    } catch (err: any) {
+      console.error("Failed to fetch available mods:", err);
+      throw err;
+    }
+  };
+
+  // Get available arcanes for build creation
+  const getAvailableArcanes = async () => {
+    try {
+      const response = await fetch("/api/builds/available/arcanes", {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch available arcanes");
+      }
+
+      return await response.json();
+    } catch (err: any) {
+      console.error("Failed to fetch available arcanes:", err);
       throw err;
     }
   };
@@ -539,5 +715,9 @@ export function useBuilds() {
     checkAuthStatus,
     getWarframeDetails,
     getAllWarframes,
+    getAvailableWarframes,
+    getAvailableWeapons,
+    getAvailableMods,
+    getAvailableArcanes,
   };
 }

@@ -7,6 +7,7 @@ interface User {
 }
 
 const user = ref<User | null>(null)
+const isInitialized = ref(false)
 
 export function useAuth() {
     async function fetchUser() {
@@ -20,6 +21,50 @@ export function useAuth() {
             }
         } catch (error) {
             user.value = null;
+        } finally {
+            isInitialized.value = true;
+        }
+    }
+
+    async function login(email: string, password: string) {
+        try {
+            const response = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ email, password }),
+            });
+
+            if (response.ok) {
+                await fetchUser();
+                return await response.json();
+            } else {
+                throw new Error("Login failed");
+            }
+        } catch (error) {
+            await fetchUser();
+            throw error;
+        }
+    }
+
+    async function register(username: string, email: string, password: string) {
+        try {
+            const response = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ username, email, password }),
+            });
+
+            if (response.ok) {
+                await fetchUser();
+                return await response.json();
+            } else {
+                throw new Error("Registration failed");
+            }
+        } catch (error) {
+            await fetchUser();
+            throw error;
         }
     }
 
@@ -37,7 +82,7 @@ export function useAuth() {
     }
 
     const isAdmin = computed(() => {
-        return user.value && user.value.role === "Administrator";
+        return user.value && (user.value.role === "Administrator" || user.value.role === "administrator" || user.value.role === "admin");
     })
 
     const isAuthenticated = computed(() => {
@@ -47,8 +92,11 @@ export function useAuth() {
     return {
         user,
         fetchUser,
+        login,
+        register,
         logout,
         isAdmin,
-        isAuthenticated
+        isAuthenticated,
+        isInitialized
     }
 }
