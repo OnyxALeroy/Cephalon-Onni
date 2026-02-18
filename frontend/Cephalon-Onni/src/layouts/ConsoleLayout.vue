@@ -15,6 +15,7 @@
             <RouterLink to="/creative" class="nav">Creative Lab</RouterLink>
             <RouterLink to="/stars" class="nav">Star Chart</RouterLink>
             <RouterLink to="/events" class="nav">Events</RouterLink>
+            <RouterLink to="/worldstate" class="nav">World State</RouterLink>
 
             <span class="divider" />
 
