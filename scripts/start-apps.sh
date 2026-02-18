@@ -1,19 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Load shared Docker functions / variables
 source "$(dirname "$0")/docker-common.sh"
 cd "$PROJECT_ROOT"
 
-DC="docker compose"
-
 print_status "Stopping backend and frontend containers..."
-$DC stop backend frontend
+compose stop backend frontend
 
 print_status "Building and recreating backend and frontend containers..."
-# --build rebuilds images, --no-deps keeps other containers untouched
-# --force-recreate ensures name conflicts don't happen
-$DC up --build -d --no-deps --force-recreate backend frontend
+compose up --build -d --no-deps --force-recreate backend frontend
 
 # Optional: short wait before checking health
 sleep 5
