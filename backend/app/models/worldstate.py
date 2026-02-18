@@ -232,8 +232,8 @@ class VoidFissure(BaseModel):
 
 
 class SortieMission(BaseModel):
-    type: MissionType
-    modifier: SortieModifier
+    type: str
+    modifier: str
     mission: str
     tileset: str
 
@@ -334,19 +334,42 @@ class SeasonInfo(BaseModel):
 # -------------------------------------------------------------------------------------------------
 
 
+def _parse_date(value) -> Optional[datetime]:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, (int, float)):
+        ts = value / 1000 if value > 1e12 else value
+        return datetime.utcfromtimestamp(ts)
+    if isinstance(value, str):
+        try:
+            ts = int(value)
+            ts = ts / 1000 if ts > 1e12 else ts
+            return datetime.utcfromtimestamp(ts)
+        except ValueError:
+            return datetime.fromisoformat(value)
+    if isinstance(value, dict):
+        if "$numberLong" in value:
+            return _parse_date(value["$numberLong"])
+        if "$date" in value:
+            return _parse_date(value["$date"])
+    return None
+
+
 class WorldState(BaseModel):
     world_seed: str
-    api_version: str
+    api_version: int
     mobile_version: str
-    date: datetime
-    current_event: Event
+    build_label: str
+    current_event: Optional[Event] = None
     current_alerts: List[Alert]
     sortie: Sortie
     syndicate_missions: List[SyndicateMission]
     void_fissures: List[VoidFissure]
     global_boosts: List[BoostType]
     void_traders: List[VoidTrader]
-    prime_resurgence: PrimeResurgence
+    prime_resurgence: Optional[PrimeResurgence] = None
     prime_token_availability: bool
     daily_deals: List[DailyDeal]
     pvp_alternative_modes: List[ConclaveChallenge]
@@ -355,15 +378,43 @@ class WorldState(BaseModel):
     season_info: SeasonInfo
 
 
-def get_worldstate(url: str) -> WorldState:
-    import requests
+def _parse_prime_resurgence(raw) -> Optional[PrimeResurgence]:
+    if not raw:
+        return None
+    pr = raw[0] if isinstance(raw, list) else raw
+    return PrimeResurgence(
+        activation=_parse_date(pr.get("Activation")),
+        expiry=_parse_date(pr.get("Expiry")),
+        initial_start_date=_parse_date(pr.get("InitialStartDate")),
+        node=pr.get("Node", ""),
+        manifest=[
+            PrimeResurgenceItem(
+                item_type=pi.get("ItemType", ""),
+                price=pi.get("PrimePrice", 0),
+            )
+            for pi in pr.get("Manifest", [])
+        ],
+        evergreen_manifest=[
+            PrimeResurgenceItem(
+                item_type=pi.get("ItemType", ""),
+                price=pi.get("PrimePrice", 0),
+            )
+            for pi in pr.get("EvergreenManifest", [])
+        ],
+        schedule_info=[
+            PrimeResurgenceScheduleInfo(
+                expiry=_parse_date(info.get("Expiry")),
+                featured_item=info.get("FeaturedItem", ""),
+                preview_hidden_until=_parse_date(info.get("PreviewHiddenUntil")),
+            )
+            for info in pr.get("ScheduleInfo", [])
+        ],
+    )
 
-    response = requests.get(url)
-    response.raise_for_status()
-    ws = response.json()
 
-    # Events
-    event = ws.get("Event", {})
+def parse_worldstate(ws: dict) -> WorldState:
+    events = ws.get("Events") or []
+    event = events[0] if events else ws.get("Event") or {}
     current_event = Event(
         messages=[Message(**message) for message in event.get("Messages", [])],
         is_mobile_only=event.get("MobileOnly", False),
@@ -372,15 +423,14 @@ def get_worldstate(url: str) -> WorldState:
         community=event.get("Community", False),
         icon=event.get("Icon", ""),
         image_url=event.get("ImageUrl", ""),
-        date=event.get("Date", None),
-        start_date=event.get("EventStartDate", None),
-        end_date=event.get("EventEndDate", None),
+        date=_parse_date(event.get("Date")),
+        start_date=_parse_date(event.get("EventStartDate")),
+        end_date=_parse_date(event.get("EventEndDate")),
         live_url=event.get("EventLiveUrl", ""),
         do_hide_end_date_modifier=event.get("HideEndDateModifier", True),
         links=[Link(**link) for link in event.get("Links", [])],
-    )
+    ) if event else None
 
-    # Alerts
     current_alerts = []
     for alert in ws.get("Alerts", []):
         mi = alert.get("MissionInfo", {})
@@ -399,51 +449,50 @@ def get_worldstate(url: str) -> WorldState:
         )
         current_alerts.append(
             Alert(
-                activation=alert.get("Activation", {}).get("$date", None),
-                expiry=alert.get("Expiry", {}).get("$date", None),
+                activation=_parse_date(alert.get("Activation")),
+                expiry=_parse_date(alert.get("Expiry")),
                 mission_info=mission_info,
                 tag=alert.get("Tag", ""),
                 force_unlock=alert.get("ForceUnlock", False),
             )
         )
 
-    # Sortie
+    sorties_raw = ws.get("Sorties", [])
+    sortie_data = sorties_raw[0] if isinstance(sorties_raw, list) and sorties_raw else (sorties_raw if isinstance(sorties_raw, dict) else {})
     sortie_missions = []
-    for m in ws.get("Sorties", {}).get("Variants", []):
+    for m in sortie_data.get("Variants", []):
         sortie_missions.append(
             SortieMission(
-                type=get_enum_instance(MissionType, m.get("missionType", "")),
-                modifier=get_enum_instance(SortieModifier, m.get("modifierType", "")),
+                type=m.get("missionType", ""),
+                modifier=m.get("modifierType", ""),
                 mission=m.get("node", ""),
                 tileset=m.get("tileset", ""),
             )
         )
     sortie = Sortie(
-        activation=ws.get("Sorties", {}).get("Activation", {}).get("$date", {}),
-        expiry=ws.get("Sorties", {}).get("Expiry", {}).get("$date", {}),
-        boss=ws.get("Sorties", {}).get("Boss", ""),
-        reward=ws.get("Sorties", {}).get("Reward", ""),
-        extra_drops=ws.get("Sorties", {}).get("ExtraDrops", []),
-        seed=ws.get("Sorties", {}).get("Seed", 0),
+        activation=_parse_date(sortie_data.get("Activation")),
+        expiry=_parse_date(sortie_data.get("Expiry")),
+        boss=sortie_data.get("Boss", ""),
+        reward=sortie_data.get("Reward", ""),
+        extra_drops=sortie_data.get("ExtraDrops", []),
+        seed=sortie_data.get("Seed", 0),
         missions=sortie_missions,
     )
 
     worldstate = WorldState(
         world_seed=ws.get("WorldSeed", ""),
-        api_version=ws.get("Version", ""),
+        api_version=ws.get("Version", 0),
         mobile_version=ws.get("MobileVersion", ""),
-        date=ws.get("BuildLabel", datetime.now()),
+        build_label=ws.get("BuildLabel", ""),
         current_event=current_event,
         current_alerts=current_alerts,
         sortie=sortie,
         syndicate_missions=[
             SyndicateMission(
-                activation=syndicate_mission.get("Activation", {}).get(
-                    "$date", datetime.now()
-                ),
-                expiry=syndicate_mission.get("Expiry", {}).get("$date", datetime.now()),
-                syndicate_tag=syndicate_mission.get("Tag", ""),
-                nodes=syndicate_mission.get("Nodes", []),
+                activation=_parse_date(sm.get("Activation")),
+                expiry=_parse_date(sm.get("Expiry")),
+                syndicate_tag=sm.get("Tag", ""),
+                nodes=sm.get("Nodes", []),
                 open_world_missions=[
                     OpenWorldMission(
                         type=job.get("jobType", ""),
@@ -453,17 +502,17 @@ def get_worldstate(url: str) -> WorldState:
                         rewards_table=job.get("rewards", ""),
                         xp_amounts=job.get("xpAmounts", []),
                     )
-                    for job in syndicate_mission.get("Jobs", [])
+                    for job in sm.get("Jobs", [])
                 ]
-                if "Jobs" in syndicate_mission.keys()
+                if "Jobs" in sm
                 else None,
             )
-            for syndicate_mission in ws.get("SyndicateMissions", [])
+            for sm in ws.get("SyndicateMissions", [])
         ],
         void_fissures=[
             VoidFissure(
-                activation=fissure.get("Activation", {}).get("$date", datetime.now()),
-                expiry=fissure.get("Expiry", {}).get("$date", datetime.now()),
+                activation=_parse_date(fissure.get("Activation")),
+                expiry=_parse_date(fissure.get("Expiry")),
                 mission_type=fissure.get("MissionType", ""),
                 era=get_relic_era_from_tier(fissure.get("Modifier", "")),
                 seed=fissure.get("Seed", 0),
@@ -477,60 +526,19 @@ def get_worldstate(url: str) -> WorldState:
         ],
         void_traders=[
             VoidTrader(
-                activation=trader.get("Activation", {}).get("$date", datetime.now()),
-                expiry=trader.get("Expiry", {}).get("$date", datetime.now()),
+                activation=_parse_date(trader.get("Activation")),
+                expiry=_parse_date(trader.get("Expiry")),
                 node=trader.get("Node", ""),
                 character=trader.get("Character", ""),
             )
             for trader in ws.get("VoidTraders", [])
         ],
-        prime_resurgence=PrimeResurgence(
-            activation=ws.get("PrimeResurgence", [])[0]
-            .get("Activation", {})
-            .get("$date", datetime.now()),
-            expiry=ws.get("PrimeResurgence", [])[0]
-            .get("Expiry", {})
-            .get("$date", datetime.now()),
-            initial_start_date=ws.get("PrimeResurgence", [])[0]
-            .get("InitialStartDate", {})
-            .get("$date", datetime.now()),
-            node=ws.get("PrimeResurgence", [])[0].get("Node", ""),
-            manifest=[
-                PrimeResurgenceItem(
-                    item_type=prime_item.get("ItemType", ""),
-                    price=prime_item.get("PrimePrice", 0),
-                )
-                for prime_item in ws.get("PrimeResurgence", [])[0].get("Manifest", [])
-            ],
-            evergreen_manifest=[
-                PrimeResurgenceItem(
-                    item_type=prime_item.get("ItemType", ""),
-                    price=prime_item.get("PrimePrice", 0),
-                )
-                for prime_item in ws.get("PrimeResurgence", [])[0].get(
-                    "EvergreenManifest", []
-                )
-            ],
-            schedule_info=[
-                PrimeResurgenceScheduleInfo(
-                    expiry=info.get("Expiry", {}).get("$date", datetime.now()),
-                    featured_item=info.get("FeaturedItem", ""),
-                    preview_hidden_until=info.get("PreviewHiddenUntil", {}).get(
-                        "$date", datetime.now()
-                    ),
-                )
-                for info in ws.get("PrimeResurgence", [])[0].get("ScheduleInfo", [])
-            ],
-        ),
+        prime_resurgence=_parse_prime_resurgence(ws.get("PrimeResurgence")),
         prime_token_availability=ws.get("PrimeTokenAvailability", False),
         daily_deals=[
             DailyDeal(
-                activation=deal.get("Activation", {})
-                .get("$date", {})
-                .get("$numberLong", datetime.now()),
-                expiry=deal.get("Activation", {})
-                .get("$date", {})
-                .get("$numberLong", datetime.now()),
+                activation=_parse_date(deal.get("Activation")),
+                expiry=_parse_date(deal.get("Expiry")),
                 original_price=deal.get("OriginalPrice", 0),
                 sale_price=deal.get("SalePrice", 0),
                 item=deal.get("StoreItem", ""),
@@ -541,12 +549,8 @@ def get_worldstate(url: str) -> WorldState:
         ],
         pvp_alternative_modes=[
             ConclaveChallenge(
-                activation=challenge.get("startDate", {})
-                .get("$date", {})
-                .get("$numberLong", datetime.now()),
-                expiry=challenge.get("endDate", {})
-                .get("$date", {})
-                .get("$numberLong", datetime.now()),
+                activation=_parse_date(challenge.get("startDate")),
+                expiry=_parse_date(challenge.get("endDate")),
                 category=challenge.get("Category", ""),
                 pvp_mode=get_enum_instance(
                     PVPMode,
@@ -576,30 +580,20 @@ def get_worldstate(url: str) -> WorldState:
             for dojo in ws.get("FeaturedGuilds", [])
         ],
         season_info=SeasonInfo(
-            activation=ws.get("SeasonInfo", {})
-            .get("Activation", {})
-            .get("$date", {})
-            .get("$numberLong", 0),
-            expiry=ws.get("SeasonInfo", {})
-            .get("Expiry", {})
-            .get("$date", {})
-            .get("$numberLong", 0),
+            activation=_parse_date(ws.get("SeasonInfo", {}).get("Activation")),
+            expiry=_parse_date(ws.get("SeasonInfo", {}).get("Expiry")),
             affiliation_tag=ws.get("SeasonInfo", {}).get("AffiliationTag", ""),
             parameters=ws.get("SeasonInfo", {}).get("Params", ""),
             phase=ws.get("SeasonInfo", {}).get("Phase", 0),
             season=ws.get("SeasonInfo", {}).get("Season", 0),
             active_challenges=[
                 MissionChallenge(
-                    activation=challenge.get("Activation", {})
-                    .get("$date", {})
-                    .get("$numberLong", 0),
+                    activation=_parse_date(challenge.get("Activation")),
                     challenge=challenge.get("Challenge", ""),
                     daily=challenge.get("Daily", False),
-                    expiry=challenge.get("Expiry", {})
-                    .get("$date", {})
-                    .get("$numberLong", 0),
+                    expiry=_parse_date(challenge.get("Expiry")),
                 )
-                for challenge in ws.get("ActiveChallenges", [])
+                for challenge in ws.get("SeasonInfo", {}).get("ActiveChallenges", [])
             ],
         ),
     )

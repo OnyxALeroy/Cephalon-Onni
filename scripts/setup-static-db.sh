@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
+set -e
 
-# Import common functions and variables
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/docker-common.sh"
+source "$(dirname "$0")/docker-common.sh"
+cd "$PROJECT_ROOT"
 
 print_status "Running database initialization script..."
 
-# Remove the output folder entirely
 print_status "Removing existing data folder..."
 rm -rf ./data/
 
