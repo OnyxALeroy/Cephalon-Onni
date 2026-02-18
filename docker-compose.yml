@@ -7,20 +7,17 @@ services:
     ports:
       - "8000:8000" # keep for dev; can remove in prod
     depends_on:
-      - postgres
       - mongodb
+      - redis
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: cephalon_db
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-
       # Mongo
       MONGO_URL: mongodb://cephalon-onni-mongo:27017
 
       # Graph is now Postgres (Apache AGE)
       GRAPH_DB_TYPE: postgres_age
+
+      # Redis
+      REDIS_URL: redis://redis:6379
     command: ["python", "-u", "app/main.py"]
     tty: true
     stdin_open: true
@@ -36,20 +33,6 @@ services:
     depends_on:
       - backend
 
-  postgres:
-    build:
-      context: ./postgres-age
-    container_name: cephalon-onni-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: cephalon_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
   mongodb:
     image: mongo:7
     container_name: cephalon-onni-mongo
@@ -59,6 +42,15 @@ services:
     volumes:
       - mongodata:/data/db
 
+  redis:
+    image: redis:7-alpine
+    container_name: cephalon-onni-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
 volumes:
-  pgdata:
   mongodata:
+  redisdata:

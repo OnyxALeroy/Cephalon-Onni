@@ -9,6 +9,7 @@ import Register from "@/views/Register.vue";
 import LootTables from "@/views/Loottables.vue";
 import Creative from "@/views/Creative.vue";
 import NotFound from "@/views/NotFound.vue";
+import WorldState from "@/views/WorldState.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -24,6 +25,7 @@ const router = createRouter({
         { path: "admin", component: Admin },
         { path: "login", component: Login },
         { path: "register", component: Register },
+        { path: "worldstate", component: WorldState },
       ],
     },
 
