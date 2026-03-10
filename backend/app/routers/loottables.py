@@ -168,7 +168,10 @@ async def get_node_neighbors(
                         type=drop_source.get("source_type", "source"),
                         properties={},
                         relationship_type="DROPPED_BY",
-                        relationship_properties={},
+                        relationship_properties={
+                            "chance": drop_source.get("chance", ""),
+                            "rotation": drop_source.get("rotation"),
+                        },
                         relationship_direction="incoming",
                     )
                 )
