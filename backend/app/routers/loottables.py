@@ -1,7 +1,5 @@
 import logging
 
-from database.static.age_helper import AgeDB, get_dict_from_agtype
-from dependencies import get_age_helper
 from fastapi import APIRouter, Depends, HTTPException
 from models.age_models import (
     GraphNode,
@@ -9,6 +7,9 @@ from models.age_models import (
     NodeNeighborsResponse,
     NodeSearchResponse,
 )
+from pymongo import MongoClient
+
+from dependencies import get_static_db_client
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/loottables", tags=["loottables"])
@@ -16,205 +17,241 @@ router = APIRouter(prefix="/api/loottables", tags=["loottables"])
 
 @router.get("/search/nodes", response_model=NodeSearchResponse)
 async def search_nodes_by_name_or_label(
-    name: str = "", label: str = "", age: AgeDB = Depends(get_age_helper)
+    name: str = "",
+    label: str = "",
+    client: MongoClient = Depends(get_static_db_client),
 ) -> NodeSearchResponse:
-    """Search for nodes by name and/or label."""
+    """Search for nodes by name and/or label (type)."""
     try:
-        # Build WHERE clause based on provided parameters
-        conditions = []
-        if name:
-            conditions.append(f"n.name CONTAINS '{name}'")
-        if label:
-            conditions.append(f"'{label}' IN labels(n)")
-
-        if not conditions:
-            raise HTTPException(
-                status_code=400, detail="At least name or label must be provided"
-            )
-
-        where_clause = " AND ".join(conditions)
-        query = f"""
-        MATCH (n)
-        WHERE {where_clause}
-        RETURN n, labels(n) as node_labels
-        LIMIT 50
-        """
-
-        result = age.cypher("loot_tables", query, "n agtype, node_labels agtype")
-
+        db = client["cephalon_onni"]
+        
         nodes = []
-        for row in result:
-            node_data = get_dict_from_agtype(row["n"])
-            node_labels = row["node_labels"]
+        node_id_counter = 0
 
-            if isinstance(node_data, dict):
-                # Extract node ID (could be direct or in properties)
-                node_id = node_data.get("id")
-                if not node_id and "properties" in node_data:
-                    node_id = node_data["properties"].get("id")
+        if label:
+            if label.lower() == "missions" or label.lower() == "mission":
+                query = {"mission_name": {"$regex": f".*{name}.*", "$options": "i"}} if name else {}
+                for mission in db["missions"].find(query).limit(50):
+                    drops = mission.get("drops", [])
+                    for drop in drops:
+                        nodes.append(
+                            {
+                                "id": str(node_id_counter),
+                                "name": drop.get("item", ""),
+                                "type": "Mission",
+                                "label": "Mission",
+                                "properties": {
+                                    "mission_name": mission.get("mission_name", ""),
+                                    "mission_type": mission.get("type", ""),
+                                    "planet": mission.get("planet", ""),
+                                    "drop_chance": drop.get("chance", ""),
+                                    "drop_rotation": drop.get("rotation"),
+                                },
+                            }
+                        )
+                        node_id_counter += 1
+            else:
+                query = {"source_type": label.lower()}
+                if name:
+                    query["name"] = {"$regex": f".*{name}.*", "$options": "i"}
+                
+                for item in db["drop_sources"].find(query).limit(50):
+                    nodes.append(
+                        {
+                            "id": str(item.get("_id", node_id_counter)),
+                            "name": item.get("name", ""),
+                            "type": item.get("source_type", "Unknown"),
+                            "label": item.get("source_type", "Unknown"),
+                            "properties": {
+                                "source": item.get("source", ""),
+                                "chance": item.get("chance", ""),
+                                "rotation": item.get("rotation"),
+                            },
+                        }
+                    )
+                    node_id_counter += 1
+        else:
+            if name:
+                name_query = name
+                
+                for item in db["drop_sources"].find({"name": {"$regex": f".*{name_query}.*", "$options": "i"}}).limit(25):
+                    nodes.append(
+                        {
+                            "id": str(item.get("_id", node_id_counter)),
+                            "name": item.get("name", ""),
+                            "type": item.get("source_type", "drop_source"),
+                            "label": item.get("source_type", "drop_source"),
+                            "properties": {
+                                "source": item.get("source", ""),
+                                "chance": item.get("chance", ""),
+                                "rotation": item.get("rotation"),
+                            },
+                        }
+                    )
+                    node_id_counter += 1
 
-                # Extract node name (could be direct or in properties)
-                node_name = node_data.get("name")
-                if not node_name and "properties" in node_data:
-                    node_name = node_data["properties"].get("name")
+                for mission in db["missions"].find(
+                    {"mission_name": {"$regex": f".*{name_query}.*", "$options": "i"}}
+                ).limit(25):
+                    drops = mission.get("drops", [])
+                    for drop in drops:
+                        nodes.append(
+                            {
+                                "id": str(node_id_counter),
+                                "name": drop.get("item", ""),
+                                "type": "Mission",
+                                "label": "Mission",
+                                "properties": {
+                                    "mission_name": mission.get("mission_name", ""),
+                                    "mission_type": mission.get("type", ""),
+                                    "planet": mission.get("planet", ""),
+                                    "drop_chance": drop.get("chance", ""),
+                                    "drop_rotation": drop.get("rotation"),
+                                },
+                            }
+                        )
+                        node_id_counter += 1
 
-                # Extract properties
-                properties = node_data.get("properties", {})
-
-                # Fix label extraction - handle AGE response format
-                label = "Unknown"
-                if node_labels and len(node_labels) > 0:
-                    if isinstance(node_labels, str):
-                        label = node_labels.strip('[]"')
-                    elif isinstance(node_labels, list):
-                        if isinstance(node_labels[0], str):
-                            label = node_labels[0]
-                        else:
-                            label = str(node_labels[0])
-
-                nodes.append(
-                    {
-                        "id": str(node_id or ""),
-                        "name": node_name or "Unknown",
-                        "label": label,
-                        "properties": properties,
-                    }
-                )
-
-        # Convert node dicts to GraphNode objects
-        graph_nodes = []
-        for node in nodes:
-            graph_node = GraphNode(
+        graph_nodes = [
+            GraphNode(
                 id=node["id"],
                 name=node["name"],
-                type=node["label"],  # label is used as type
+                type=node["type"],
                 label=node["label"],
                 properties=node["properties"],
             )
-            graph_nodes.append(graph_node)
+            for node in nodes
+        ]
 
         return NodeSearchResponse(nodes=graph_nodes)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to search nodes: {e}")
-    finally:
-        age.close()
 
 
 @router.get("/neighbors", response_model=NodeNeighborsResponse)
 async def get_node_neighbors(
     name: str = "",
-    age: AgeDB = Depends(get_age_helper),
+    client: MongoClient = Depends(get_static_db_client),
 ):
     """Get the direct neighbors of a node using name."""
+    if not name:
+        raise HTTPException(status_code=400, detail="Name must be provided")
+
     try:
-        if not name:
-            raise HTTPException(status_code=400, detail="Name must be provided")
-
-        where_clause = f"start_node.name = '{name}'"
-        query = f"""
-        MATCH (start_node)
-        WHERE {where_clause}
-        MATCH (start_node)-[r]->(end_node)
-        RETURN start_node, labels(start_node) as start_labels, r as rel, end_node, labels(end_node) as end_labels, 'outgoing' as direction
-        LIMIT 100
-        UNION ALL
-        MATCH (start_node)
-        WHERE {where_clause}
-        MATCH (start_node)<-[r]-(end_node)
-        RETURN start_node, labels(start_node) as start_labels, r as rel, end_node, labels(end_node) as end_labels, 'incoming' as direction
-        LIMIT 100
-        """
-
-        result = age.cypher(
-            "loot_tables",
-            query,
-            "start_node agtype, start_labels agtype, rel agtype, end_node agtype, end_labels agtype, direction agtype",
-        )
-        if not result:
-            raise HTTPException(
-                status_code=404, detail=f"No nodes found matching the criteria: {name}"
-            )
-
+        db = client["cephalon_onni"]
+        
+        starting_node = None
         neighbors = []
-        starting_node_data = None
+        node_id = 0
 
-        # Process the results to collect neighbors with relationship info
-        for row in result:
-            # Get starting node info from first row
-            if starting_node_data is None:
-                start_node_data = get_dict_from_agtype(row["start_node"])
-                start_node_labels = get_dict_from_agtype(row["start_labels"])
-
-                if isinstance(start_node_data, dict):
-                    start_id = str(start_node_data.get("id", ""))
-
-                    # Extract label from the returned labels
-                    start_label = "Unknown"
-                    if start_node_labels and len(start_node_labels) > 0:
-                        if isinstance(start_node_labels, str):
-                            start_label = start_node_labels.strip('[]"')
-                        elif (
-                            isinstance(start_node_labels, list)
-                            and len(start_node_labels) > 0
-                        ):
-                            start_label = str(start_node_labels[0])
-
-                    starting_node_data = GraphNode(
-                        id=start_id,
-                        name=start_node_data.get("properties", {}).get(
-                            "name", "Unknown"
-                        ),
-                        type=start_label,
-                        label=start_label,
-                        properties=start_node_data.get("properties", {}),
+        drop_sources = list(db["drop_sources"].find({"name": {"$regex": f".*{name}.*", "$options": "i"}}))
+        
+        if drop_sources:
+            for drop_source in drop_sources:
+                if starting_node is None:
+                    starting_node = GraphNode(
+                        id=str(drop_source.get("_id", "")),
+                        name=drop_source.get("name", "Unknown"),
+                        type=drop_source.get("source_type", "drop_source"),
+                        label=drop_source.get("source_type", "drop_source"),
+                        properties={
+                            "source": drop_source.get("source", ""),
+                            "chance": drop_source.get("chance", ""),
+                            "rotation": drop_source.get("rotation"),
+                        },
                     )
 
-            end_node_data = get_dict_from_agtype(row["end_node"])
-            end_node_labels = get_dict_from_agtype(row["end_labels"])
-            rel_data = get_dict_from_agtype(row["rel"])
-            direction = row["direction"].strip(
-                '"'
-            )  # Remove extra quotes from agtype string
-
-            # Add neighbor node
-            if isinstance(end_node_data, dict):
-                end_id = str(end_node_data.get("id"))
-
-                # Extract label from the returned labels
-                end_label = "Unknown"
-                if end_node_labels and len(end_node_labels) > 0:
-                    if isinstance(end_node_labels, str):
-                        end_label = end_node_labels.strip('[]"')
-                    elif isinstance(end_node_labels, list) and len(end_node_labels) > 0:
-                        end_label = str(end_node_labels[0])
-
-                # Extract relationship information
-                relationship_type = (
-                    rel_data.get("label", "Unknown") if rel_data else "Unknown"
+                neighbors.append(
+                    NodeNeighbor(
+                        id=str(drop_source.get("_id", "")),
+                        name=drop_source.get("source", "Unknown"),
+                        type=drop_source.get("source_type", "source"),
+                        properties={},
+                        relationship_type="DROPPED_BY",
+                        relationship_properties={
+                            "chance": drop_source.get("chance", ""),
+                            "rotation": drop_source.get("rotation"),
+                        },
+                        relationship_direction="incoming",
+                    )
                 )
-                relationship_properties = (
-                    rel_data.get("properties", {}) if rel_data else {}
-                )
-
-                neighbor = NodeNeighbor(
-                    id=end_id,
-                    name=end_node_data.get("properties", {}).get("name", "Unknown"),
-                    type=end_label,
-                    properties=end_node_data.get("properties", {}),
-                    relationship_type=relationship_type,
-                    relationship_properties=relationship_properties,
-                    relationship_direction=direction,
+        else:
+            missions = list(db["missions"].find({
+                "$or": [
+                    {"mission_name": {"$regex": f".*{name}.*", "$options": "i"}},
+                    {"drops.item": {"$regex": f".*{name}.*", "$options": "i"}},
+                ]
+            }))
+            
+            for mission in missions:
+                starting_node = GraphNode(
+                    id=str(mission.get("_id", "")),
+                    name=mission.get("mission_name", "Unknown"),
+                    type="Mission",
+                    label="Mission",
+                    properties={
+                        "mission_type": mission.get("type", ""),
+                        "planet": mission.get("planet", ""),
+                    },
                 )
 
-                neighbors.append(neighbor)
+                drops = mission.get("drops", [])
+                for drop in drops:
+                    neighbors.append(
+                        NodeNeighbor(
+                            id=str(node_id),
+                            name=drop.get("item", "Unknown"),
+                            type="Item",
+                            properties={},
+                            relationship_type="DROPS",
+                            relationship_properties={
+                                "chance": drop.get("chance", ""),
+                                "rotation": drop.get("rotation"),
+                            },
+                            relationship_direction="outgoing",
+                        )
+                    )
+                    node_id += 1
+            
+            if not starting_node:
+                for mission in db["missions"].find({"drops.item": {"$regex": f".*{name}.*", "$options": "i"}}):
+                    if starting_node is None:
+                        starting_node = GraphNode(
+                            id=str(mission.get("_id", "")),
+                            name=name,
+                            type="Item",
+                            label="Item",
+                            properties={},
+                        )
+                    
+                    matching_drop = next(
+                        (d for d in mission.get("drops", []) 
+                         if d.get("item", "").lower() == name.lower()),
+                        {}
+                    )
+                    
+                    neighbors.append(
+                        NodeNeighbor(
+                            id=str(mission.get("_id", "")),
+                            name=mission.get("mission_name", "Unknown"),
+                            type="Mission",
+                            properties={},
+                            relationship_type="DROPPED_BY",
+                            relationship_properties={
+                                "chance": matching_drop.get("chance", ""),
+                                "rotation": matching_drop.get("rotation"),
+                            },
+                            relationship_direction="incoming",
+                        )
+                    )
 
-        if not starting_node_data:
+        if not starting_node:
             raise HTTPException(
-                status_code=404, detail="No starting node found matching the criteria"
+                status_code=404, detail=f"No nodes found matching: {name}"
             )
 
         return NodeNeighborsResponse(
-            starting_node=starting_node_data,
+            starting_node=starting_node,
             neighbors=neighbors,
             count=len(neighbors),
         )
@@ -224,5 +261,3 @@ async def get_node_neighbors(
         raise HTTPException(
             status_code=500, detail=f"Failed to get node neighbors: {e}"
         )
-    finally:
-        age.close()
