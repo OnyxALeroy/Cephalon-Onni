@@ -10,8 +10,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from routers import (
-    admin,
-    admin_age,
     auth,
     builds,
     inventory,
@@ -21,6 +19,7 @@ from routers import (
     warframes,
     worldstate,
 )
+from routers.admin import user as admin_user
 
 logger = logging.getLogger(__name__)
 
@@ -121,8 +120,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-app.include_router(admin.router)
-app.include_router(admin_age.router)
+app.include_router(admin_user.router)
 app.include_router(auth.router)
 app.include_router(inventory.router)
 app.include_router(loottables.router)
