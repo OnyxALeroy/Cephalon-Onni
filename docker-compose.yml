@@ -13,9 +13,6 @@ services:
       # Mongo
       MONGO_URL: mongodb://cephalon-onni-mongo:27017
 
-      # Graph is now Postgres (Apache AGE)
-      GRAPH_DB_TYPE: postgres_age
-
       # Redis
       REDIS_URL: redis://redis:6379
     command: ["python", "-u", "app/main.py"]
