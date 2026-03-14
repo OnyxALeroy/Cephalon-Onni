@@ -1,0 +1,20 @@
+services:
+  backend:
+    secrets:
+      - mongo_private_key
+
+  mongodb:
+    secrets:
+      - mongo_private_key
+    command:
+      [
+        "mongod",
+        "--tlsMode",
+        "requireTLS",
+        "--tlsCertificateKeyFile",
+        "/run/secrets/mongo_private_key",
+      ]
+
+secrets:
+  mongo_private_key:
+    file: ./secrets/mongo_client.pem

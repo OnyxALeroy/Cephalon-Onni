@@ -1,6 +1,10 @@
+import logging
+
 from models.static_models import Weapon
 from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
+
+logger = logging.getLogger(__name__)
 
 
 def create_weapon_database(client: MongoClient, db_name: str = "cephalon_onni") -> bool:
@@ -14,10 +18,10 @@ def create_weapon_database(client: MongoClient, db_name: str = "cephalon_onni") 
         # Create unique index on weapon_name
         collection.create_index("uniqueName", unique=True)
 
-        print("Created weapons collection")
+        logger.info("Created weapons collection")
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While creating weapon database: {e}")
+        logger.error(f"While creating weapon database: {e}")
         return False
 
 
@@ -83,10 +87,10 @@ def fill_weapons_db(
 
         if ops:
             collection.bulk_write(ops, ordered=False)
-            print(f"Upserted {len(ops)} weapons")
+            logger.info(f"Upserted {len(ops)} weapons")
 
         return True
 
     except PyMongoError as e:
-        print(f"[ERROR] While loading weapon database: {e}")
+        logger.error(f"While loading weapon database: {e}")
         return False

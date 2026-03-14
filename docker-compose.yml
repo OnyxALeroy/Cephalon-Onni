@@ -5,16 +5,12 @@ services:
     container_name: cephalon-onni-backend
     restart: unless-stopped
     ports:
-      - "8000:8000" # keep for dev; can remove in prod
+      - "8000:8000"
     depends_on:
       - mongodb
       - redis
-    environment:
-      # Mongo
-      MONGO_URL: mongodb://cephalon-onni-mongo:27017
-
-      # Redis
-      REDIS_URL: redis://redis:6379
+    env_file:
+      - .env
     command: ["python", "-u", "app/main.py"]
     tty: true
     stdin_open: true
@@ -30,15 +26,6 @@ services:
     depends_on:
       - backend
 
-  mongodb:
-    image: mongo:7
-    container_name: cephalon-onni-mongo
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodata:/data/db
-
   redis:
     image: redis:7-alpine
     container_name: cephalon-onni-redis
@@ -47,6 +34,18 @@ services:
       - "6379:6379"
     volumes:
       - redisdata:/data
+
+  mongodb:
+    image: mongo:7
+    container_name: cephalon-onni-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongodata:/data/db
 
 volumes:
   mongodata:

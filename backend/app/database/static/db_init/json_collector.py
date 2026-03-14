@@ -1,10 +1,13 @@
 import json
+import logging
 import lzma
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional, TypeVar
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
@@ -43,7 +46,7 @@ class JsonCollector:
             index_file = lzma.decompress(response.content)
             return index_file.decode("utf-8").splitlines()
         except Exception as e:
-            print(f"[ERROR] Failed to fetch index for {language_code}: {e}")
+            logger.error(f"Failed to fetch index for {language_code}: {e}")
             return []
 
     def get_export_json(
@@ -60,7 +63,7 @@ class JsonCollector:
         )
 
         if not file_name:
-            print(f"[ERROR] No match for {json_name}")
+            logger.error(f"No match for {json_name}")
             return None
 
         try:
@@ -88,13 +91,13 @@ class JsonCollector:
             return data
 
         except Exception as e:
-            print(f"[ERROR] Failed fetching {json_name}: {e}")
+            logger.error(f"Failed fetching {json_name}: {e}")
             return None
 
     def get_jsons(self, language_code: str, json_names: List[str]) -> Dict[str, Any]:
         """Parallel fetcher for multiple JSON exports."""
         if language_code.lower() not in self.LANGUAGE_CODE_LIST:
-            print(f"[ERROR] Invalid language: {language_code}")
+            logger.error(f"Invalid language: {language_code}")
             return {}
 
         index_content = self._fetch_lzma_index(language_code)
@@ -117,7 +120,7 @@ class JsonCollector:
                     if data is not None:
                         results[name] = data
                 except Exception as e:
-                    print(f"[ERROR] Exception in thread for {name}: {e}")
+                    logger.error(f"Exception in thread for {name}: {e}")
 
         return results
 
@@ -130,8 +133,8 @@ class JsonCollector:
                 path = os.path.join(output_dir, f"{name}.json")
                 with open(path, "w", encoding="utf-8") as f:
                     json.dump(content, f, ensure_ascii=False, indent=2)
-                print(f"[INFO] Saved {path}")
+                logger.info(f"Saved {path}")
             return True
         except Exception as e:
-            print(f"[ERROR] Failed to save JSONs: {e}")
+            logger.error(f"Failed to save JSONs: {e}")
             return False

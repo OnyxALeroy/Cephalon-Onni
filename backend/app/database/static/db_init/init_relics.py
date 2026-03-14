@@ -1,8 +1,11 @@
+import logging
 from typing import List, Union
 
 from models.static_models import Arcana, Relic
 from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
+
+logger = logging.getLogger(__name__)
 
 
 def create_relic_database(client: MongoClient, db_name: str = "cephalon_onni") -> bool:
@@ -16,10 +19,10 @@ def create_relic_database(client: MongoClient, db_name: str = "cephalon_onni") -
         collection = db["arcanes"]
         collection.create_index("uniqueName", unique=True)
 
-        print("Created recipes and arcane collections")
+        logger.info("Created recipes and arcane collections")
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While creating relics / arcane collections: {e}")
+        logger.error(f"While creating relics / arcane collections: {e}")
         return False
 
 
@@ -64,7 +67,7 @@ def fill_relic_db(
                     )
                 )
             else:
-                print(f"[WARN] Invalid element: {element}")
+                logger.warning(f"Invalid element: {element}")
                 continue
 
         db = client[db_name]
@@ -75,5 +78,5 @@ def fill_relic_db(
 
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While loading recipe database: {e}")
+        logger.error(f"While loading recipe database: {e}")
         return False
