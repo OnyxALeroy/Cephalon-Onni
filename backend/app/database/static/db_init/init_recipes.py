@@ -1,8 +1,12 @@
+import logging
+
 from models.static_models import Recipe
 from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
 
 from database.db import get_value_by_field
+
+logger = logging.getLogger(__name__)
 
 
 def create_recipe_database(client: MongoClient, db_name: str = "cephalon_onni") -> bool:
@@ -13,10 +17,10 @@ def create_recipe_database(client: MongoClient, db_name: str = "cephalon_onni") 
         collection = db["recipes"]
         collection.create_index("uniqueName", unique=True)
 
-        print("Created recipes collection")
+        logger.info("Created recipes collection")
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While creating recipe database: {e}")
+        logger.error(f"While creating recipe database: {e}")
         return False
 
 
@@ -81,9 +85,9 @@ def fill_recipes_db(
 
         if ops:
             collection.bulk_write(ops, ordered=False)
-            print(f"Upserted {len(ops)} recipes")
+            logger.info(f"Upserted {len(ops)} recipes")
 
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While loading recipe database: {e}")
+        logger.error(f"While loading recipe database: {e}")
         return False

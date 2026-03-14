@@ -1,6 +1,10 @@
+import logging
+
 from models.static_models import Warframe
 from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
+
+logger = logging.getLogger(__name__)
 
 
 def create_warframe_database(
@@ -20,10 +24,10 @@ def create_warframe_database(
             [("warframe_uniqueName", 1), ("abilityUniqueName", 1)], unique=True
         )
 
-        print("Created warframes and warframe_abilities collections")
+        logger.info("Created warframes and warframe_abilities collections")
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While creating warframe database: {e}")
+        logger.error(f"While creating warframe database: {e}")
         return False
 
 
@@ -70,8 +74,8 @@ def fill_warframe_db(
             # Abilities documents
             abilities = warframe.get("abilities", [])
             if not isinstance(abilities, list):
-                print(
-                    f"[ERROR] abilities is not a list: {type(abilities)} for warframe {warframe.get('uniqueName', 'unknown')}"
+                logger.error(
+                    f"abilities is not a list: {type(abilities)} for warframe {warframe.get('uniqueName', 'unknown')}"
                 )
                 continue
 
@@ -97,14 +101,14 @@ def fill_warframe_db(
         # Insert warframes
         if warframe_ops:
             warframes_collection.bulk_write(warframe_ops, ordered=False)
-            print(f"Upserted {len(warframe_ops)} warframes")
+            logger.info(f"Upserted {len(warframe_ops)} warframes")
 
         # Insert abilities
         if ability_ops:
             abilities_collection.bulk_write(ability_ops, ordered=False)
-            print(f"Upserted {len(ability_ops)} warframe abilities")
+            logger.info(f"Upserted {len(ability_ops)} warframe abilities")
 
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While loading warframe database: {e}")
+        logger.error(f"While loading warframe database: {e}")
         return False

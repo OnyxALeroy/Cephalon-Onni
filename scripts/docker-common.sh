@@ -19,10 +19,14 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Compose command abstraction
 compose() {
+    local files=("-f" "$PROJECT_ROOT/docker-compose.yml")
+    if [[ "${PROFILE:-dev}" == "prod" ]]; then
+        files+=("-f" "$PROJECT_ROOT/docker-compose.prod.yml")
+    fi
     if command -v docker-compose &> /dev/null; then
-        docker-compose "$@"
+        docker-compose "${files[@]}" "$@"
     else
-        docker compose "$@"
+        docker compose "${files[@]}" "$@"
     fi
 }
 
