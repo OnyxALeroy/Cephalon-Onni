@@ -1,4 +1,7 @@
+import logging
 import sys
+import os
+from datetime import datetime
 from typing import List, Union, cast
 
 from database.db import (
@@ -41,15 +44,42 @@ from models.static_models import (
 
 
 def main() -> None:
+    # Setup logging to file with timestamp
+    log_dir = "/app/logs/db_init"
+    os.makedirs(log_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_file = os.path.join(log_dir, f"db_init_{timestamp}.log")
+
+    # Configure root logger to capture all loggers
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.handlers.clear()
+    
+    # File handler
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter("%(message)s"))
+    root_logger.addHandler(file_handler)
+    
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(logging.Formatter("%(message)s"))
+    root_logger.addHandler(console_handler)
+
+    # Use root logger for script-level messages
+    logging.info("DB INIT LOG - " + timestamp)
+    logging.info("")
+
     # Check for help flag
     if "--help" in sys.argv or "-h" in sys.argv:
-        print("Usage: python db_init_script.py [options]")
-        print("Options:")
-        print("  -y                    Skip confirmation prompts")
-        print("  --save-json, -sj      Save JSON files to disk (default: False)")
-        print("  --limit=<number>      Number of lines to show per table (default: 10)")
-        print("  --limit <number>      Same as above")
-        print("  -h, --help            Show this help message")
+        logging.info("Usage: python db_init_script.py [options]")
+        logging.info("Options:")
+        logging.info("  -y                    Skip confirmation prompts")
+        logging.info("  --save-json, -sj      Save JSON files to disk (default: False)")
+        logging.info("  --limit=<number>      Number of lines to show per table (default: 10)")
+        logging.info("  --limit <number>      Same as above")
+        logging.info("  -h, --help            Show this help message")
         sys.exit(0)
 
     # Check for -y flag to skip confirmation
@@ -65,19 +95,19 @@ def main() -> None:
             try:
                 limit = int(arg.split("=")[1])
                 if limit < 1:
-                    print("[ERROR] Limit must be a positive integer")
+                    logging.error("Limit must be a positive integer")
                     sys.exit(1)
             except (ValueError, IndexError):
-                print("[ERROR] Invalid limit format. Use --limit=<number>")
+                logging.error("Invalid limit format. Use --limit=<number>")
                 sys.exit(1)
         elif arg == "--limit" and i + 1 < len(sys.argv):
             try:
                 limit = int(sys.argv[i + 1])
                 if limit < 1:
-                    print("[ERROR] Limit must be a positive integer")
+                    logging.error("Limit must be a positive integer")
                     sys.exit(1)
             except ValueError:
-                print("[ERROR] Invalid limit value. Must be an integer.")
+                logging.error("Invalid limit value. Must be an integer.")
                 sys.exit(1)
 
     # Connect to MongoDB
@@ -144,7 +174,7 @@ def main() -> None:
         # Save JSONs to disk before database operations
         if save_json_to_disk:
             if not jsons_collector.save_to_disk(raw_data):
-                print("[ERROR] Failed to save JSONs to disk")
+                logging.error("Failed to save JSONs to disk")
 
         # All database fills ----------------------------------------------------------------------
 
@@ -184,7 +214,7 @@ def main() -> None:
 
         tables = list_tables(client)
         if not tables:
-            print("No tables found.")
+            logging.info("No tables found.")
             return
 
         for table in tables:
@@ -192,7 +222,7 @@ def main() -> None:
             preview_table(client, table, limit)
 
     except Exception as e:
-        print(f"[ERROR] While reading DB: {e}")
+        logging.error(f"While reading DB: {e}")
 
     finally:
         client.close()

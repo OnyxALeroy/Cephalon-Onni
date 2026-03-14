@@ -1,6 +1,10 @@
+import logging
+
 from models.static_models import ImgItem
 from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
+
+logger = logging.getLogger(__name__)
 
 
 def create_images_database(client: MongoClient, db_name: str = "cephalon_onni") -> bool:
@@ -14,10 +18,10 @@ def create_images_database(client: MongoClient, db_name: str = "cephalon_onni") 
         # Create unique index on uniqueName
         collection.create_index("uniqueName", unique=True)
 
-        print("Created images collection")
+        logger.info("Created images collection")
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While creating image database: {e}")
+        logger.error(f"While creating image database: {e}")
         return False
 
 
@@ -47,9 +51,9 @@ def fill_img_db(
 
         if ops:
             collection.bulk_write(ops, ordered=False)
-            print(f"Upserted {len(ops)} images")
+            logger.info(f"Upserted {len(ops)} images")
 
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While loading image database: {e}")
+        logger.error(f"While loading image database: {e}")
         return False

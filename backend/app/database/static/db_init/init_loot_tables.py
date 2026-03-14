@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import List, Optional
 
@@ -7,6 +8,8 @@ from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 
 from database.db import get_value_by_field
+
+logger = logging.getLogger(__name__)
 
 # -------------------------------------------------------------------------------------------------
 
@@ -73,8 +76,8 @@ def handle_missions(
                 },
             )
             if res.matched_count == 0:
-                print(
-                    f'[INFO] Inserting new drop source: "{item["planet"]}, {item["source"]} ({item["type"]})" not found as mission, inserted as "auxiliary_mission"'
+                logger.info(
+                    f'Inserting new drop source: "{item["planet"]}, {item["source"]} ({item["type"]})" not found as mission, inserted as "auxiliary_mission"'
                 )
                 db = client[db_name]
                 collection = db["drop_sources"]
@@ -88,7 +91,7 @@ def handle_missions(
                     }
                 )
     except PyMongoError as e:
-        print(f"Error updating mission loot-tables: {e}")
+        logger.error(f"Error updating mission loot-tables: {e}")
         raise
 
 
@@ -129,9 +132,9 @@ def handle_keys(
         collection = db["drop_sources"]
         if list(items.values()):
             collection.insert_many(items.values())
-            print(f"Inserted {len(items)} drop sources")
+            logger.info(f"Inserted {len(items)} drop sources")
     except PyMongoError as e:
-        print(f"Error inserting drop sources: {e}")
+        logger.error(f"Error inserting drop sources: {e}")
 
 
 def handle_dynamic_location_items(
@@ -177,9 +180,9 @@ def handle_dynamic_location_items(
         collection = db["drop_sources"]
         if list(items.values()):
             collection.insert_many(items.values())
-            print(f"Inserted {len(items)} drop sources")
+            logger.info(f"Inserted {len(items)} drop sources")
     except PyMongoError as e:
-        print(f"Error inserting drop sources: {e}")
+        logger.error(f"Error inserting drop sources: {e}")
 
 
 def handle_sorties(
@@ -212,9 +215,9 @@ def handle_sorties(
         collection = db["drop_sources"]
         if list(items.values()):
             collection.insert_many(items.values())
-            print(f"Inserted {len(items)} drop sources")
+            logger.info(f"Inserted {len(items)} drop sources")
     except PyMongoError as e:
-        print(f"Error inserting drop sources: {e}")
+        logger.error(f"Error inserting drop sources: {e}")
 
 
 def handle_bounty_items(
@@ -264,9 +267,9 @@ def handle_bounty_items(
         collection = db["drop_sources"]
         if list(items.values()):
             collection.insert_many(items.values())
-            print(f"Inserted {len(items)} drop sources")
+            logger.info(f"Inserted {len(items)} drop sources")
     except PyMongoError as e:
-        print(f"Error inserting drop sources: {e}")
+        logger.error(f"Error inserting drop sources: {e}")
 
 
 def handle_general_drops(
@@ -311,9 +314,9 @@ def handle_general_drops(
         collection = db["drop_sources"]
         if list(items.values()):
             collection.insert_many(items.values())
-            print(f"Inserted {len(items)} drop sources")
+            logger.info(f"Inserted {len(items)} drop sources")
     except PyMongoError as e:
-        print(f"Error inserting drop sources: {e}")
+        logger.error(f"Error inserting drop sources: {e}")
 
 
 # -------------------------------------------------------------------------------------------------
