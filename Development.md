@@ -78,3 +78,57 @@ For each run of this script, a logging file is created inside the Docker contain
 - to list all logs: `docker exec cephalon-onni-backend ls /app/logs/db_init/` ;
 - to access it: `docker exec cephalon-onni-backend ls /app/logs/db_init/db_init_<time>.log` ;
 - to copy all logs to your local machine: `docker cp cephalon-onni-backend:/app/logs/db_init/* ./db_init_logs/`.
+
+## Quick Commands (Makefile)
+
+The `Makefile` provides shortcuts for common development tasks:
+
+```bash
+make up              # Start all services (same as ./scripts/start-everything.sh)
+make down           # Stop all containers
+make restart        # Restart all services (rebuilds containers)
+make health         # Show status of all running containers
+make setup          # Copy .env.example to .env if missing
+```
+
+### Logs
+
+```bash
+make logs            # Tail all logs
+make logs-backend    # Tail backend logs only
+make logs-frontend   # Tail frontend logs only
+make logs-mongo      # Tail MongoDB logs only
+make logs-redis      # Tail Redis logs only
+```
+
+Or use the script directly:
+```bash
+./scripts/logs.sh [backend|frontend|mongo|redis|all]
+```
+
+### Shell Access
+
+```bash
+make shell-backend   # Bash shell in backend container
+make shell-mongo     # MongoDB shell (mongosh)
+make shell-redis     # Redis CLI
+```
+
+Or use the script directly:
+```bash
+./scripts/shell.sh [backend|mongo|redis]
+```
+
+### Cleanup
+
+```bash
+make clean           # Remove containers and unused images
+make clean-volumes   # Remove containers, volumes, and images (DESTRUCTIVE)
+```
+
+Or use the script directly:
+```bash
+./scripts/clean.sh [all|volumes]
+```
+
+**Warning:** `clean volumes` will delete all database data. You'll need to re-run the DB setup script.
