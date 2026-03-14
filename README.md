@@ -1,8 +1,8 @@
 # Cephalon Onni
 
-**Cephalon Onni** is a companion web application for *Warframe* that allows players to visualize, manage, and analyze their inventory outside the game.
+**Cephalon Onni** is a companion web application for *Warframe* that allows players to visualize, manage, and analyze their inventory outside the game. The goal is to provide users with a clean, fast, and modern interface to view their Arsenal, equipment, and progression anytime, anywhere.
 
-The goal is to provide Tenno with a clean, fast, and modern interface to view their Arsenal, equipment, and progression anytime, anywhere.
+The main selling point of the Cephalon Onni are the Warframe profile getter, allowing the users to access their Arsenal, equiment, progression, etc., without launching the game.
 
 ---
 
@@ -18,7 +18,8 @@ The goal is to provide Tenno with a clean, fast, and modern interface to view th
 ### Backend
 
 * FastAPI
-* MongoDB / PostgreSQL with Apache AGE (graph database)
+* MongoDB
+* Redis
 * OAuth-based authentication system
 * REST API
 
@@ -26,46 +27,7 @@ The goal is to provide Tenno with a clean, fast, and modern interface to view th
 
 ## Setup Instructions
 
-### Backend
-
-The whole backend is encapsulated in a Docker container. To run it locally, install Docker on your machine, and run from the project root directory:
-   ```bash
-   docker compose up --build
-   ```
-
-The backend will be available at:
-
-```
-http://localhost:8000
-```
-
-The services include:
-- **Backend API**: FastAPI server (port 8000)
-- **Frontend**: Vue.js application (port 8080) 
-- **PostgreSQL with Apache AGE**: Graph database (port 5432)
-- **MongoDB**: Document database (port 27017)
-
-Once you're done, stop the containers by pressing `Ctrl+C` in the terminal and don't forget to remove them with `docker compose down`.
-
-### Frontend
-
-#### Install dependencies
-
-```bash
-npm install
-```
-
-#### Run development server
-
-```bash
-npm run dev
-```
-
-The app will be available at:
-
-```
-http://localhost:5173
-```
+See [[Development.md]] for detailed setup instructions.
 
 ---
 

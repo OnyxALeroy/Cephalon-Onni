@@ -1,6 +1,10 @@
+import logging
+
 from models.static_models import Mod
 from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
+
+logger = logging.getLogger(__name__)
 
 
 def create_mods_database(client: MongoClient, db_name: str = "cephalon_onni") -> bool:
@@ -14,10 +18,10 @@ def create_mods_database(client: MongoClient, db_name: str = "cephalon_onni") ->
         # Create unique index on uniqueName
         collection.create_index("uniqueName", unique=True)
 
-        print("Created mods collection")
+        logger.info("Created mods collection")
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While creating mods database: {e}")
+        logger.error(f"While creating mods database: {e}")
         return False
 
 
@@ -32,7 +36,7 @@ def fill_mods_db(
         ops = []
         for mod in mods:
             if "upgradeEntries" in mod or "availableChallenges" in mod:
-                print(f"Mod {mod['uniqueName']} (true name: {mod['name']}) is Riven")
+                logger.warning(f"Mod {mod['uniqueName']} (true name: {mod['name']}) is Riven")
                 continue
 
             # Create document
@@ -66,9 +70,9 @@ def fill_mods_db(
 
         if ops:
             collection.bulk_write(ops, ordered=False)
-            print(f"Upserted {len(ops)} mods")
+            logger.info(f"Upserted {len(ops)} mods")
 
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While loading mods database: {e}")
+        logger.error(f"While loading mods database: {e}")
         return False

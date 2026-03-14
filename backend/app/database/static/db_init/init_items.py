@@ -1,5 +1,9 @@
+import logging
+
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
+
+logger = logging.getLogger(__name__)
 
 
 def create_item_database(client: MongoClient, db_name: str = "cephalon_onni") -> bool:
@@ -13,8 +17,8 @@ def create_item_database(client: MongoClient, db_name: str = "cephalon_onni") ->
         # Create unique index on uniqueName
         collection.create_index("uniqueName", unique=True)
 
-        print("Created items collection")
+        logger.info("Created items collection")
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While creating item database: {e}")
+        logger.error(f"While creating item database: {e}")
         return False

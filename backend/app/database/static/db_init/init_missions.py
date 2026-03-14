@@ -1,6 +1,10 @@
+import logging
+
 from models.static_models import FetchedMission
 from pymongo import MongoClient, UpdateOne
 from pymongo.errors import PyMongoError
+
+logger = logging.getLogger(__name__)
 
 
 def create_mission_database(
@@ -16,10 +20,10 @@ def create_mission_database(
         # Create unique index on mission_name
         collection.create_index("mission_name", unique=True)
 
-        print("Created missions collection")
+        logger.info("Created missions collection")
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While creating mission database: {e}")
+        logger.error(f"While creating mission database: {e}")
         return False
 
 
@@ -61,9 +65,9 @@ def fill_missions_db(
 
         if ops:
             collection.bulk_write(ops, ordered=False)
-            print(f"Upserted {len(ops)} missions")
+            logger.info(f"Upserted {len(ops)} missions")
 
         return True
     except PyMongoError as e:
-        print(f"[ERROR] While loading mission database: {e}")
+        logger.error(f"While loading mission database: {e}")
         return False

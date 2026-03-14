@@ -27,20 +27,30 @@ class MongoDBManager:
             if self._initialized:
                 return
 
+            # Set up TLS arguments if the secret file exists
+            tls_kwargs = {}
+            cert_path = "/run/secrets/mongo_private_key"
+            if os.path.exists(cert_path):
+                tls_kwargs = {
+                    "tls": True,
+                    "tlsCertificateKeyFile": cert_path,
+                    "tlsAllowInvalidCertificates": True,  # Required for self-signed dev certs
+                }
+
             # Initialize sync client
             try:
                 self._sync_client = MongoClient(
-                    self._mongo_url, serverSelectionTimeoutMS=5000
+                    self._mongo_url, serverSelectionTimeoutMS=5000, **tls_kwargs
                 )
                 self._sync_client.admin.command("ping")
-                print(f"Successfully connected to MongoDB at {self._mongo_url}")
+                print("Successfully connected to MongoDB")
             except ConnectionFailure as e:
                 print(f"Failed to connect to MongoDB: {e}")
                 raise
 
             # Initialize async client
             try:
-                self._async_client = AsyncIOMotorClient(self._mongo_url)
+                self._async_client = AsyncIOMotorClient(self._mongo_url, **tls_kwargs)
             except Exception as e:
                 print(f"Failed to connect to MongoDB (async): {e}")
                 raise
