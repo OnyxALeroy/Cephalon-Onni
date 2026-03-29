@@ -1,6 +1,7 @@
 from database.db import connect_to_mongodb
 from database.dynamic.auth import decode_token
 from database.static.age_helper import AgeDB
+from database.postgres_db import postgres_db
 from fastapi import HTTPException, Request
 
 
@@ -36,3 +37,8 @@ def get_static_db_client():
     if not client:
         raise HTTPException(status_code=500, detail="Failed to connect to the database")
     yield client
+
+
+async def get_postgres_session():
+    async for session in postgres_db.get_session():
+        yield session
