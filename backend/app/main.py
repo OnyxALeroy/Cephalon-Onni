@@ -27,11 +27,20 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     from database.db import db_manager
+    from database.postgres_db import postgres_db
 
     db_manager.initialize()
 
     application.state.client = db_manager.async_client
     application.state.db = db_manager.async_db
+
+    postgres_db.initialize()
+    try:
+        import models.postgres
+        await postgres_db.create_tables()
+        logger.info("PostgreSQL tables created/verified")
+    except Exception as e:
+        logger.warning(f"PostgreSQL initialization warning: {e}")
 
     from services.worldstate import (
         WorldStateCache,
@@ -56,6 +65,7 @@ async def lifespan(application: FastAPI):
     except asyncio.CancelledError:
         pass
     await cache.disconnect()
+    await postgres_db.close()
     db_manager.close_all()
 
 

@@ -7,13 +7,15 @@ cd "$PROJECT_ROOT"
 
 compose down mongodb 2>/dev/null || true
 compose down redis 2>/dev/null || true
+compose down postgres 2>/dev/null || true
 
-compose up -d mongodb redis
+compose up -d mongodb redis postgres
 sleep 8
 
 services=(
   "MongoDB:cephalon-onni-mongo"
   "Redis:cephalon-onni-redis"
+  "PostgreSQL:cephalon-onni-postgres"
 )
 
 for s in "${services[@]}"; do
