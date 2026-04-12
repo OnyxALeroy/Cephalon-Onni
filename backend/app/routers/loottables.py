@@ -2,7 +2,7 @@ import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
-from models.age_models import (
+from models.loot_tables import (
     GraphNode,
     NodeNeighbor,
     NodeNeighborsResponse,

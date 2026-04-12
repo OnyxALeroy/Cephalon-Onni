@@ -1,6 +1,5 @@
 from database.db import connect_to_mongodb
 from database.dynamic.auth import decode_token
-from database.static.age_helper import AgeDB
 from database.postgres_db import postgres_db
 from fastapi import HTTPException, Request
 
@@ -21,15 +20,6 @@ def get_current_user(request: Request):
         return user_id
     except Exception:
         raise HTTPException(status_code=401, detail="Token expired or invalid")
-
-
-def get_age_helper():
-    try:
-        return AgeDB()
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to initialize graph connection: {e}"
-        )
 
 
 def get_static_db_client():
