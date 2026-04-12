@@ -9,6 +9,7 @@ services:
     depends_on:
       - mongodb
       - redis
+      - postgres
     env_file:
       - .env
     command: ["python", "-u", "app/main.py"]
@@ -18,6 +19,26 @@ services:
       watch:
         - path: ./backend/app
           action: rebuild
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: cephalon-onni-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgresdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build:
@@ -58,3 +79,4 @@ services:
 volumes:
   mongodata:
   redisdata:
+  postgresdata:

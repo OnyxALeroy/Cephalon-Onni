@@ -7,7 +7,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/docker-common.sh"
 
 usage() {
-    echo "Usage: $0 [backend|frontend|mongo|redis|all]"
+    echo "Usage: $0 [backend|frontend|mongo|postgres|redis|all]"
     echo "  Default: all"
     exit 1
 }
@@ -26,6 +26,10 @@ case "$SERVICE" in
     mongo|mongodb)
         print_status "Tailing MongoDB logs..."
         docker compose logs -f mongodb
+        ;;
+    postgres|pg)
+        print_status "Tailing PostgreSQL logs..."
+        docker compose logs -f postgres
         ;;
     redis)
         print_status "Tailing Redis logs..."

@@ -1,38 +1,61 @@
+import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
-from models.age_models import (
+from models.loot_tables import (
     GraphNode,
     NodeNeighbor,
     NodeNeighborsResponse,
     NodeSearchResponse,
 )
-from pymongo import MongoClient
+from sqlalchemy import select, or_
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from dependencies import get_static_db_client
+from dependencies import get_postgres_session
+from models.postgres.missions import Mission
+from models.postgres.drop_sources import DropSource
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/loottables", tags=["loottables"])
+
+
+def _parse_json(value):
+    """Parse JSON string to Python object."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return []
+    return value if isinstance(value, list) else []
 
 
 @router.get("/search/nodes", response_model=NodeSearchResponse)
 async def search_nodes_by_name_or_label(
     name: str = "",
     label: str = "",
-    client: MongoClient = Depends(get_static_db_client),
+    session: AsyncSession = Depends(get_postgres_session),
 ) -> NodeSearchResponse:
     """Search for nodes by name and/or label (type)."""
     try:
-        db = client["cephalon_onni"]
-        
         nodes = []
         node_id_counter = 0
 
+        if not name and not label:
+            return NodeSearchResponse(nodes=[])
+
         if label:
             if label.lower() == "missions" or label.lower() == "mission":
-                query = {"mission_name": {"$regex": f".*{name}.*", "$options": "i"}} if name else {}
-                for mission in db["missions"].find(query).limit(50):
-                    drops = mission.get("drops", [])
+                query = select(Mission)
+                if name:
+                    query = query.where(Mission.mission_name.ilike(f"%{name}%"))
+                query = query.limit(50)
+                result = await session.execute(query)
+                missions = result.scalars().all()
+                
+                for mission in missions:
+                    drops = _parse_json(mission.drops)
                     for drop in drops:
                         nodes.append(
                             {
@@ -41,9 +64,9 @@ async def search_nodes_by_name_or_label(
                                 "type": "Mission",
                                 "label": "Mission",
                                 "properties": {
-                                    "mission_name": mission.get("mission_name", ""),
-                                    "mission_type": mission.get("type", ""),
-                                    "planet": mission.get("planet", ""),
+                                    "mission_name": mission.mission_name,
+                                    "mission_type": mission.type,
+                                    "planet": mission.planet,
                                     "drop_chance": drop.get("chance", ""),
                                     "drop_rotation": drop.get("rotation"),
                                 },
@@ -51,49 +74,56 @@ async def search_nodes_by_name_or_label(
                         )
                         node_id_counter += 1
             else:
-                query = {"source_type": label.lower()}
+                query = select(DropSource).where(DropSource.source_type == label.lower())
                 if name:
-                    query["name"] = {"$regex": f".*{name}.*", "$options": "i"}
+                    query = query.where(DropSource.name.ilike(f"%{name}%"))
+                query = query.limit(50)
+                result = await session.execute(query)
+                items = result.scalars().all()
                 
-                for item in db["drop_sources"].find(query).limit(50):
+                for item in items:
                     nodes.append(
                         {
-                            "id": str(item.get("_id", node_id_counter)),
-                            "name": item.get("name", ""),
-                            "type": item.get("source_type", "Unknown"),
-                            "label": item.get("source_type", "Unknown"),
+                            "id": str(item.id),
+                            "name": item.name,
+                            "type": item.source_type,
+                            "label": item.source_type,
                             "properties": {
-                                "source": item.get("source", ""),
-                                "chance": item.get("chance", ""),
-                                "rotation": item.get("rotation"),
+                                "source": item.source,
+                                "chance": item.chance,
+                                "rotation": item.rotation,
                             },
                         }
                     )
-                    node_id_counter += 1
         else:
             if name:
                 name_query = name
                 
-                for item in db["drop_sources"].find({"name": {"$regex": f".*{name_query}.*", "$options": "i"}}).limit(25):
+                query = select(DropSource).where(DropSource.name.ilike(f"%{name_query}%")).limit(25)
+                result = await session.execute(query)
+                items = result.scalars().all()
+                
+                for item in items:
                     nodes.append(
                         {
-                            "id": str(item.get("_id", node_id_counter)),
-                            "name": item.get("name", ""),
-                            "type": item.get("source_type", "drop_source"),
-                            "label": item.get("source_type", "drop_source"),
+                            "id": str(item.id),
+                            "name": item.name,
+                            "type": item.source_type,
+                            "label": item.source_type,
                             "properties": {
-                                "source": item.get("source", ""),
-                                "chance": item.get("chance", ""),
-                                "rotation": item.get("rotation"),
+                                "source": item.source,
+                                "chance": item.chance,
+                                "rotation": item.rotation,
                             },
                         }
                     )
-                    node_id_counter += 1
 
-                for mission in db["missions"].find(
-                    {"mission_name": {"$regex": f".*{name_query}.*", "$options": "i"}}
-                ).limit(25):
-                    drops = mission.get("drops", [])
+                query = select(Mission).where(Mission.mission_name.ilike(f"%{name_query}%")).limit(25)
+                result = await session.execute(query)
+                missions = result.scalars().all()
+                
+                for mission in missions:
+                    drops = _parse_json(mission.drops)
                     for drop in drops:
                         nodes.append(
                             {
@@ -102,9 +132,9 @@ async def search_nodes_by_name_or_label(
                                 "type": "Mission",
                                 "label": "Mission",
                                 "properties": {
-                                    "mission_name": mission.get("mission_name", ""),
-                                    "mission_type": mission.get("type", ""),
-                                    "planet": mission.get("planet", ""),
+                                    "mission_name": mission.mission_name,
+                                    "mission_type": mission.type,
+                                    "planet": mission.planet,
                                     "drop_chance": drop.get("chance", ""),
                                     "drop_rotation": drop.get("rotation"),
                                 },
@@ -125,125 +155,165 @@ async def search_nodes_by_name_or_label(
 
         return NodeSearchResponse(nodes=graph_nodes)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to search nodes: {e}")
+        logger.error(f"Failed to search nodes: {e}")
+        return NodeSearchResponse(nodes=[])
 
 
 @router.get("/neighbors", response_model=NodeNeighborsResponse)
 async def get_node_neighbors(
     name: str = "",
-    client: MongoClient = Depends(get_static_db_client),
+    session: AsyncSession = Depends(get_postgres_session),
 ):
     """Get the direct neighbors of a node using name."""
     if not name:
         raise HTTPException(status_code=400, detail="Name must be provided")
 
     try:
-        db = client["cephalon_onni"]
-        
         starting_node = None
         neighbors = []
         node_id = 0
 
-        drop_sources = list(db["drop_sources"].find({"name": {"$regex": f".*{name}.*", "$options": "i"}}))
+        result = await session.execute(
+            select(DropSource).where(DropSource.name.ilike(f"%{name}%"))
+        )
+        drop_sources = result.scalars().all()
         
         if drop_sources:
-            for drop_source in drop_sources:
-                if starting_node is None:
-                    starting_node = GraphNode(
-                        id=str(drop_source.get("_id", "")),
-                        name=drop_source.get("name", "Unknown"),
-                        type=drop_source.get("source_type", "drop_source"),
-                        label=drop_source.get("source_type", "drop_source"),
-                        properties={
-                            "source": drop_source.get("source", ""),
-                            "chance": drop_source.get("chance", ""),
-                            "rotation": drop_source.get("rotation"),
-                        },
-                    )
+            drop_source = drop_sources[0]
+            starting_node = GraphNode(
+                id=str(drop_source.id),
+                name=drop_source.name,
+                type=drop_source.source_type,
+                label=drop_source.source_type,
+                properties={
+                    "source": drop_source.source,
+                    "chance": drop_source.chance,
+                    "rotation": drop_source.rotation,
+                },
+            )
 
+            for drop_source in drop_sources:
                 neighbors.append(
                     NodeNeighbor(
-                        id=str(drop_source.get("_id", "")),
-                        name=drop_source.get("source", "Unknown"),
-                        type=drop_source.get("source_type", "source"),
+                        id=str(drop_source.id),
+                        name=drop_source.source,
+                        type=drop_source.source_type,
                         properties={},
                         relationship_type="DROPPED_BY",
                         relationship_properties={
-                            "chance": drop_source.get("chance", ""),
-                            "rotation": drop_source.get("rotation"),
+                            "chance": drop_source.chance,
+                            "rotation": drop_source.rotation,
                         },
                         relationship_direction="incoming",
                     )
                 )
         else:
-            missions = list(db["missions"].find({
-                "$or": [
-                    {"mission_name": {"$regex": f".*{name}.*", "$options": "i"}},
-                    {"drops.item": {"$regex": f".*{name}.*", "$options": "i"}},
-                ]
-            }))
+            result = await session.execute(
+                select(Mission).where(
+                    or_(
+                        Mission.mission_name.ilike(f"%{name}%"),
+                    )
+                )
+            )
+            missions = result.scalars().all()
             
             for mission in missions:
-                starting_node = GraphNode(
-                    id=str(mission.get("_id", "")),
-                    name=mission.get("mission_name", "Unknown"),
-                    type="Mission",
-                    label="Mission",
-                    properties={
-                        "mission_type": mission.get("type", ""),
-                        "planet": mission.get("planet", ""),
-                    },
-                )
-
-                drops = mission.get("drops", [])
+                drops = mission.drops or []
                 for drop in drops:
-                    neighbors.append(
-                        NodeNeighbor(
-                            id=str(node_id),
-                            name=drop.get("item", "Unknown"),
-                            type="Item",
-                            properties={},
-                            relationship_type="DROPS",
-                            relationship_properties={
-                                "chance": drop.get("chance", ""),
-                                "rotation": drop.get("rotation"),
-                            },
-                            relationship_direction="outgoing",
+                    if drop.get("item", "").lower() == name.lower():
+                        if starting_node is None:
+                            starting_node = GraphNode(
+                                id=str(mission.id),
+                                name=mission.mission_name,
+                                type="Mission",
+                                label="Mission",
+                                properties={
+                                    "mission_type": mission.type,
+                                    "planet": mission.planet,
+                                },
+                            )
+                        
+                        neighbors.append(
+                            NodeNeighbor(
+                                id=str(node_id),
+                                name=drop.get("item", "Unknown"),
+                                type="Item",
+                                properties={},
+                                relationship_type="DROPS",
+                                relationship_properties={
+                                    "chance": drop.get("chance", ""),
+                                    "rotation": drop.get("rotation"),
+                                },
+                                relationship_direction="outgoing",
+                            )
                         )
-                    )
-                    node_id += 1
+                        node_id += 1
             
             if not starting_node:
-                for mission in db["missions"].find({"drops.item": {"$regex": f".*{name}.*", "$options": "i"}}):
+                result = await session.execute(
+                    select(Mission).where(Mission.mission_name.ilike(f"%{name}%"))
+                )
+                missions = result.scalars().all()
+                
+                for mission in missions:
                     if starting_node is None:
                         starting_node = GraphNode(
-                            id=str(mission.get("_id", "")),
-                            name=name,
-                            type="Item",
-                            label="Item",
-                            properties={},
-                        )
-                    
-                    matching_drop = next(
-                        (d for d in mission.get("drops", []) 
-                         if d.get("item", "").lower() == name.lower()),
-                        {}
-                    )
-                    
-                    neighbors.append(
-                        NodeNeighbor(
-                            id=str(mission.get("_id", "")),
-                            name=mission.get("mission_name", "Unknown"),
+                            id=str(mission.id),
+                            name=mission.mission_name,
                             type="Mission",
-                            properties={},
-                            relationship_type="DROPPED_BY",
-                            relationship_properties={
-                                "chance": matching_drop.get("chance", ""),
-                                "rotation": matching_drop.get("rotation"),
+                            label="Mission",
+                            properties={
+                                "mission_type": mission.type,
+                                "planet": mission.planet,
                             },
-                            relationship_direction="incoming",
                         )
-                    )
+                    
+                    drops = mission.drops or []
+                    for drop in drops:
+                        neighbors.append(
+                            NodeNeighbor(
+                                id=str(node_id),
+                                name=drop.get("item", "Unknown"),
+                                type="Item",
+                                properties={},
+                                relationship_type="DROPS",
+                                relationship_properties={
+                                    "chance": drop.get("chance", ""),
+                                    "rotation": drop.get("rotation"),
+                                },
+                                relationship_direction="outgoing",
+                            )
+                        )
+                        node_id += 1
+
+            if not starting_node:
+                for mission in missions:
+                    drops = _parse_json(mission.drops)
+                    for drop in drops:
+                        if name.lower() in drop.get("item", "").lower():
+                            if starting_node is None:
+                                starting_node = GraphNode(
+                                    id=str(node_id),
+                                    name=name,
+                                    type="Item",
+                                    label="Item",
+                                    properties={},
+                                )
+                            
+                            neighbors.append(
+                                NodeNeighbor(
+                                    id=str(mission.id),
+                                    name=mission.mission_name,
+                                    type="Mission",
+                                    properties={},
+                                    relationship_type="DROPPED_BY",
+                                    relationship_properties={
+                                        "chance": drop.get("chance", ""),
+                                        "rotation": drop.get("rotation"),
+                                    },
+                                    relationship_direction="incoming",
+                                )
+                            )
 
         if not starting_node:
             raise HTTPException(
@@ -258,6 +328,7 @@ async def get_node_neighbors(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Failed to get node neighbors: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to get node neighbors: {e}"
+            status_code=500, detail=f"Database error: {str(e)}"
         )

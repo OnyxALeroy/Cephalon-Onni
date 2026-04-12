@@ -12,31 +12,11 @@ class GraphNode(BaseModel):
 
 
 class GraphEdge(BaseModel):
-    id: Optional[str] = None
+    id: str
     from_node: str
     to_node: str
     relationship_type: str
     properties: Dict[str, Any]
-
-
-class GraphStats(BaseModel):
-    totalNodes: int
-    totalEdges: int
-    nodeTypes: Dict[str, int]
-    lastUpdated: str
-
-
-class SearchRequest(BaseModel):
-    query: str
-    type: Optional[str] = "all"
-
-
-class CypherRequest(BaseModel):
-    query: str
-
-
-class NodeSearchResponse(BaseModel):
-    nodes: List[GraphNode]
 
 
 class NodeNeighbor(BaseModel):
@@ -46,7 +26,7 @@ class NodeNeighbor(BaseModel):
     properties: Dict[str, Any]
     relationship_type: str
     relationship_properties: Dict[str, Any]
-    relationship_direction: str  # "outgoing" or "incoming"
+    relationship_direction: str
 
 
 class NodeNeighborsResponse(BaseModel):
@@ -55,6 +35,14 @@ class NodeNeighborsResponse(BaseModel):
     count: int
 
 
-class GraphResponse(BaseModel):
+class NodeSearchResponse(BaseModel):
     nodes: List[GraphNode]
-    edges: List[GraphEdge]
+
+
+class CypherRequest(BaseModel):
+    query: str
+
+
+class SearchRequest(BaseModel):
+    name: Optional[str] = None
+    label: Optional[str] = None

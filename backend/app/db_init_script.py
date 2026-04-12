@@ -1,77 +1,331 @@
+import asyncio
 import logging
 import sys
 import os
+import requests
+import re
 from datetime import datetime
-from typing import List, Union, cast
+from typing import List, Dict, Any, Optional
+from bs4 import BeautifulSoup
 
-from database.db import (
-    connect_to_mongodb,
-    describe_table,
-    drop_tables,
-    list_tables,
-    preview_table,
-)
-from database.static.db_init.init_images import create_images_database, fill_img_db
-from database.static.db_init.init_items import create_item_database
-from database.static.db_init.init_loot_tables import init_loot_tables
-from database.static.db_init.init_missions import (
-    create_mission_database,
-    fill_missions_db,
-)
-from database.static.db_init.init_mods import create_mods_database, fill_mods_db
-from database.static.db_init.init_recipes import create_recipe_database, fill_recipes_db
-from database.static.db_init.init_relics import create_relic_database, fill_relic_db
-from database.static.db_init.init_translations import create_translation_database
-from database.static.db_init.init_warframes import (
-    create_warframe_database,
+from database.postgres_db import postgres_db
+from database.static.db_init.json_collector import JsonCollector
+from database.static.db_init.postgres.init_warframes import (
+    create_warframe_tables,
     fill_warframe_db,
 )
-from database.static.db_init.init_weapons import (
-    create_weapon_database,
+from database.static.db_init.postgres.init_weapons import (
+    create_weapon_tables,
     fill_weapons_db,
 )
-from database.static.db_init.json_collector import JsonCollector
-from models.static_models import (
-    Arcana,
-    FetchedMission,
-    ImgItem,
-    Mod,
-    Recipe,
-    Relic,
-    Warframe,
-    Weapon,
+from database.static.db_init.postgres.init_mods import (
+    create_mods_tables,
+    fill_mods_db,
 )
+from database.static.db_init.postgres.init_missions import (
+    create_mission_tables,
+    fill_missions_db,
+)
+from database.static.db_init.postgres.init_relics import (
+    create_relic_tables,
+    fill_relic_db,
+)
+from database.static.db_init.postgres.init_recipes import (
+    create_recipe_tables,
+    fill_recipes_db,
+)
+from database.static.db_init.postgres.init_images import (
+    create_images_tables,
+    fill_img_db,
+)
+from database.static.db_init.postgres.init_loot_tables import (
+    create_drop_source_tables,
+    fill_drop_sources_db,
+)
+
+
+def parse_loot_tables_sync(loot_table_url: str) -> List[Dict[str, Any]]:
+    drop_sources = []
+    
+    resp = requests.get(loot_table_url, timeout=30)
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "lxml")
+    tables = soup.find_all("table")
+
+    last_header = None
+    reading_list = []
+    
+    def handle_missions(row_list: List[List[str]], drop_sources: List[Dict]):
+        items = dict()
+        current_planet = ""
+        current_mission_name = ""
+        current_mission_type = ""
+        current_rotation = ""
+        cursor = 0
+        while cursor < len(row_list):
+            row = row_list[cursor]
+            cursor += 1
+            if len(row) == 1:
+                if "Rotation" in row[0]:
+                    current_rotation = row[0].strip()
+                else:
+                    mission_match = re.match(r"([^/]+)/(.+?) \((.+)\)", row[0])
+                    if mission_match:
+                        planet, name, t = mission_match.groups()
+                        current_planet = planet.strip()
+                        current_mission_name = name.strip()
+                        current_mission_type = t.strip()
+            elif len(row) == 2:
+                item_name, probability = row[0].strip(), row[1].strip()
+                prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
+                if prob_match:
+                    _, p_value = prob_match.groups()
+                    items[item_name.strip()] = {
+                        "name": item_name.strip(),
+                        "source": current_mission_name,
+                        "chance": p_value.strip(),
+                        "rotation": current_rotation.strip() if current_rotation else None,
+                        "planet": current_planet,
+                        "type": current_mission_type,
+                        "source_type": "mission",
+                    }
+            else:
+                continue
+        
+        drop_sources.extend(items.values())
+
+    def handle_keys(row_list: List[List[str]], drop_sources: List[Dict]):
+        items = dict()
+        current_key_name = ""
+        current_rotation = ""
+        cursor = 0
+        while cursor < len(row_list):
+            row = row_list[cursor]
+            cursor += 1
+            if len(row) == 1:
+                if "Rotation" in row[0]:
+                    current_rotation = row[0]
+                else:
+                    current_key_name = row[0]
+            elif len(row) == 2:
+                item_name, probability = row[0].strip(), row[1].strip()
+                prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
+                if prob_match:
+                    _, p_value = prob_match.groups()
+                    items[item_name.strip()] = {
+                        "name": item_name.strip(),
+                        "chance": p_value.strip(),
+                        "source": current_key_name.strip(),
+                        "source_type": "key",
+                        "rotation": current_rotation.strip() if current_rotation else None,
+                    }
+            else:
+                continue
+        
+        drop_sources.extend(items.values())
+
+    def handle_dynamic_location_items(row_list: List[List[str]], drop_sources: List[Dict]):
+        for sub_list in row_list:
+            for element in sub_list:
+                if element == "":
+                    sub_list.remove(element)
+
+        items = dict()
+        current_dynamic_location_name = ""
+        current_rotation: Optional[str] = ""
+        cursor = 0
+        while cursor < len(row_list):
+            row = row_list[cursor]
+            cursor += 1
+            if len(row) == 1:
+                if "Rotation" in row[0]:
+                    current_rotation = row[0]
+                else:
+                    current_dynamic_location_name = row[0]
+            elif len(row) == 2:
+                item_name, probability = row[0].strip(), row[1].strip()
+                prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
+                if prob_match:
+                    _, p_value = prob_match.groups()
+                    items[item_name.strip()] = {
+                        "name": item_name.strip(),
+                        "source": current_dynamic_location_name.strip(),
+                        "type": "dynamic_location",
+                        "chance": p_value.strip(),
+                        "rotation": current_rotation.strip() if current_rotation else None,
+                        "source_type": "dynamic_location",
+                    }
+            else:
+                continue
+
+        drop_sources.extend(items.values())
+
+    def handle_sorties(row_list: List[List[str]], drop_sources: List[Dict]):
+        items = dict()
+        cursor = 0
+        while cursor < len(row_list):
+            row = row_list[cursor]
+            cursor += 1
+            if len(row) == 2:
+                item_name, probability = row[0].strip(), row[1].strip()
+                prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
+                if prob_match:
+                    _, p_value = prob_match.groups()
+                    items[item_name.strip()] = {
+                        "name": item_name.strip(),
+                        "source": "Sortie",
+                        "source_type": "sortie",
+                        "chance": p_value.strip(),
+                        "rotation": None,
+                    }
+            else:
+                continue
+        
+        drop_sources.extend(items.values())
+
+    def handle_bounty_items(row_list: List[List[str]], mission_title: str, drop_sources: List[Dict]):
+        def parse_stages(s):
+            if s.strip() == "Final Stage":
+                return ["Final Stage"]
+            parts = re.split(r",\s*|\s+and\s+", s)
+            return [re.sub(r"\band\b", "", part).strip() for part in parts if part.strip()]
+
+        items = dict()
+        cursor = 0
+        current_level_name = ""
+        current_rotation = ""
+        current_stages = []
+        while cursor < len(row_list):
+            row = row_list[cursor]
+            cursor += 1
+            if len(row) == 1:
+                if "Rotation" in row[0]:
+                    current_rotation = row[0].strip()
+                else:
+                    current_level_name = row[0]
+            elif len(row) == 2:
+                current_stages = parse_stages(row[1])
+            elif len(row) == 3:
+                item_name, probability = row[1].strip(), row[2].strip()
+                prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
+                if prob_match:
+                    _, p_value = prob_match.groups()
+                    items[item_name.strip()] = {
+                        "name": item_name.strip(),
+                        "source": mission_title + " " + current_level_name,
+                        "source_type": "bounty",
+                        "chance": p_value.strip(),
+                        "rotation": f"{current_rotation} ({', '.join(current_stages)})",
+                    }
+            else:
+                continue
+
+        drop_sources.extend(items.values())
+
+    def handle_general_drops(row_list: List[List[str]], title: str, drop_sources: List[Dict]):
+        items = dict()
+        cursor = 0
+        current_source_name = ""
+        current_global_drop_chance = ""
+        while cursor < len(row_list):
+            row = row_list[cursor]
+            cursor += 1
+            if len(row) == 1:
+                current_source_name = row[0]
+            elif len(row) == 2:
+                source, match = row[0], re.search(r"(\d+\.?\d*)%", row[1])
+                current_source_name = source
+                if match:
+                    current_global_drop_chance = match.group(0)
+            elif len(row) == 3:
+                if row[0] == "Source":
+                    continue
+                item_name, probability = row[1].strip(), row[2].strip()
+                prob_match = re.match(r"(.+?) \(([\d.]+%?)\)", probability)
+                if prob_match:
+                    _, p_value = prob_match.groups()
+                    items[item_name.strip()] = {
+                        "name": item_name.strip(),
+                        "source": f"{current_source_name.strip()} ({current_global_drop_chance.strip()}%)",
+                        "source_type": "general_drop",
+                        "chance": p_value.strip(),
+                        "rotation": None,
+                    }
+            else:
+                continue
+
+        drop_sources.extend(items.values())
+
+    def handle_read_values(title: Optional[str], reading_list: list, drop_sources: List[Dict]):
+        if title is None:
+            return
+
+        if title == "Missions:":
+            handle_missions(reading_list, drop_sources)
+        elif title == "Keys:":
+            handle_keys(reading_list, drop_sources)
+        elif title == "Dynamic Location Rewards:":
+            handle_dynamic_location_items(reading_list, drop_sources)
+        elif title == "Sorties:":
+            handle_sorties(reading_list, drop_sources)
+        elif title in [
+            "Cetus Bounty Rewards:",
+            "Orb Vallis Bounty Rewards:",
+            "Cambion Drift Bounty Rewards:",
+            "Zariman Bounty Rewards:",
+            "Albrecht's Laboratories Bounty Rewards:",
+            "Hex Bounty Rewards:",
+        ]:
+            handle_bounty_items(reading_list, title[:-1], drop_sources)
+        elif " Drops by " in title:
+            handle_general_drops(reading_list, title.replace("/", "-"), drop_sources)
+
+    for table in tables:
+        h3 = table.find_previous("h3")
+        title = h3.get_text(strip=True) if h3 else None
+        if title != last_header:
+            handle_read_values(last_header, reading_list, drop_sources)
+            last_header = title
+            reading_list = []
+        for row in table.find_all("tr"):
+            cells = row.find_all(["td", "th"])
+            values = [cell.get_text(strip=True) for cell in cells]
+            if values == [""]:
+                continue
+            reading_list.append(values)
+    if last_header:
+        handle_read_values(last_header, reading_list, drop_sources)
+
+    return drop_sources
 
 
 def main() -> None:
-    # Setup logging to file with timestamp
+    asyncio.run(_async_main())
+
+
+async def _async_main() -> None:
     log_dir = "/app/logs/db_init"
     os.makedirs(log_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log_file = os.path.join(log_dir, f"db_init_{timestamp}.log")
 
-    # Configure root logger to capture all loggers
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     root_logger.handlers.clear()
-    
-    # File handler
+
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(logging.Formatter("%(message)s"))
     root_logger.addHandler(file_handler)
-    
-    # Console handler
+
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(logging.Formatter("%(message)s"))
     root_logger.addHandler(console_handler)
 
-    # Use root logger for script-level messages
-    logging.info("DB INIT LOG - " + timestamp)
+    logging.info("POSTGRES DB INIT LOG - " + timestamp)
     logging.info("")
 
-    # Check for help flag
     if "--help" in sys.argv or "-h" in sys.argv:
         logging.info("Usage: python db_init_script.py [options]")
         logging.info("Options:")
@@ -82,13 +336,9 @@ def main() -> None:
         logging.info("  -h, --help            Show this help message")
         sys.exit(0)
 
-    # Check for -y flag to skip confirmation
     skip_confirmation = "-y" in sys.argv
-
-    # Check for --save-json flag
     save_json_to_disk = "--save-json" in sys.argv or "-sj" in sys.argv
 
-    # Parse limit parameter (default 10)
     limit = 10
     for i, arg in enumerate(sys.argv):
         if arg.startswith("--limit="):
@@ -110,58 +360,17 @@ def main() -> None:
                 logging.error("Invalid limit value. Must be an integer.")
                 sys.exit(1)
 
-    # Connect to MongoDB
-    client = connect_to_mongodb()
-    if not client:
-        return
+    postgres_db.initialize()
+    await postgres_db.create_tables()
+    logging.info("PostgreSQL tables created")
 
-    # JSONs collector
     jsons_collector = JsonCollector()
 
-    # Actual operations
     try:
-        drop_tables(
-            client,
-            [
-                "translations",
-                "items",
-                "recipes",
-                "warframes",
-                "warframe_abilities",
-                "mods",
-                "weapons",
-                "missions",
-                "relics",
-            ],
-            confirm=not skip_confirmation,
-        )
-
-        if (
-            not create_translation_database(client)
-            or not create_item_database(client)
-            or not create_recipe_database(client)
-            or not create_warframe_database(client)
-            or not create_images_database(client)
-            or not create_mods_database(client)
-            or not create_weapon_database(client)
-            or not create_mission_database(client)
-            or not create_relic_database(client)
-        ):
-            return
-
         jsons: List[str] = [
-            # "ExportCustoms",
-            # "ExportDrones",
-            # "ExportFlavour",
-            # "ExportFusionBundles",
-            # "ExportGear",
-            # "ExportKeys",
             "ExportRecipes",
             "ExportRegions",
             "ExportRelicArcane",
-            # "ExportResources",
-            # "ExportSentinels",
-            # "ExportSortieRewards",
             "ExportUpgrades",
             "ExportWarframes",
             "ExportWeapons",
@@ -169,63 +378,56 @@ def main() -> None:
         ]
         raw_data = jsons_collector.get_jsons("en", jsons)
         if raw_data is None:
+            logging.error("Failed to fetch JSON data from Warframe")
             return
 
-        # Save JSONs to disk before database operations
         if save_json_to_disk:
             if not jsons_collector.save_to_disk(raw_data):
                 logging.error("Failed to save JSONs to disk")
 
-        # All database fills ----------------------------------------------------------------------
+        async with postgres_db._session_factory() as session:
+            recipes = raw_data.get("ExportRecipes", [])
+            await fill_recipes_db(session, recipes)
 
-        recipes: List[Recipe] = cast(List[Recipe], raw_data.get("ExportRecipes", []))
-        fill_recipes_db(client, recipes)
+            warframes = raw_data.get("ExportWarframes", [])
+            await fill_warframe_db(session, warframes)
 
-        warframes: List[Warframe] = cast(
-            List[Warframe], raw_data.get("ExportWarframes", [])
-        )
-        fill_warframe_db(client, warframes)
+            imgs = raw_data.get("ExportManifest", [])
+            await fill_img_db(session, imgs)
 
-        imgs: List[ImgItem] = cast(List[ImgItem], raw_data.get("ExportManifest", []))
-        fill_img_db(client, imgs)
+            mods = raw_data.get("ExportUpgrades", [])
+            await fill_mods_db(session, mods)
 
-        mods: List[Mod] = cast(List[Mod], raw_data.get("ExportUpgrades", []))
-        fill_mods_db(client, mods)
+            weapons = raw_data.get("ExportWeapons", [])
+            await fill_weapons_db(session, weapons)
 
-        weapons: List[Weapon] = cast(List[Weapon], raw_data.get("ExportWeapons", []))
-        fill_weapons_db(client, weapons)
+            missions = raw_data.get("ExportRegions", [])
+            await fill_missions_db(session, missions)
 
-        missions: List[FetchedMission] = cast(
-            List[FetchedMission], raw_data.get("ExportRegions", [])
-        )
-        fill_missions_db(client, missions)
-
-        relics: List[Union[Relic, Arcana]] = cast(
-            List[Union[Relic, Arcana]], raw_data.get("ExportRelicArcane", [])
-        )
-        fill_relic_db(client, relics)
-
-        # -----------------------------------------------------------------------------------------
+            relics = raw_data.get("ExportRelicArcane", [])
+            await fill_relic_db(session, relics)
 
         loot_table_url = "https://www.warframe.com/fr/droptables"
-        init_loot_tables(client, loot_table_url)
+        logging.info("Fetching loot tables from Warframe website...")
+        drop_sources = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: parse_loot_tables_sync(loot_table_url)
+        )
+        logging.info(f"Found {len(drop_sources)} drop sources")
+        
+        if drop_sources:
+            async with postgres_db._session_factory() as session:
+                await fill_drop_sources_db(session, drop_sources)
 
-        # -----------------------------------------------------------------------------------------
-
-        tables = list_tables(client)
-        if not tables:
-            logging.info("No tables found.")
-            return
-
-        for table in tables:
-            describe_table(client, table)
-            preview_table(client, table, limit)
+        logging.info("")
+        logging.info("PostgreSQL Database initialized successfully!")
 
     except Exception as e:
-        logging.error(f"While reading DB: {e}")
+        logging.error(f"While initializing DB: {e}")
+        import traceback
+        traceback.print_exc()
 
     finally:
-        client.close()
+        await postgres_db.close()
 
 
 if __name__ == "__main__":
