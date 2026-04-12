@@ -58,6 +58,12 @@ check_service_health() {
                         return 0
                     }
                     ;;
+                PostgreSQL)
+                    docker exec "$container_name" pg_isready -U postgres >/dev/null 2>&1 && {
+                        print_success "$service_name is healthy!"
+                        return 0
+                    }
+                    ;;
                 *)
                     print_success "$service_name is running!"
                     return 0
@@ -78,4 +84,8 @@ test_database_connections() {
     docker exec cephalon-onni-mongo mongosh --eval "db.adminCommand('ping')" >/dev/null &&
         print_success "MongoDB OK" ||
         print_error "MongoDB failed"
+
+    docker exec cephalon-onni-postgres pg_isready -U postgres >/dev/null 2>&1 &&
+        print_success "PostgreSQL OK" ||
+        print_error "PostgreSQL failed"
 }
