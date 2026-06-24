@@ -1,66 +1,79 @@
 :root {
-  /* Background Colors */
-  --bg-page: #02050a;
-  --bg-card: #050b16;
-  --bg-surface: #08121f;
-  --bg-surface-hover: #0a1929;
-  --bg-elevated: #0f172a;
-  --bg-elevated-2: #1e293b;
-  --bg-overlay: rgba(0, 0, 0, 0.7);
-  --bg-overlay-heavy: rgba(0, 0, 0, 0.8);
-  --bg-loading: rgba(5, 11, 22, 0.8);
+  /* Background Colors - Deep void with violet undertones */
+  --bg-page: #05010a;
+  --bg-card: #0a0618;
+  --bg-surface: #0f0b24;
+  --bg-surface-hover: #14102e;
+  --bg-elevated: #1a1540;
+  --bg-elevated-2: #1f1a4a;
+  --bg-overlay: rgba(5, 1, 10, 0.8);
+  --bg-overlay-heavy: rgba(3, 1, 6, 0.92);
+  --bg-loading: rgba(10, 6, 24, 0.85);
 
-  /* Text Colors */
-  --text-primary: #c9e5ff;
-  --text-heading: #e2e8f0;
-  --text-secondary: #7dd3fc;
-  --text-muted: #64748b;
-  --text-muted-2: #94a3b8;
-  --text-body: #cbd5e1;
-  --text-on-accent: #021019;
+  /* Text Colors - Violet-white spectrum */
+  --text-primary: #d4c0ff;
+  --text-heading: #e8dcff;
+  --text-secondary: #a78bfa;
+  --text-muted: #5a4a8a;
+  --text-muted-2: #7a6aaa;
+  --text-body: #c0b0dc;
+  --text-on-accent: #05010a;
   --text-white: #ffffff;
-  --text-light: #f1f5f9;
-  --text-gray-light: #e5e7eb;
+  --text-light: #ece4ff;
+  --text-gray-light: #ccc0e5;
 
-  /* Border Colors */
-  --border-primary: #1b2a3a;
-  --border-secondary: #334155;
-  --border-input: #475569;
+  /* Border Colors - Violet-tinted */
+  --border-primary: #1a1040;
+  --border-secondary: #2a1a5c;
+  --border-input: #3a2a7a;
 
-  /* Accent / Action Colors */
-  --accent: #38bdf8;
-  --accent-hover: #0ea5e9;
-  --accent-subtle: #7dd3fc;
-  --accent-rgb: 56, 189, 248;
+  /* Cephalon Violet - Primary Accent */
+  --accent: #8b5cf6;
+  --accent-hover: #7c3aed;
+  --accent-subtle: #a78bfa;
+  --accent-rgb: 139, 92, 246;
+  --accent-glow: 0 0 8px rgba(139, 92, 246, 0.35), 0 0 24px rgba(139, 92, 246, 0.1);
+
+  /* Warm Amber - Secondary Accent (Relay terminal energy) */
+  --accent-warm: #f59e0b;
+  --accent-warm-hover: #d97706;
+  --accent-warm-subtle: #fbbf24;
+  --accent-warm-rgb: 245, 158, 11;
+  --accent-warm-glow: 0 0 8px rgba(245, 158, 11, 0.35), 0 0 24px rgba(245, 158, 11, 0.1);
 
   /* Status Colors */
-  --danger: #ef4444;
-  --danger-hover: #dc2626;
-  --danger-subtle: rgba(239, 68, 68, 0.1);
-  --success: #22c55e;
-  --success-hover: #16a34a;
-  --success-alt: #10b981;
-  --success-alt-hover: #059669;
-  --success-subtle: rgba(34, 197, 94, 0.1);
-  --warning: #f59e0b;
-  --warning-hover: #d97706;
-  --warning-subtle: rgba(245, 158, 11, 0.1);
-  --warning-text: #fbbf24;
+  --danger: #ff3355;
+  --danger-hover: #e62e4d;
+  --danger-subtle: rgba(255, 51, 85, 0.12);
+  --success: #00e676;
+  --success-hover: #00c866;
+  --success-alt: #00c853;
+  --success-alt-hover: #00a844;
+  --success-subtle: rgba(0, 230, 118, 0.12);
+  --warning: #ffab00;
+  --warning-hover: #e69a00;
+  --warning-subtle: rgba(255, 171, 0, 0.12);
+  --warning-text: #ffca28;
 
   /* Gray Scale Buttons */
-  --gray-btn: #374151;
-  --gray-btn-hover: #4b5563;
-  --gray-btn-2: #475569;
-  --gray-btn-2-hover: #334155;
+  --gray-btn: #1f1a4a;
+  --gray-btn-hover: #2a2266;
+  --gray-btn-2: #3a2a7a;
+  --gray-btn-2-hover: #1f1a4a;
 
   /* Misc Accents */
-  --purple: #a78bfa;
-  --purple-alt: #8b5cf6;
-  --indigo: #6366f1;
-  --blue-rare: #3b82f6;
-  --yellow-legendary: #facc15;
-  --blue-selected: #1e3a8a;
-  --error-text: #f87171;
+  --purple: #b388ff;
+  --purple-alt: #9c64ff;
+  --indigo: #536dfe;
+  --blue-rare: #448aff;
+  --yellow-legendary: #ffd740;
+  --blue-selected: #2a1a5c;
+  --error-text: #ff6b81;
+
+  /* Font Families */
+  --font-display: "Orbitron", system-ui, sans-serif;
+  --font-body: "Rajdhani", system-ui, sans-serif;
+  --font-mono: "Share Tech Mono", "Cascadia Code", "Fira Code", monospace;
 
   /* Border Radius */
   --radius-sm: 4px;
@@ -70,12 +83,13 @@
   --radius-round: 50%;
 
   /* Shadows */
-  --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.6);
+  --shadow-glow-accent: 0 0 12px rgba(139, 92, 246, 0.15);
 
   /* Transitions */
-  --transition-fast: 0.15s;
-  --transition-normal: 0.2s;
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
 
   /* Font Sizes */
   --text-xs: 0.7rem;
