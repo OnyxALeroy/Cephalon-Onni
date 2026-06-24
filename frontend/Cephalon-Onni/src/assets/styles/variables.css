@@ -1,0 +1,104 @@
+:root {
+  /* Background Colors */
+  --bg-page: #02050a;
+  --bg-card: #050b16;
+  --bg-surface: #08121f;
+  --bg-surface-hover: #0a1929;
+  --bg-elevated: #0f172a;
+  --bg-elevated-2: #1e293b;
+  --bg-overlay: rgba(0, 0, 0, 0.7);
+  --bg-overlay-heavy: rgba(0, 0, 0, 0.8);
+  --bg-loading: rgba(5, 11, 22, 0.8);
+
+  /* Text Colors */
+  --text-primary: #c9e5ff;
+  --text-heading: #e2e8f0;
+  --text-secondary: #7dd3fc;
+  --text-muted: #64748b;
+  --text-muted-2: #94a3b8;
+  --text-body: #cbd5e1;
+  --text-on-accent: #021019;
+  --text-white: #ffffff;
+  --text-light: #f1f5f9;
+  --text-gray-light: #e5e7eb;
+
+  /* Border Colors */
+  --border-primary: #1b2a3a;
+  --border-secondary: #334155;
+  --border-input: #475569;
+
+  /* Accent / Action Colors */
+  --accent: #38bdf8;
+  --accent-hover: #0ea5e9;
+  --accent-subtle: #7dd3fc;
+  --accent-rgb: 56, 189, 248;
+
+  /* Status Colors */
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-subtle: rgba(239, 68, 68, 0.1);
+  --success: #22c55e;
+  --success-hover: #16a34a;
+  --success-alt: #10b981;
+  --success-alt-hover: #059669;
+  --success-subtle: rgba(34, 197, 94, 0.1);
+  --warning: #f59e0b;
+  --warning-hover: #d97706;
+  --warning-subtle: rgba(245, 158, 11, 0.1);
+  --warning-text: #fbbf24;
+
+  /* Gray Scale Buttons */
+  --gray-btn: #374151;
+  --gray-btn-hover: #4b5563;
+  --gray-btn-2: #475569;
+  --gray-btn-2-hover: #334155;
+
+  /* Misc Accents */
+  --purple: #a78bfa;
+  --purple-alt: #8b5cf6;
+  --indigo: #6366f1;
+  --blue-rare: #3b82f6;
+  --yellow-legendary: #facc15;
+  --blue-selected: #1e3a8a;
+  --error-text: #f87171;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 12px;
+  --radius-round: 50%;
+
+  /* Shadows */
+  --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.5);
+
+  /* Transitions */
+  --transition-fast: 0.15s;
+  --transition-normal: 0.2s;
+
+  /* Font Sizes */
+  --text-xs: 0.7rem;
+  --text-sm: 0.75rem;
+  --text-base: 0.8rem;
+  --text-md: 0.85rem;
+  --text-body: 0.9rem;
+  --text-normal: 1rem;
+  --text-lg: 1.1rem;
+  --text-xl: 1.2rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.8rem;
+  --text-4xl: 2.5rem;
+  --text-5xl: 3rem;
+
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+}

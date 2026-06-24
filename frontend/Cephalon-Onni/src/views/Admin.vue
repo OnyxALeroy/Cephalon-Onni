@@ -4,14 +4,14 @@
     <div v-if="!user" class="login-prompt">
       <h2>Authentication Required</h2>
       <p>Administrator access requires authentication.</p>
-      <button class="btn primary" @click="goLogin">Login</button>
+      <button class="btn btn-primary" @click="goLogin">Login</button>
     </div>
 
     <!-- Logged in but not admin -->
     <div v-else-if="!isAdmin" class="access-denied">
       <h2>Access Denied</h2>
       <p>You do not have administrator privileges to access this area.</p>
-      <button class="btn secondary" @click="goHome">Return to Home</button>
+      <button class="btn btn-ghost" @click="goHome">Return to Home</button>
     </div>
 
     <!-- Admin user -->
@@ -125,7 +125,6 @@ function goHome() {
 </script>
 
 <style scoped>
-/* LOGIN UI */
 .login-prompt {
   text-align: center;
   margin-top: 20vh;
@@ -134,68 +133,39 @@ function goHome() {
 .access-denied {
   text-align: center;
   margin-top: 20vh;
-  color: #ef4444;
+  color: var(--danger);
 }
 
-.btn {
-  margin: 1rem;
-  padding: 0.7rem 1.5rem;
-  border-radius: 4px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.primary {
-  background: #38bdf8;
-  color: #021019;
-  border: none;
-}
-
-.secondary {
-  border: 1px solid #38bdf8;
-  color: #38bdf8;
-  background: transparent;
-}
-
-/* ADMIN PANEL */
 h1 {
-  color: #7dd3fc;
+  color: var(--accent-subtle);
   letter-spacing: 2px;
 }
 
 .subtitle {
   opacity: 0.7;
-  margin-bottom: 2rem;
-}
-
-/* TABS */
-.tabs {
-  display: flex;
-  border-bottom: 1px solid #1b2a3a;
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-8);
 }
 
 .tab-button {
   background: transparent;
   border: none;
-  color: #c9e5ff;
-  padding: 1rem 1.5rem;
+  color: var(--text-primary);
+  padding: var(--space-4) var(--space-6);
   cursor: pointer;
-  transition: 0.2s;
+  transition: var(--transition-normal);
   border-bottom: 2px solid transparent;
 }
 
 .tab-button:hover {
-  color: #7dd3fc;
-  background: #08121f;
+  color: var(--accent-subtle);
+  background: var(--bg-surface);
 }
 
 .tab-button.active {
-  color: #38bdf8;
-  border-bottom-color: #38bdf8;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
-/* TAB CONTENT */
 .tab-content {
   min-height: 400px;
 }

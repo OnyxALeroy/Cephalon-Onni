@@ -5,9 +5,9 @@
       <h2>Identification Required</h2>
       <p>Link your Tenno profile to access inventory data.</p>
 
-      <button class="btn primary" @click="goLogin">Login</button>
+      <button class="btn btn-primary" @click="goLogin">Login</button>
 
-      <button class="btn secondary" @click="goRegister">Create Account</button>
+      <button class="btn btn-ghost" @click="goRegister">Create Account</button>
     </div>
 
     <!-- Logged in -->
@@ -116,63 +116,46 @@ function openItem(item: Item) {
 </script>
 
 <style scoped>
-/* LOGIN UI */
 .login-prompt {
   text-align: center;
   margin-top: 20vh;
 }
-.btn {
-  margin: 1rem;
-  padding: 0.7rem 1.5rem;
-  border-radius: 4px;
-  font-weight: bold;
-}
-.primary {
-  background: #38bdf8;
-  color: #021019;
-}
-.secondary {
-  border: 1px solid #38bdf8;
-  color: #38bdf8;
-  background: transparent;
-}
 
-/* INVENTORY */
 h1 {
-  color: #7dd3fc;
+  color: var(--accent-subtle);
 }
 
 .toolbar {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 input,
 select {
-  background: #050b16;
-  border: 1px solid #1b2a3a;
-  padding: 0.5rem;
-  color: white;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  padding: var(--space-2);
+  color: var(--text-white);
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .card {
-  background: #08121f;
-  padding: 1rem;
-  border: 1px solid #1b2a3a;
+  background: var(--bg-surface);
+  padding: var(--space-4);
+  border: 1px solid var(--border-primary);
   cursor: pointer;
   position: relative;
-  transition: 0.2s;
+  transition: var(--transition-normal);
 }
 
 .card:hover {
-  border-color: #38bdf8;
+  border-color: var(--accent);
 }
 
 .count {
@@ -182,15 +165,14 @@ select {
   opacity: 0.7;
 }
 
-/* rarity highlight */
 .card.common {
-  border-left: 4px solid #64748b;
+  border-left: 4px solid var(--text-muted);
 }
 .card.rare {
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid var(--blue-rare);
 }
 .card.legendary {
-  border-left: 4px solid #facc15;
+  border-left: 4px solid var(--yellow-legendary);
 }
 
 .name {
@@ -198,6 +180,6 @@ select {
 }
 .type {
   opacity: 0.6;
-  font-size: 0.8rem;
+  font-size: var(--text-base);
 }
 </style>
