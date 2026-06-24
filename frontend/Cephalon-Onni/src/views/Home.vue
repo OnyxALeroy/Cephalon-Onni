@@ -14,26 +14,26 @@
 
 <style scoped>
 .dashboard h1 {
-  color: #7dd3fc;
+  color: var(--accent-subtle);
   letter-spacing: 2px;
 }
 .subtitle {
   opacity: 0.7;
 }
 .panel-grid {
-  margin-top: 2rem;
+  margin-top: var(--space-8);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
+  gap: var(--space-4);
 }
 .panel {
-  background: #08121f;
-  border: 1px solid #1b2a3a;
-  padding: 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  padding: var(--space-4);
   height: 120px;
-  transition: 0.2s;
+  transition: var(--transition-normal);
 }
 .panel:hover {
-  border-color: #38bdf8;
+  border-color: var(--accent);
 }
 </style>

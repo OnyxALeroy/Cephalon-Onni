@@ -48,10 +48,10 @@
           ></textarea>
         </div>
         <div class="form-actions">
-          <button type="submit" class="btn primary" :disabled="loading">
+          <button type="submit" class="btn btn-primary" :disabled="loading">
             {{ loading ? 'Creating...' : 'Create Node' }}
           </button>
-          <button type="button" class="btn secondary" @click="resetCreateForm">
+          <button type="button" class="btn btn-ghost" @click="resetCreateForm">
             Reset
           </button>
         </div>
@@ -101,10 +101,10 @@
           ></textarea>
         </div>
         <div class="form-actions">
-          <button type="submit" class="btn primary" :disabled="loading">
+          <button type="submit" class="btn btn-primary" :disabled="loading">
             {{ loading ? 'Creating...' : 'Create Edge' }}
           </button>
-          <button type="button" class="btn secondary" @click="resetEdgeForm">
+          <button type="button" class="btn btn-ghost" @click="resetEdgeForm">
             Reset
           </button>
         </div>
@@ -228,91 +228,57 @@ function resetEdgeForm() {
 <style scoped>
 .graph-editor {
   display: grid;
-  gap: 2rem;
+  gap: var(--space-8);
 }
 
 .create-section {
-  background: #0f172a;
-  border: 1px solid #1b2a3a;
-  border-radius: 4px;
-  padding: 1.5rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  padding: var(--space-6);
 }
 
 .create-section h3 {
-  color: #7dd3fc;
-  margin-bottom: 1rem;
+  color: var(--accent-subtle);
+  margin-bottom: var(--space-4);
 }
 
 .node-form, .edge-form {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .form-row {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .form-row label {
-  color: #c9e5ff;
+  color: var(--text-primary);
   font-weight: bold;
-  font-size: 0.875rem;
+  font-size: var(--text-md);
 }
 
 .form-input {
-  padding: 0.5rem 1rem;
-  border: 1px solid #334155;
-  background: #1e293b;
-  color: #ffffff;
-  border-radius: 4px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-elevated-2);
+  color: var(--text-white);
+  border-radius: var(--radius-sm);
   font-family: inherit;
   resize: vertical;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.1);
 }
 
 .form-actions {
   display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.btn {
-  padding: 0.7rem 1.5rem;
-  border-radius: 4px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.primary {
-  background: #38bdf8;
-  color: #021019;
-  border: none;
-}
-
-.primary:hover:not(:disabled) {
-  background: #2cb1d4;
-}
-
-.secondary {
-  background: transparent;
-  border: 1px solid #38bdf8;
-  color: #38bdf8;
-}
-
-.secondary:hover {
-  background: #38bdf8;
-  color: #021019;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
 }
 </style>

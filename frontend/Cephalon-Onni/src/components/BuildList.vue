@@ -14,7 +14,7 @@
                     <span v-else>Sync Local Builds</span>
                 </button>
 
-                <button @click="$emit('create-new')" class="btn-create">
+                <button @click="$emit('create-new')" class="btn btn-primary">
                     New Build
                 </button>
             </div>
@@ -45,7 +45,7 @@
             <div class="empty-content">
                 <h4>No builds yet</h4>
                 <p>Start creating your first Warframe build!</p>
-                <button @click="$emit('create-new')" class="btn-create-empty">
+                <button @click="$emit('create-new')" class="btn btn-primary">
                     Create Your First Build
                 </button>
             </div>
@@ -146,7 +146,7 @@
             </div>
         </div>
 
-        <div v-if="error" class="error-message">
+        <div v-if="error" class="message message-error">
             {{ error }}
         </div>
     </div>
@@ -356,59 +356,46 @@ const handleSyncLocalBuilds = async () => {
 
 <style scoped>
 .build-list {
-    background: #050b16;
-    border: 1px solid #1b2a3a;
-    border-radius: 8px;
-    padding: 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
 }
 
 .list-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--space-6);
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: var(--space-4);
 }
 
 .list-header h3 {
-    color: #38bdf8;
+    color: var(--accent);
     margin: 0;
-    font-size: 1.5rem;
+    font-size: var(--text-2xl);
 }
 
 .header-actions {
     display: flex;
-    gap: 0.75rem;
-}
-
-.btn-sync,
-.btn-create {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
+    gap: var(--space-3);
 }
 
 .btn-sync {
-    background: #f59e0b;
-    color: #021019;
+    padding: var(--space-2) var(--space-4);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-body);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    background: var(--warning);
+    color: var(--text-on-accent);
 }
 
 .btn-sync:hover:not(:disabled) {
-    background: #d97706;
-}
-
-.btn-create {
-    background: #38bdf8;
-    color: #021019;
-}
-
-.btn-create:hover {
-    background: #0ea5e9;
+    background: var(--warning-hover);
 }
 
 .btn-sync:disabled {
@@ -418,21 +405,21 @@ const handleSyncLocalBuilds = async () => {
 
 .sync-prompt {
     background: rgba(59, 130, 246, 0.1);
-    border: 1px solid #38bdf8;
-    border-radius: 4px;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: var(--space-4);
+    margin-bottom: var(--space-6);
 }
 
 .sync-info p {
-    color: #38bdf8;
+    color: var(--accent);
     margin: 0;
-    font-size: 0.9rem;
+    font-size: var(--text-body);
 }
 
 .login-link,
 .register-link {
-    color: #38bdf8;
+    color: var(--accent);
     text-decoration: none;
     font-weight: bold;
 }
@@ -445,153 +432,127 @@ const handleSyncLocalBuilds = async () => {
 .loading-state,
 .empty-state {
     text-align: center;
-    padding: 3rem 1rem;
-    color: #64748b;
+    padding: var(--space-12) var(--space-4);
+    color: var(--text-muted);
 }
 
 .empty-content h4 {
-    color: #94a3b8;
-    margin-bottom: 0.5rem;
-    font-size: 1.2rem;
-}
-
-.btn-create-empty {
-    margin-top: 1rem;
-    padding: 0.75rem 1.5rem;
-    background: #38bdf8;
-    color: #021019;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.btn-create-empty:hover {
-    background: #0ea5e9;
+    color: var(--text-muted-2);
+    margin-bottom: var(--space-2);
+    font-size: var(--text-xl);
 }
 
 .builds-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 1rem;
+    gap: var(--space-4);
 }
 
 .build-card {
-    background: #08121f;
-    border: 1px solid #1b2a3a;
-    border-radius: 8px;
-    padding: 1.25rem;
-    transition: all 0.2s;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    transition: all var(--transition-normal);
 }
 
 .build-card:hover {
-    border-color: #38bdf8;
+    border-color: var(--accent);
     transform: translateY(-2px);
 }
 
 .build-card.local-build {
-    border-left: 3px solid #f59e0b;
+    border-left: 3px solid var(--warning);
 }
 
 .build-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1rem;
+    margin-bottom: var(--space-4);
 }
 
 .build-header h4 {
-    color: #e2e8f0;
+    color: var(--text-heading);
     margin: 0;
-    font-size: 1.1rem;
+    font-size: var(--text-lg);
     flex: 1;
 }
 
 .build-badges {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-2);
     flex-wrap: wrap;
 }
 
-.badge-local,
 .badge-warframe {
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.7rem;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
     font-weight: 500;
-}
-
-.badge-local {
-    background: #f59e0b;
-    color: #021019;
-}
-
-.badge-warframe {
-    background: #38bdf8;
-    color: #021019;
+    background: var(--accent);
+    color: var(--text-on-accent);
 }
 
 .build-info {
-    margin-bottom: 1rem;
+    margin-bottom: var(--space-4);
 }
 
 .warframe-stats-mini {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 0.75rem;
+    gap: var(--space-4);
+    margin-bottom: var(--space-3);
     flex-wrap: wrap;
 }
 
 .stat {
-    font-size: 0.8rem;
-    color: #94a3b8;
+    font-size: var(--text-base);
+    color: var(--text-muted-2);
 }
 
 .build-description {
-    color: #cbd5e1;
-    font-size: 0.85rem;
+    color: var(--text-body);
+    font-size: var(--text-md);
     line-height: 1.4;
-    margin: 0 0 0.75rem 0;
+    margin: 0 0 var(--space-3) 0;
     opacity: 0.9;
 }
 
 .abilities-preview {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
 }
 
 .ability-mini {
-    background: #1e293b;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    color: #38bdf8;
+    background: var(--bg-elevated-2);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    color: var(--accent);
 }
 
 .more-abilities {
-    font-size: 0.7rem;
-    color: #64748b;
+    font-size: var(--text-xs);
+    color: var(--text-muted);
 }
 
 .build-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 0.75rem;
-    border-top: 1px solid #1b2a3a;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-primary);
 }
 
 .build-date {
-    font-size: 0.75rem;
-    color: #64748b;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
 }
 
 .build-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-2);
 }
 
 .btn-view,
@@ -600,11 +561,11 @@ const handleSyncLocalBuilds = async () => {
 .btn-push {
     background: none;
     border: none;
-    padding: 0.25rem;
+    padding: var(--space-1);
     cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-    font-size: 0.9rem;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--transition-normal);
+    font-size: var(--text-body);
 }
 
 .btn-view:hover {
@@ -612,25 +573,15 @@ const handleSyncLocalBuilds = async () => {
 }
 
 .btn-edit:hover {
-    background: rgba(34, 197, 94, 0.1);
+    background: var(--success-subtle);
 }
 
 .btn-push:hover {
-    background: rgba(245, 158, 11, 0.1);
+    background: var(--warning-subtle);
 }
 
 .btn-delete:hover {
-    background: rgba(239, 68, 68, 0.1);
-}
-
-.error-message {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid #ef4444;
-    color: #ef4444;
-    padding: 0.75rem;
-    border-radius: 4px;
-    margin-top: 1rem;
-    font-size: 0.9rem;
+    background: var(--danger-subtle);
 }
 
 @media (max-width: 768px) {

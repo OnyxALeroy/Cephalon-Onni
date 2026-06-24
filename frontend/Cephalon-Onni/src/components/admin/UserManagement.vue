@@ -45,7 +45,7 @@
                         <td class="actions">
                             <button
                                 @click="confirmDelete(user)"
-                                class="btn-danger"
+                                class="btn btn-danger btn-sm"
                                 :disabled="isCurrentUser(user.id)"
                             >
                                 Delete
@@ -79,10 +79,10 @@
                     <p class="warning">This action cannot be undone.</p>
 
                     <div class="modal-actions">
-                        <button @click="deleteUser" class="btn-danger">
+                        <button @click="deleteUser" class="btn btn-danger">
                             Delete User
                         </button>
-                        <button @click="cancelDelete" class="btn-secondary">
+                        <button @click="cancelDelete" class="btn btn-secondary">
                             Cancel
                         </button>
                     </div>
@@ -226,65 +226,65 @@ onMounted(() => {
 
 <style scoped>
 .tab-panel {
-    color: #e2e8f0;
+    color: var(--text-heading);
 }
 
 .panel-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--space-6);
 }
 
 .panel-header h2 {
-    color: #7dd3fc;
+    color: var(--accent-subtle);
     margin: 0;
 }
 
 .search-bar {
     flex: 1;
     max-width: 400px;
-    margin-left: 2rem;
+    margin-left: var(--space-8);
 }
 
 .search-input {
     width: 100%;
-    padding: 0.5rem 1rem;
-    background: #0f172a;
-    border: 1px solid #1b2a3a;
-    border-radius: 4px;
-    color: #e2e8f0;
-    font-size: 0.875rem;
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    color: var(--text-heading);
+    font-size: var(--text-md);
 }
 
 .search-input:focus {
     outline: none;
-    border-color: #0ea5e9;
+    border-color: var(--accent-hover);
 }
 
 .search-input::placeholder {
-    color: #64748b;
+    color: var(--text-muted);
 }
 
 .loading,
 .error,
 .no-users {
     text-align: center;
-    padding: 2rem;
-    background: #08121f;
-    border: 1px solid #1b2a3a;
-    border-radius: 4px;
+    padding: var(--space-8);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
 }
 
 .error {
-    color: #f87171;
-    border-color: #f87171;
+    color: var(--error-text);
+    border-color: var(--error-text);
 }
 
 .users-table {
-    background: #08121f;
-    border: 1px solid #1b2a3a;
-    border-radius: 4px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
     overflow: hidden;
 }
 
@@ -295,14 +295,14 @@ table {
 
 th,
 td {
-    padding: 0.75rem;
+    padding: var(--space-3);
     text-align: left;
-    border-bottom: 1px solid #1b2a3a;
+    border-bottom: 1px solid var(--border-primary);
 }
 
 th {
-    background: #0f172a;
-    color: #7dd3fc;
+    background: var(--bg-elevated);
+    color: var(--accent-subtle);
     font-weight: 600;
 }
 
@@ -311,18 +311,18 @@ tr:last-child td {
 }
 
 .role-select {
-    padding: 0.25rem 0.5rem;
-    background: #0f172a;
-    border: 1px solid #1b2a3a;
-    border-radius: 4px;
-    color: #e2e8f0;
-    font-size: 0.875rem;
+    padding: var(--space-1) var(--space-2);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    color: var(--text-heading);
+    font-size: var(--text-md);
     cursor: pointer;
 }
 
 .role-select:focus {
     outline: none;
-    border-color: #0ea5e9;
+    border-color: var(--accent-hover);
 }
 
 .role-select:disabled {
@@ -331,51 +331,13 @@ tr:last-child td {
 }
 
 .role-select option {
-    background: #0f172a;
-    color: #e2e8f0;
+    background: var(--bg-elevated);
+    color: var(--text-heading);
 }
 
 .actions {
     display: flex;
-    gap: 0.5rem;
-}
-
-.btn-primary,
-.btn-secondary,
-.btn-danger {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.875rem;
-    transition: background-color 0.2s;
-}
-
-.btn-primary {
-    background: #0ea5e9;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #0284c7;
-}
-
-.btn-secondary {
-    background: #475569;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #334155;
-}
-
-.btn-danger {
-    background: #dc2626;
-    color: white;
-}
-
-.btn-danger:hover {
-    background: #b91c1c;
+    gap: var(--space-2);
 }
 
 button:disabled {
@@ -383,69 +345,32 @@ button:disabled {
     cursor: not-allowed;
 }
 
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-}
-
 .modal {
-    background: #08121f;
-    border: 1px solid #1b2a3a;
-    border-radius: 8px;
-    padding: 2rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8);
     min-width: 400px;
     max-width: 90%;
     outline: none;
-    color: #e2e8f0;
+    color: var(--text-heading);
 }
 
 .modal h3 {
-    color: #7dd3fc;
+    color: var(--accent-subtle);
     margin-top: 0;
-    margin-bottom: 1rem;
-}
-
-.form-group {
-    margin-bottom: 1rem;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: #cbd5e1;
-}
-
-.form-control {
-    width: 100%;
-    padding: 0.5rem;
-    background: #0f172a;
-    border: 1px solid #1b2a3a;
-    border-radius: 4px;
-    color: #e2e8f0;
-}
-
-.form-control:focus {
-    outline: none;
-    border-color: #0ea5e9;
+    margin-bottom: var(--space-4);
 }
 
 .modal-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-2);
     justify-content: flex-end;
-    margin-top: 1.5rem;
+    margin-top: var(--space-6);
 }
 
 .warning {
-    color: #fbbf24;
+    color: var(--warning-text);
     font-weight: 500;
 }
 </style>

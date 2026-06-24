@@ -61,20 +61,20 @@ onMounted(async () => {
     display: grid;
     grid-template-columns: 220px 1fr;
     height: 100vh;
-    background: #02050a;
-    color: #c9e5ff;
+    background: var(--bg-page);
+    color: var(--text-primary);
 }
 
 .sidebar {
-    background: #050b16;
-    border-right: 1px solid #1b2a3a;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border-primary);
     display: flex;
     flex-direction: column;
     padding: 1.2rem;
 }
 
 .brand {
-    color: #38bdf8;
+    color: var(--accent);
     letter-spacing: 2px;
     margin-bottom: 2rem;
     text-transform: uppercase;
@@ -83,65 +83,46 @@ onMounted(async () => {
 .nav {
     margin-bottom: 0.6rem;
     text-decoration: none;
-    color: #c9e5ff;
+    color: var(--text-primary);
     padding: 0.4rem;
-    border-radius: 4px;
-    transition: 0.15s;
+    border-radius: var(--radius-sm);
+    transition: var(--transition-fast);
 }
 
 .nav:hover,
 .router-link-active {
-    background: #08121f;
-    color: #7dd3fc;
+    background: var(--bg-surface);
+    color: var(--accent-subtle);
 }
 
 .logout-btn {
     background: none;
     border: none;
-    color: #c9e5ff;
+    color: var(--text-primary);
     padding: 0.4rem;
-    border-radius: 4px;
-    transition: 0.15s;
+    border-radius: var(--radius-sm);
+    transition: var(--transition-fast);
     cursor: pointer;
     text-align: left;
     width: 100%;
     font-family: inherit;
     font-size: inherit;
+    margin-bottom: 0.6rem;
 }
 
 .logout-btn:hover {
-    background: #08121f;
-    color: #7dd3fc;
+    background: var(--bg-surface);
+    color: var(--accent-subtle);
 }
 
 .divider {
     height: 1px;
-    background: #1b2a3a;
+    background: var(--border-primary);
     margin: 1rem 0;
 }
 
-.logout-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    text-align: left;
-    width: 100%;
-    margin-bottom: 0.6rem;
-    padding: 0.4rem;
-    border-radius: 4px;
-    transition: 0.15s;
-    text-decoration: none;
-    color: #c9e5ff;
-    font-family: inherit;
-    font-size: inherit;
-}
-
-.logout-btn:hover {
-    background: #08121f;
-    color: #7dd3fc;
-}
 .main {
-    padding: 2rem;
+    padding: var(--space-8);
     overflow-y: auto;
 }
 </style>
