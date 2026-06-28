@@ -1,6 +1,13 @@
 @import "./variables.css";
 
 /* ===== BASE ===== */
+html, body, #app {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-page);
+  min-height: 100vh;
+}
+
 * {
   font-family: var(--font-body);
   letter-spacing: 0.02em;
