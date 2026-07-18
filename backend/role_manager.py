@@ -8,8 +8,19 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "app"))
 from database.dynamic.security import hash_password
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# MongoDB connection
+# Load .env from project root if present
+_env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+if os.path.exists(_env_path):
+    with open(_env_path) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _key, _, _val = _line.partition("=")
+                os.environ.setdefault(_key.strip(), _val.strip())
+
+# MongoDB connection — replace Docker hostname with localhost for local usage
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+MONGO_URL = MONGO_URL.replace("cephalon-onni-mongo", "localhost")
 client = AsyncIOMotorClient(MONGO_URL)
 db = client["cephalon_onni"]
 users_collection = db["users"]
