@@ -1,18 +1,15 @@
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from dependencies import get_postgres_session
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from repositories.warframe_pg_repository import WarframePGRepository
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from models.postgres.warframes import Warframe
 
 router = APIRouter(prefix="/api/warframes", tags=["warframes"])
 
 
 def _parse_json(value: Any) -> Any:
-    """Parse JSON string to Python object."""
     if value is None:
         return None
     if isinstance(value, str):
@@ -25,10 +22,8 @@ def _parse_json(value: Any) -> Any:
 
 @router.get("/", response_model=List[Dict[str, Any]])
 async def get_all_warframes(session: AsyncSession = Depends(get_postgres_session)):
-    """Get all warframes with basic info"""
     try:
-        result = await session.execute(select(Warframe))
-        warframes = result.scalars().all()
+        warframes = await WarframePGRepository.find_all(session)
         return [
             {
                 "id": w.id,
@@ -58,13 +53,8 @@ async def get_all_warframes(session: AsyncSession = Depends(get_postgres_session
 async def get_warframe_by_unique_name(
     unique_name: str, session: AsyncSession = Depends(get_postgres_session)
 ):
-    """Get a specific warframe by uniqueName with all details including abilities"""
     try:
-        result = await session.execute(
-            select(Warframe).where(Warframe.unique_name == unique_name)
-        )
-        warframe = result.scalar_one_or_none()
-
+        warframe = await WarframePGRepository.find_by_unique_name(session, unique_name)
         if not warframe:
             raise HTTPException(status_code=404, detail="Warframe not found")
 

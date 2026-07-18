@@ -36,11 +36,20 @@ async def lifespan(application: FastAPI):
 
     postgres_db.initialize()
     try:
-        import models.postgres
-        await postgres_db.create_tables()
-        logger.info("PostgreSQL tables created/verified")
+        import subprocess
+        import sys
+        result = subprocess.run(
+            [sys.executable, "-m", "alembic", "upgrade", "head"],
+            capture_output=True,
+            text=True,
+            cwd="/home/onyx/Documents/Cephalon-Onni/backend",
+        )
+        if result.returncode != 0:
+            logger.warning(f"Alembic migration warning: {result.stderr}")
+        else:
+            logger.info("PostgreSQL migrations applied successfully")
     except Exception as e:
-        logger.warning(f"PostgreSQL initialization warning: {e}")
+        logger.warning(f"PostgreSQL migration warning: {e}")
 
     from services.worldstate import (
         WorldStateCache,
