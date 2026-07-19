@@ -13,6 +13,7 @@ import models.postgres.warframes
 import models.postgres.weapons
 import models.postgres.mods
 import models.postgres.arcanes
+import models.postgres.companions
 import models.postgres.missions
 import models.postgres.relics
 import models.postgres.recipes
