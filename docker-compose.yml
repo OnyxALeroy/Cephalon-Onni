@@ -12,6 +12,8 @@ services:
       - postgres
     env_file:
       - .env
+    volumes:
+      - ./data:/app/data:z
     command: ["python", "-u", "app/main.py"]
     tty: true
     stdin_open: true

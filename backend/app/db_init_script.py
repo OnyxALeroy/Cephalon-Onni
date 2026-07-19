@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import sys
 import os
@@ -41,6 +42,10 @@ from database.static.db_init.postgres.init_images import (
 from database.static.db_init.postgres.init_loot_tables import (
     create_drop_source_tables,
     fill_drop_sources_db,
+)
+from database.static.db_init.postgres.init_companions import (
+    create_companion_tables,
+    fill_companion_db,
 )
 
 
@@ -375,11 +380,33 @@ async def _async_main() -> None:
             "ExportWarframes",
             "ExportWeapons",
             "ExportManifest",
+            "ExportSentinels",
         ]
-        raw_data = jsons_collector.get_jsons("en", jsons)
+        extra_jsons: List[str] = [
+            "ExportCustoms",
+            "ExportDrones",
+            "ExportFlavour",
+            "ExportFusionBundles",
+            "ExportGear",
+            "ExportKeys",
+            "ExportResources",
+            "ExportSortieRewards",
+        ]
+        all_jsons = jsons + extra_jsons
+        raw_data = jsons_collector.get_jsons("en", all_jsons)
         if raw_data is None:
             logging.error("Failed to fetch JSON data from Warframe")
             return
+
+        extra_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "json", "extra")
+        extra_data = {k: v for k, v in raw_data.items() if k in extra_jsons}
+        if extra_data:
+            os.makedirs(extra_dir, exist_ok=True)
+            for name, content in extra_data.items():
+                path = os.path.join(extra_dir, f"{name}.json")
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(content, f, ensure_ascii=False, indent=2)
+                logging.info(f"Saved extra export: {path}")
 
         if save_json_to_disk:
             if not jsons_collector.save_to_disk(raw_data):
@@ -406,6 +433,9 @@ async def _async_main() -> None:
 
             relics = raw_data.get("ExportRelicArcane", [])
             await fill_relic_db(session, relics)
+
+            companions = raw_data.get("ExportSentinels", [])
+            await fill_companion_db(session, companions)
 
         loot_table_url = "https://www.warframe.com/fr/droptables"
         logging.info("Fetching loot tables from Warframe website...")

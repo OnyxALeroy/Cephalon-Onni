@@ -3,6 +3,7 @@ from models.postgres.weapons import Weapon
 from models.postgres.warframes import Warframe
 from models.postgres.mods import Mod
 from models.postgres.arcanes import Arcane
+from models.postgres.companions import Companion
 from models.postgres.missions import Mission
 from models.postgres.relics import Relic
 from models.postgres.recipes import Recipe
@@ -15,6 +16,7 @@ __all__ = [
     "Warframe",
     "Mod",
     "Arcane",
+    "Companion",
     "Mission",
     "Relic",
     "Recipe",
