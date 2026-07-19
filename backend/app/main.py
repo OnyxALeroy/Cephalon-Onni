@@ -42,7 +42,6 @@ async def lifespan(application: FastAPI):
             [sys.executable, "-m", "alembic", "upgrade", "head"],
             capture_output=True,
             text=True,
-            cwd="/home/onyx/Documents/Cephalon-Onni/backend",
         )
         if result.returncode != 0:
             logger.warning(f"Alembic migration warning: {result.stderr}")
@@ -50,6 +49,8 @@ async def lifespan(application: FastAPI):
             logger.info("PostgreSQL migrations applied successfully")
     except Exception as e:
         logger.warning(f"PostgreSQL migration warning: {e}")
+
+    await postgres_db.create_tables()
 
     from services.worldstate import (
         WorldStateCache,

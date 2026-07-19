@@ -136,7 +136,7 @@ async def delete_build_endpoint(request: Request, build_id: str):
 @router.get("/available/warframes")
 async def get_available_warframes_endpoint():
     try:
-        return BuildService.get_available_warframes()
+        return await BuildService.get_available_warframes()
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception:
@@ -146,7 +146,7 @@ async def get_available_warframes_endpoint():
 @router.get("/available/weapons")
 async def get_available_weapons_endpoint():
     try:
-        return BuildService.get_available_weapons()
+        return await BuildService.get_available_weapons()
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception:
@@ -156,7 +156,7 @@ async def get_available_weapons_endpoint():
 @router.get("/available/mods")
 async def get_available_mods_endpoint():
     try:
-        return BuildService.get_available_mods()
+        return await BuildService.get_available_mods()
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception:
@@ -166,7 +166,7 @@ async def get_available_mods_endpoint():
 @router.get("/available/arcanes")
 async def get_available_arcanes_endpoint():
     try:
-        return BuildService.get_available_arcanes()
+        return await BuildService.get_available_arcanes()
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception:
