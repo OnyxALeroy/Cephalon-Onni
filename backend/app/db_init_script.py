@@ -47,6 +47,14 @@ from database.static.db_init.postgres.init_companions import (
     create_companion_tables,
     fill_companion_db,
 )
+from database.static.db_init.postgres.init_resources import (
+    create_resource_tables,
+    fill_resource_db,
+)
+from database.static.db_init.postgres.init_amp_parts import (
+    create_amp_tables,
+    fill_amp_db,
+)
 
 
 def parse_loot_tables_sync(loot_table_url: str) -> List[Dict[str, Any]]:
@@ -381,6 +389,7 @@ async def _async_main() -> None:
             "ExportWeapons",
             "ExportManifest",
             "ExportSentinels",
+            "ExportResources",
         ]
         extra_jsons: List[str] = [
             "ExportCustoms",
@@ -389,7 +398,6 @@ async def _async_main() -> None:
             "ExportFusionBundles",
             "ExportGear",
             "ExportKeys",
-            "ExportResources",
             "ExportSortieRewards",
         ]
         all_jsons = jsons + extra_jsons
@@ -436,6 +444,12 @@ async def _async_main() -> None:
 
             companions = raw_data.get("ExportSentinels", [])
             await fill_companion_db(session, companions)
+
+            resources = raw_data.get("ExportResources", [])
+            await fill_resource_db(session, resources)
+
+            weapons_for_amps = raw_data.get("ExportWeapons", [])
+            await fill_amp_db(session, weapons_for_amps)
 
         loot_table_url = "https://www.warframe.com/fr/droptables"
         logging.info("Fetching loot tables from Warframe website...")
