@@ -27,6 +27,9 @@ async def fill_weapons_db(session: AsyncSession, weapons: List[dict]) -> bool:
     try:
         count = 0
         for weapon in weapons:
+            if "/OperatorAmplifiers/" in weapon.get("uniqueName", ""):
+                continue
+
             weapon_doc = {
                 "unique_name": weapon.get("uniqueName", ""),
                 "name": weapon.get("name", ""),

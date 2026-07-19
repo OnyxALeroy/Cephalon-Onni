@@ -14,6 +14,8 @@ import models.postgres.weapons
 import models.postgres.mods
 import models.postgres.arcanes
 import models.postgres.companions
+import models.postgres.resources
+import models.postgres.amp_parts
 import models.postgres.missions
 import models.postgres.relics
 import models.postgres.recipes
