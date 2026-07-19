@@ -1,4 +1,3 @@
-from database.db import connect_to_mongodb
 from database.dynamic.auth import decode_token
 from database.postgres_db import postgres_db
 from fastapi import HTTPException, Request
@@ -38,13 +37,6 @@ async def get_current_admin_user(request: Request) -> dict:
     if user.get("role") != "Administrator":
         raise HTTPException(status_code=403, detail="Administrator access required")
     return user
-
-
-def get_static_db_client():
-    client = connect_to_mongodb()
-    if not client:
-        raise HTTPException(status_code=500, detail="Failed to connect to the database")
-    yield client
 
 
 async def get_postgres_session():
