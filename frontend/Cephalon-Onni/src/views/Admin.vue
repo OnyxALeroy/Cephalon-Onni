@@ -2,6 +2,7 @@
   <div>
     <!-- Not logged in -->
     <div v-if="!user" class="login-prompt">
+      <div class="terminal-tag mono">CEPHALON_ONNI://clearance_check</div>
       <h2>Authentication Required</h2>
       <p>Administrator access requires authentication.</p>
       <button class="btn btn-primary" @click="goLogin">Login</button>
@@ -9,6 +10,7 @@
 
     <!-- Logged in but not admin -->
     <div v-else-if="!isAdmin" class="access-denied">
+      <div class="terminal-tag mono">CEPHALON_ONNI://clearance_denied</div>
       <h2>Access Denied</h2>
       <p>You do not have administrator privileges to access this area.</p>
       <button class="btn btn-ghost" @click="goHome">Return to Home</button>
@@ -134,6 +136,13 @@ function goHome() {
   text-align: center;
   margin-top: 20vh;
   color: var(--danger);
+}
+
+.terminal-tag {
+  font-size: var(--text-sm);
+  letter-spacing: 1px;
+  margin-bottom: var(--space-4);
+  opacity: 0.7;
 }
 
 h1 {
