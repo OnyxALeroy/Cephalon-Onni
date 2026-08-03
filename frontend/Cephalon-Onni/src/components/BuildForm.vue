@@ -466,7 +466,7 @@ onMounted(() => {
 .weapon-section {
   margin-bottom: var(--space-6);
   padding: var(--space-4);
-  background: rgba(27, 42, 58, 0.3);
+  background: rgba(var(--accent-rgb), 0.05);
   border-radius: var(--radius-sm);
 }
 
@@ -655,7 +655,7 @@ onMounted(() => {
 .weapon-details {
   margin-top: var(--space-4);
   padding: var(--space-4);
-  background: rgba(27, 42, 58, 0.2);
+  background: rgba(var(--accent-rgb), 0.04);
   border-radius: var(--radius-sm);
   border-left: 3px solid var(--accent);
 }

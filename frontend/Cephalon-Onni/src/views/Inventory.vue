@@ -2,12 +2,14 @@
   <div>
     <!-- Not logged in -->
     <div v-if="!user" class="login-prompt">
+      <div class="terminal-tag mono">CEPHALON_ONNI://access_check</div>
       <h2>Identification Required</h2>
       <p>Link your Tenno profile to access inventory data.</p>
 
-      <button class="btn btn-primary" @click="goLogin">Login</button>
-
-      <button class="btn btn-ghost" @click="goRegister">Create Account</button>
+      <div class="prompt-actions">
+        <button class="btn btn-primary" @click="goLogin">Login</button>
+        <button class="btn btn-ghost" @click="goRegister">Create Account</button>
+      </div>
     </div>
 
     <!-- Logged in -->
@@ -16,9 +18,9 @@
 
       <!-- Toolbar -->
       <div class="toolbar">
-        <input v-model="search" placeholder="Search..." />
+        <input v-model="search" placeholder="Search..." class="form-input" />
 
-        <select v-model="type">
+        <select v-model="type" class="form-input">
           <option value="">All</option>
           <option value="warframe">Warframes</option>
           <option value="weapon">Weapons</option>
@@ -121,6 +123,25 @@ function openItem(item: Item) {
   margin-top: 20vh;
 }
 
+.terminal-tag {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  letter-spacing: 1px;
+  margin-bottom: var(--space-4);
+  opacity: 0.8;
+}
+
+.login-prompt h2 {
+  color: var(--text-secondary);
+}
+
+.prompt-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  margin-top: var(--space-4);
+}
+
 h1 {
   color: var(--accent-subtle);
 }
@@ -131,12 +152,8 @@ h1 {
   margin-bottom: var(--space-4);
 }
 
-input,
-select {
-  background: var(--bg-card);
-  border: 1px solid var(--border-primary);
-  padding: var(--space-2);
-  color: var(--text-white);
+.toolbar .form-input {
+  width: auto;
 }
 
 .grid {

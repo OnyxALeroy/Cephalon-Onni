@@ -149,11 +149,37 @@
         <div v-if="error" class="message message-error">
             {{ error }}
         </div>
+
+        <Teleport to="body">
+            <div v-if="deletingBuild" class="modal-overlay" @click="cancelDelete">
+                <div
+                    class="modal-content delete-modal"
+                    @click.stop
+                    @keydown.esc="cancelDelete"
+                    tabindex="-1"
+                    ref="deleteModalRef"
+                >
+                    <h3>Confirm Purge</h3>
+                    <p>
+                        Delete build <strong>"{{ deletingBuild.name }}"</strong>?
+                        This data cannot be recovered from the archive.
+                    </p>
+                    <div class="modal-actions">
+                        <button class="btn btn-danger" @click="confirmDelete">
+                            Delete
+                        </button>
+                        <button class="btn btn-secondary" @click="cancelDelete">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, nextTick, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useBuilds, type BuildPublic } from "@/composables/useBuilds";
 
@@ -243,101 +269,22 @@ const handlePushBuild = async (build: BuildPublic) => {
     }
 };
 
-const showDeleteConfirm = (build: BuildPublic) => {
-    // Create custom confirmation dialog that won't be blocked
-    const dialog = document.createElement('div');
-    dialog.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: #08121f;
-        border: 2px solid #dc2626;
-        border-radius: 8px;
-        padding: 2rem;
-        z-index: 10000;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-        min-width: 300px;
-        color: #e2e8f0;
-    `;
-    
-    dialog.innerHTML = `
-        <h3 style="margin: 0 0 1rem 0; color: #dc2626;">Confirm Delete</h3>
-        <p style="margin: 0 0 1.5rem 0;">Are you sure you want to delete "<strong>${build.name}</strong>"?</p>
-        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-            <button id="cancel-delete" style="
-                padding: 0.5rem 1rem;
-                background: #374151;
-                color: #e5e7eb;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-            ">Cancel</button>
-            <button id="confirm-delete" style="
-                padding: 0.5rem 1rem;
-                background: #dc2626;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-            ">Delete</button>
-        </div>
-    `;
-    
-    // Add backdrop
-    const backdrop = document.createElement('div');
-    backdrop.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
-        z-index: 9999;
-    `;
-    
-    document.body.appendChild(backdrop);
-    document.body.appendChild(dialog);
-    
-    const cleanup = () => {
-        document.body.removeChild(dialog);
-        document.body.removeChild(backdrop);
-    };
-    
-    return new Promise<boolean>((resolve) => {
-        const cancelBtn = dialog.querySelector('#cancel-delete') as HTMLButtonElement;
-        const confirmBtn = dialog.querySelector('#confirm-delete') as HTMLButtonElement;
-        
-        cancelBtn.onclick = () => {
-            cleanup();
-            resolve(false);
-        };
-        
-        confirmBtn.onclick = () => {
-            cleanup();
-            resolve(true);
-        };
-        
-        backdrop.onclick = () => {
-            cleanup();
-            resolve(false);
-        };
-        
-        // Focus the cancel button by default
-        cancelBtn.focus();
-    });
+const deletingBuild = ref<BuildPublic | null>(null);
+const deleteModalRef = ref<HTMLElement | null>(null);
+
+const handleDelete = (build: BuildPublic) => {
+    deletingBuild.value = build;
+    nextTick(() => deleteModalRef.value?.focus());
 };
 
-const handleDelete = async (build: BuildPublic) => {
-    console.log('Delete button clicked for build:', build);
-    const confirmed = await showDeleteConfirm(build);
-    console.log('Custom confirm result:', confirmed);
-    if (confirmed) {
-        console.log('Emitting delete-build event with id:', build.id);
-        emit("delete-build", build.id);
-    } else {
-        console.log('Delete cancelled by user');
-    }
+const cancelDelete = () => {
+    deletingBuild.value = null;
+};
+
+const confirmDelete = () => {
+    if (!deletingBuild.value) return;
+    emit("delete-build", deletingBuild.value.id);
+    deletingBuild.value = null;
 };
 
 const handleSyncLocalBuilds = async () => {
@@ -404,7 +351,7 @@ const handleSyncLocalBuilds = async () => {
 }
 
 .sync-prompt {
-    background: rgba(59, 130, 246, 0.1);
+    background: rgba(var(--accent-rgb), 0.1);
     border: 1px solid var(--accent);
     border-radius: var(--radius-sm);
     padding: var(--space-4);
@@ -569,7 +516,7 @@ const handleSyncLocalBuilds = async () => {
 }
 
 .btn-view:hover {
-    background: rgba(59, 130, 246, 0.1);
+    background: rgba(var(--accent-rgb), 0.1);
 }
 
 .btn-edit:hover {
@@ -582,6 +529,18 @@ const handleSyncLocalBuilds = async () => {
 
 .btn-delete:hover {
     background: var(--danger-subtle);
+}
+
+.delete-modal p {
+    color: var(--text-body);
+    line-height: 1.5;
+    margin: 0 0 var(--space-6) 0;
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--space-2);
+    justify-content: flex-end;
 }
 
 @media (max-width: 768px) {

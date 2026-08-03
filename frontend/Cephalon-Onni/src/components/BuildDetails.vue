@@ -240,7 +240,8 @@ const handleDelete = async () => {
 }
 
 .btn-edit:hover {
-  background: rgba(34, 197, 94, 0.2);
+  background: var(--success-subtle);
+  filter: brightness(1.4);
 }
 
 .btn-delete {
@@ -249,7 +250,8 @@ const handleDelete = async () => {
 }
 
 .btn-delete:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: var(--danger-subtle);
+  filter: brightness(1.4);
 }
 
 .build-overview {
