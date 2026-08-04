@@ -36,7 +36,6 @@ docker compose up --build
 The services include:
 - **Backend API**: FastAPI server (port 8000) ;
 - **Frontend**: Vue.js application (port 8080) ;
-- **PostgreSQL with Apache AGE**: Graph database (port 5432) ;
 - **MongoDB**: Document database (port 27017).
 
 ### Frontend

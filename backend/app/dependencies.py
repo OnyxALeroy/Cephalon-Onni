@@ -42,13 +42,3 @@ async def get_current_admin_user(request: Request) -> dict:
 async def get_postgres_session():
     async for session in postgres_db.get_session():
         yield session
-
-
-def get_age_helper():
-    from database.static.age_helper import AgeDB
-
-    age = AgeDB()
-    try:
-        yield age
-    finally:
-        age.close()
