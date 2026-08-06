@@ -27,7 +27,7 @@
                 </div>
                 <div class="search-buttons">
                     <button
-                        class="btn secondary"
+                            class="btn btn-ghost"
                         @click="handleSearchNodes"
                         :disabled="
                             loading ||
@@ -285,45 +285,45 @@ function getEdgeDisplay(edge: any) {
 
 <style scoped>
 .graph-visualization {
-    background: #0f172a;
-    border: 1px solid #1b2a3a;
-    border-radius: 4px;
-    padding: 1.5rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    padding: var(--space-6);
 }
 
 .graph-controls {
     display: grid;
-    gap: 2rem;
-    margin-bottom: 2rem;
+    gap: var(--space-8);
+    margin-bottom: var(--space-8);
     grid-template-columns: 1fr;
 }
 
 .search-section,
 .exploration-section {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 4px;
-    padding: 1rem;
+    background: var(--bg-elevated-2);
+    border: 1px solid var(--border-secondary);
+    border-radius: var(--radius-sm);
+    padding: var(--space-4);
 }
 
 .search-section h3,
 .exploration-section h3 {
-    color: #7dd3fc;
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
+    color: var(--accent-subtle);
+    margin-bottom: var(--space-4);
+    font-size: var(--text-lg);
 }
 
 .search-section h4 {
-    color: #94a3b8;
-    margin: 1rem 0 0.5rem 0;
-    font-size: 0.9rem;
+    color: var(--text-muted-2);
+    margin: var(--space-4) 0 var(--space-2) 0;
+    font-size: var(--text-body);
 }
 
 .input-group {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
 }
 
 .input-field {
@@ -332,70 +332,70 @@ function getEdgeDisplay(edge: any) {
 }
 
 .input-field label {
-    color: #94a3b8;
-    font-size: 0.9rem;
-    margin-bottom: 0.5rem;
+    color: var(--text-muted-2);
+    font-size: var(--text-body);
+    margin-bottom: var(--space-2);
 }
 
 .node-input {
-    background: #0f172a;
-    border: 1px solid #475569;
-    border-radius: 4px;
-    color: #f1f5f9;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-sm);
+    color: var(--text-light);
     padding: 0.7rem;
-    font-size: 0.9rem;
+    font-size: var(--text-body);
 }
 
 .node-input:focus {
     outline: none;
-    border-color: #38bdf8;
-    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.2);
 }
 
 .depth-select {
-    background: #0f172a;
-    border: 1px solid #475569;
-    border-radius: 4px;
-    color: #f1f5f9;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-sm);
+    color: var(--text-light);
     padding: 0.7rem;
-    font-size: 0.9rem;
+    font-size: var(--text-body);
 }
 
 .depth-select:focus {
     outline: none;
-    border-color: #38bdf8;
-    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.2);
 }
 
 .search-buttons,
 .control-buttons {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
     flex-wrap: wrap;
 }
 
 .search-results {
-    margin-top: 1rem;
+    margin-top: var(--space-4);
 }
 
 .results-list {
     max-height: 200px;
     overflow-y: auto;
-    border: 1px solid #475569;
-    border-radius: 4px;
-    background: #0f172a;
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
 }
 
 .result-item {
     padding: 0.8rem;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid var(--border-secondary);
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color var(--transition-normal);
 }
 
 .result-item:hover {
-    background: #334155;
+    background: var(--border-secondary);
 }
 
 .result-item:last-child {
@@ -403,123 +403,123 @@ function getEdgeDisplay(edge: any) {
 }
 
 .node-name {
-    color: #f1f5f9;
+    color: var(--text-light);
     font-weight: bold;
-    margin-bottom: 0.25rem;
-    font-size: 1rem;
+    margin-bottom: var(--space-1);
+    font-size: var(--text-normal);
 }
 
 .node-label {
-    color: #38bdf8;
-    font-size: 0.9rem;
-    margin-bottom: 0.5rem;
+    color: var(--accent);
+    font-size: var(--text-body);
+    margin-bottom: var(--space-2);
     font-weight: 600;
 }
 
 .node-properties {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: var(--space-1);
 }
 
 .property-item {
     display: flex;
-    gap: 0.5rem;
-    font-size: 0.8rem;
+    gap: var(--space-2);
+    font-size: var(--text-base);
 }
 
 .prop-key {
-    color: #64748b;
+    color: var(--text-muted);
     min-width: 60px;
 }
 
 .prop-value {
-    color: #94a3b8;
+    color: var(--text-muted-2);
 }
 
 .selected-node {
-    margin-bottom: 1rem;
+    margin-bottom: var(--space-4);
     padding: 0.8rem;
-    background: #0f172a;
-    border: 1px solid #475569;
-    border-radius: 4px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-sm);
 }
 
 .selected-info {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
 }
 
 .selected-label {
-    color: #94a3b8;
-    font-size: 0.9rem;
+    color: var(--text-muted-2);
+    font-size: var(--text-body);
 }
 
 .selected-name {
-    color: #38bdf8;
+    color: var(--accent);
     font-weight: bold;
 }
 
 .graph-stats {
     display: flex;
-    gap: 2rem;
-    margin-bottom: 1rem;
-    padding: 1rem;
-    background: #1e293b;
-    border-radius: 4px;
-    border: 1px solid #334155;
+    gap: var(--space-8);
+    margin-bottom: var(--space-4);
+    padding: var(--space-4);
+    background: var(--bg-elevated-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-secondary);
 }
 
 .graph-summary-container {
-    background: #08121f;
-    border-radius: 4px;
-    padding: 1.5rem;
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    padding: var(--space-6);
     overflow: auto;
 }
 
 .graph-summary-container h3 {
-    color: #7dd3fc;
-    margin-bottom: 1.5rem;
-    font-size: 1.2rem;
+    color: var(--accent-subtle);
+    margin-bottom: var(--space-6);
+    font-size: var(--text-xl);
     text-align: center;
 }
 
 .graph-summary-container h4 {
-    color: #94a3b8;
-    margin: 1.5rem 0 1rem 0;
-    font-size: 1.1rem;
+    color: var(--text-muted-2);
+    margin: var(--space-6) 0 var(--space-4) 0;
+    font-size: var(--text-lg);
 }
 
 .section {
-    margin-bottom: 2rem;
+    margin-bottom: var(--space-8);
 }
 
 .nodes-grid,
 .edges-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
 }
 
 .node-card,
 .edge-card {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 4px;
-    padding: 1rem;
-    transition: background-color 0.2s;
+    background: var(--bg-elevated-2);
+    border: 1px solid var(--border-secondary);
+    border-radius: var(--radius-sm);
+    padding: var(--space-4);
+    transition: background-color var(--transition-normal);
 }
 
 .node-card:hover,
 .edge-card:hover {
-    background: #334155;
+    background: var(--border-secondary);
 }
 
 .node-card.selected-node {
-    border-color: #38bdf8;
-    background: #1e3a8a;
+    border-color: var(--accent);
+    background: var(--blue-selected);
 }
 
 .node-header,
@@ -531,16 +531,16 @@ function getEdgeDisplay(edge: any) {
 }
 
 .node-name {
-    color: #38bdf8;
+    color: var(--accent);
     font-weight: bold;
-    font-size: 1rem;
+    font-size: var(--text-normal);
 }
 
 .edge-direction {
-    color: #94a3b8;
-    font-size: 0.9rem;
+    color: var(--text-muted-2);
+    font-size: var(--text-body);
     text-align: center;
-    margin-top: 0.5rem;
+    margin-top: var(--space-2);
 }
 
 .node-properties,
@@ -553,23 +553,23 @@ function getEdgeDisplay(edge: any) {
 .node-properties .property-item,
 .edge-properties .property-item {
     display: flex;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-    background: #0f172a;
-    padding: 0.3rem 0.5rem;
+    gap: var(--space-2);
+    font-size: var(--text-base);
+    background: var(--bg-elevated);
+    padding: 0.3rem var(--space-2);
     border-radius: 3px;
 }
 
 .node-properties .prop-key,
 .edge-properties .prop-key {
-    color: #94a3b8;
+    color: var(--text-muted-2);
     min-width: 80px;
     font-weight: 600;
 }
 
 .node-properties .prop-value,
 .edge-properties .prop-value {
-    color: #38bdf8;
+    color: var(--accent);
     word-break: break-word;
 }
 
@@ -580,21 +580,21 @@ function getEdgeDisplay(edge: any) {
 }
 
 .stat-label {
-    color: #94a3b8;
-    font-size: 0.8rem;
-    margin-bottom: 0.25rem;
+    color: var(--text-muted-2);
+    font-size: var(--text-base);
+    margin-bottom: var(--space-1);
 }
 
 .stat-value {
-    color: #7dd3fc;
+    color: var(--accent-subtle);
     font-weight: bold;
-    font-size: 1.1rem;
+    font-size: var(--text-lg);
 }
 
 .graph-container {
-    background: #08121f;
-    border: 1px solid #1b2a3a;
-    border-radius: 4px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
     min-height: 600px;
     position: relative;
     overflow: hidden;
@@ -606,56 +606,56 @@ function getEdgeDisplay(edge: any) {
     justify-content: center;
     height: 100%;
     min-height: 200px;
-    color: #64748b;
-    font-size: 1.1rem;
-    padding: 2rem;
+    color: var(--text-muted);
+    font-size: var(--text-lg);
+    padding: var(--space-8);
 }
 
 .neighbors-table-container {
-    background: #08121f;
-    border-radius: 4px;
-    padding: 1.5rem;
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    padding: var(--space-6);
     overflow: auto;
 }
 
 .neighbors-table-container h3 {
-    color: #7dd3fc;
-    margin-bottom: 1rem;
-    font-size: 1.2rem;
+    color: var(--accent-subtle);
+    margin-bottom: var(--space-4);
+    font-size: var(--text-xl);
     text-align: center;
 }
 
 .neighbors-table {
     width: 100%;
     border-collapse: collapse;
-    background: #0f172a;
-    border-radius: 4px;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
     overflow: hidden;
 }
 
 .neighbors-table th {
-    background: #1e293b;
-    color: #7dd3fc;
-    padding: 0.8rem 1rem;
+    background: var(--bg-elevated-2);
+    color: var(--accent-subtle);
+    padding: 0.8rem var(--space-4);
     text-align: left;
     font-weight: 600;
-    border-bottom: 2px solid #334155;
+    border-bottom: 2px solid var(--border-secondary);
 }
 
 .neighbors-table td {
-    padding: 0.8rem 1rem;
-    border-bottom: 1px solid #334155;
-    color: #f1f5f9;
+    padding: 0.8rem var(--space-4);
+    border-bottom: 1px solid var(--border-secondary);
+    color: var(--text-light);
 }
 
 .neighbors-table tr:hover {
-    background: #1e293b;
+    background: var(--bg-elevated-2);
 }
 
 .node-id-cell {
     font-family: monospace;
-    color: #94a3b8;
-    font-size: 0.8rem;
+    color: var(--text-muted-2);
+    font-size: var(--text-base);
     max-width: 80px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -664,7 +664,7 @@ function getEdgeDisplay(edge: any) {
 
 .node-name-cell {
     font-weight: bold;
-    color: #38bdf8;
+    color: var(--accent);
 }
 
 .node-type-cell {
@@ -681,36 +681,36 @@ function getEdgeDisplay(edge: any) {
 
 .direction-badge {
     padding: 0.2rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
+    border-radius: var(--radius-full);
+    font-size: var(--text-base);
     font-weight: 600;
 }
 
 .direction-badge.outgoing {
-    background: #10b981;
-    color: #021019;
+    background: var(--success-alt);
+    color: var(--text-on-accent);
 }
 
 .direction-badge.incoming {
-    background: #ef4444;
-    color: #ffffff;
+    background: var(--danger);
+    color: var(--text-white);
 }
 
 .type-badge {
-    background: #38bdf8;
-    color: #021019;
+    background: var(--accent);
+    color: var(--text-on-accent);
     padding: 0.2rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
+    border-radius: var(--radius-full);
+    font-size: var(--text-base);
     font-weight: 600;
 }
 
 .relationship-badge {
-    background: #f59e0b;
-    color: #021019;
+    background: var(--warning);
+    color: var(--text-on-accent);
     padding: 0.2rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
+    border-radius: var(--radius-full);
+    font-size: var(--text-base);
     font-weight: 600;
 }
 
@@ -730,56 +730,21 @@ function getEdgeDisplay(edge: any) {
 
 .properties-cell .property-item {
     display: flex;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-    background: #1e293b;
-    padding: 0.3rem 0.5rem;
+    gap: var(--space-2);
+    font-size: var(--text-base);
+    background: var(--bg-elevated-2);
+    padding: 0.3rem var(--space-2);
     border-radius: 3px;
 }
 
 .properties-cell .prop-key {
-    color: #94a3b8;
+    color: var(--text-muted-2);
     min-width: 80px;
     font-weight: 600;
 }
 
 .properties-cell .prop-value {
-    color: #38bdf8;
-}
-
-.btn {
-    padding: 0.7rem 1.5rem;
-    border-radius: 4px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.2s;
-    font-size: 0.9rem;
-}
-
-.btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.primary {
-    background: #38bdf8;
-    color: #021019;
-    border: none;
-}
-
-.primary:hover:not(:disabled) {
-    background: #2cb1d4;
-}
-
-.secondary {
-    background: transparent;
-    border: 1px solid #38bdf8;
-    color: #38bdf8;
-}
-
-.secondary:hover:not(:disabled) {
-    background: #38bdf8;
-    color: #021019;
+    color: var(--accent);
 }
 
 @media (max-width: 768px) {
@@ -793,7 +758,7 @@ function getEdgeDisplay(edge: any) {
 
     .graph-stats {
         flex-wrap: wrap;
-        gap: 1rem;
+        gap: var(--space-4);
     }
 
     .control-buttons,

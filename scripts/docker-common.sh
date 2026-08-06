@@ -41,13 +41,13 @@ check_service_health() {
         if docker ps --filter "name=$container_name" --filter "status=running" | grep -q "$container_name"; then
             case "$service_name" in
                 Backend)
-                    curl -fs http://localhost:8000/health >/dev/null && {
+                    curl -fs http://localhost:8080/health >/dev/null && {
                         print_success "$service_name is healthy!"
                         return 0
                     }
                     ;;
                 Frontend)
-                    curl -fs http://localhost:8080 >/dev/null && {
+                    curl -fs http://localhost:3000 >/dev/null && {
                         print_success "$service_name is healthy!"
                         return 0
                     }

@@ -16,6 +16,7 @@
             placeholder="My Awesome Build"
             :disabled="loading"
             maxlength="50"
+            class="form-input"
           />
         </div>
 
@@ -178,17 +179,17 @@
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="btn-primary" :disabled="loading || !isFormValid">
+        <button type="submit" class="btn btn-primary" :disabled="loading || !isFormValid">
           <span v-if="loading">Saving...</span>
           <span v-else>{{ isEditing ? 'Update' : 'Save' }} Build</span>
         </button>
         
-        <button type="button" class="btn-secondary" @click="$emit('cancel')" :disabled="loading">
+        <button type="button" class="btn btn-secondary" @click="$emit('cancel')" :disabled="loading">
           Cancel
         </button>
       </div>
 
-      <div v-if="error" class="error-message">
+      <div v-if="error" class="message message-error">
         {{ error }}
       </div>
     </form>
@@ -437,205 +438,167 @@ onMounted(() => {
 
 <style scoped>
 .build-form {
-  background: #050b16;
-  border: 1px solid #1b2a3a;
-  border-radius: 8px;
-  padding: 2rem;
-  margin-bottom: 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  margin-bottom: var(--space-8);
 }
 
 .build-form h3 {
-  color: #38bdf8;
-  margin-bottom: 1.5rem;
-  font-size: 1.5rem;
+  color: var(--accent);
+  margin-bottom: var(--space-6);
+  font-size: var(--text-2xl);
 }
 
 .form-section {
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid #1b2a3a;
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .form-section h4 {
-  color: #38bdf8;
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
+  color: var(--accent);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-xl);
 }
 
 .weapon-section {
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background: rgba(27, 42, 58, 0.3);
-  border-radius: 4px;
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  background: rgba(var(--accent-rgb), 0.05);
+  border-radius: var(--radius-sm);
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-6);
 }
 
 .form-group label {
   display: block;
-  color: #c9e5ff;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-body);
   font-weight: 500;
 }
 
-.form-group input,
 .form-group select {
   width: 100%;
-  background: #08121f;
-  border: 1px solid #1b2a3a;
-  border-radius: 4px;
-  padding: 0.75rem;
-  color: #c9e5ff;
-  font-size: 1rem;
-  transition: border-color 0.2s;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  color: var(--text-primary);
+  font-size: var(--text-normal);
+  transition: border-color var(--transition-normal);
 }
 
-.form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #38bdf8;
+  border-color: var(--accent);
 }
 
-.form-group input:disabled,
 .form-group select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 .warframe-preview {
-  background: #08121f;
-  border: 1px solid #1b2a3a;
-  border-radius: 4px;
-  padding: 1rem;
-  margin-top: 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  margin-top: var(--space-4);
 }
 
 .warframe-preview h4 {
-  color: #38bdf8;
-  margin-bottom: 0.5rem;
+  color: var(--accent);
+  margin-bottom: var(--space-2);
 }
 
 .warframe-description {
-  color: #c9e5ff;
+  color: var(--text-primary);
   opacity: 0.8;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
+  margin-bottom: var(--space-4);
+  font-size: var(--text-body);
 }
 
 .warframe-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
 }
 
 .stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0.5rem;
-  background: #0f172a;
-  border-radius: 4px;
+  padding: var(--space-2);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
 }
 
 .stat-label {
-  font-size: 0.7rem;
-  color: #94a3b8;
-  margin-bottom: 0.25rem;
+  font-size: var(--text-xs);
+  color: var(--text-muted-2);
+  margin-bottom: var(--space-1);
 }
 
 .stat-value {
   font-weight: bold;
-  color: #38bdf8;
+  color: var(--accent);
 }
 
 .abilities h5 {
-  color: #38bdf8;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
+  color: var(--accent);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-body);
 }
 
 .ability-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .ability {
-  background: #0f172a;
-  border-left: 2px solid #38bdf8;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0 4px 4px 0;
+  background: var(--bg-elevated);
+  border-left: 2px solid var(--accent);
+  padding: var(--space-2) var(--space-3);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
 .ability h6 {
-  color: #38bdf8;
-  font-size: 0.8rem;
-  margin-bottom: 0.25rem;
+  color: var(--accent);
+  font-size: var(--text-base);
+  margin-bottom: var(--space-1);
 }
 
 .ability p {
-  color: #c9e5ff;
-  font-size: 0.7rem;
+  color: var(--text-primary);
+  font-size: var(--text-xs);
   opacity: 0.8;
   margin: 0;
 }
 
 .form-actions {
   display: flex;
-  gap: 1rem;
-  margin-top: 2rem;
-}
-
-.btn-primary,
-.btn-secondary {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background: #38bdf8;
-  color: #021019;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #0ea5e9;
-}
-
-.btn-secondary {
-  background: #374151;
-  color: #e5e7eb;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #4b5563;
-}
-
-.btn-primary:disabled,
-.btn-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
 }
 
 .mods-container,
 .arcanes-container {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .mod-slot,
 .arcane-slot {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
   align-items: center;
 }
 
@@ -652,26 +615,26 @@ onMounted(() => {
 
 .btn-add,
 .btn-remove {
-  padding: 0.5rem;
+  padding: var(--space-2);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.9rem;
+  transition: all var(--transition-normal);
+  font-size: var(--text-body);
 }
 
 .btn-add {
-  background: #10b981;
-  color: white;
+  background: var(--success-alt);
+  color: var(--text-white);
 }
 
 .btn-add:hover:not(:disabled) {
-  background: #059669;
+  background: var(--success-alt-hover);
 }
 
 .btn-remove {
-  background: #ef4444;
-  color: white;
+  background: var(--danger);
+  color: var(--text-white);
   width: 32px;
   height: 32px;
   display: flex;
@@ -680,7 +643,7 @@ onMounted(() => {
 }
 
 .btn-remove:hover:not(:disabled) {
-  background: #dc2626;
+  background: var(--danger-hover);
 }
 
 .btn-add:disabled,
@@ -690,20 +653,10 @@ onMounted(() => {
 }
 
 .weapon-details {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: rgba(27, 42, 58, 0.2);
-  border-radius: 4px;
-  border-left: 3px solid #38bdf8;
-}
-
-.error-message {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid #ef4444;
-  color: #ef4444;
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-top: 1rem;
-  font-size: 0.9rem;
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  background: rgba(var(--accent-rgb), 0.04);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent);
 }
 </style>

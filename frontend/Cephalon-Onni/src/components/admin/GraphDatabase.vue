@@ -46,40 +46,39 @@ const viewModes = [
 
 <style scoped>
 .tab-panel h2 {
-  color: #7dd3fc;
-  margin-bottom: 1rem;
+  color: var(--accent-subtle);
+  margin-bottom: var(--space-4);
 }
 
 .graph-explorer {
   display: grid;
-  gap: 2rem;
+  gap: var(--space-8);
 }
 
-/* VIEW TOGGLE */
 .view-toggle {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid #1b2a3a;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .view-btn {
   background: transparent;
   border: none;
-  color: #c9e5ff;
-  padding: 1rem 1.5rem;
+  color: var(--text-primary);
+  padding: var(--space-4) var(--space-6);
   cursor: pointer;
-  transition: 0.2s;
+  transition: var(--transition-normal);
   border-bottom: 2px solid transparent;
 }
 
 .view-btn:hover {
-  color: #7dd3fc;
-  background: #08121f;
+  color: var(--accent-subtle);
+  background: var(--bg-surface);
 }
 
 .view-btn.active {
-  color: #38bdf8;
-  border-bottom-color: #38bdf8;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 </style>
