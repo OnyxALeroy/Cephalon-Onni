@@ -34,7 +34,7 @@ docker compose up --build
 ```
 
 The services include:
-- **Backend API**: FastAPI server (port 8000) ;
+- **Backend API**: FastAPI server (port 8080) ;
 - **Frontend**: Vue.js application (port 8080) ;
 - **MongoDB**: Document database (port 27017).
 
@@ -60,7 +60,7 @@ Just run the Backend container.
 docker compose up --build
 ```
 
-The backend will be available at `http://localhost:8000`.
+The backend will be available at `http://localhost:8080`.
 Once you're done, stop the containers by pressing `Ctrl+C` in the terminal and don't forget to remove them with `docker compose down`.
 
 ## DB Setup
