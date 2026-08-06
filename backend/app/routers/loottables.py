@@ -8,19 +8,17 @@ from models.loot_tables import (
     NodeNeighborsResponse,
     NodeSearchResponse,
 )
-from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dependencies import get_postgres_session
-from models.postgres.missions import Mission
-from models.postgres.drop_sources import DropSource
+from repositories.mission_repository import MissionRepository
+from repositories.drop_source_repository import DropSourceRepository
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/loottables", tags=["loottables"])
 
 
 def _parse_json(value):
-    """Parse JSON string to Python object."""
     if value is None:
         return []
     if isinstance(value, str):
@@ -37,7 +35,6 @@ async def search_nodes_by_name_or_label(
     label: str = "",
     session: AsyncSession = Depends(get_postgres_session),
 ) -> NodeSearchResponse:
-    """Search for nodes by name and/or label (type)."""
     try:
         nodes = []
         node_id_counter = 0
@@ -46,15 +43,12 @@ async def search_nodes_by_name_or_label(
             return NodeSearchResponse(nodes=[])
 
         if label:
-            if label.lower() == "missions" or label.lower() == "mission":
-                query = select(Mission)
-                if name:
-                    query = query.where(Mission.mission_name.ilike(f"%{name}%"))
-                query = query.limit(50)
-                result = await session.execute(query)
-                missions = result.scalars().all()
-                
-                for mission in missions:
+            if label.lower() in ("missions", "mission"):
+                missions = await MissionRepository.search_by_name(
+                    session, name, limit=50
+                ) if name else await MissionRepository.find_all(session)
+
+                for mission in missions[:50]:
                     drops = _parse_json(mission.drops)
                     for drop in drops:
                         nodes.append(
@@ -74,13 +68,10 @@ async def search_nodes_by_name_or_label(
                         )
                         node_id_counter += 1
             else:
-                query = select(DropSource).where(DropSource.source_type == label.lower())
-                if name:
-                    query = query.where(DropSource.name.ilike(f"%{name}%"))
-                query = query.limit(50)
-                result = await session.execute(query)
-                items = result.scalars().all()
-                
+                items = await DropSourceRepository.find_by_source_type(
+                    session, label, name, limit=50
+                )
+
                 for item in items:
                     nodes.append(
                         {
@@ -97,12 +88,10 @@ async def search_nodes_by_name_or_label(
                     )
         else:
             if name:
-                name_query = name
-                
-                query = select(DropSource).where(DropSource.name.ilike(f"%{name_query}%")).limit(25)
-                result = await session.execute(query)
-                items = result.scalars().all()
-                
+                items = await DropSourceRepository.search_by_name(
+                    session, name, limit=25
+                )
+
                 for item in items:
                     nodes.append(
                         {
@@ -118,10 +107,10 @@ async def search_nodes_by_name_or_label(
                         }
                     )
 
-                query = select(Mission).where(Mission.mission_name.ilike(f"%{name_query}%")).limit(25)
-                result = await session.execute(query)
-                missions = result.scalars().all()
-                
+                missions = await MissionRepository.search_by_name(
+                    session, name, limit=25
+                )
+
                 for mission in missions:
                     drops = _parse_json(mission.drops)
                     for drop in drops:
@@ -164,7 +153,6 @@ async def get_node_neighbors(
     name: str = "",
     session: AsyncSession = Depends(get_postgres_session),
 ):
-    """Get the direct neighbors of a node using name."""
     if not name:
         raise HTTPException(status_code=400, detail="Name must be provided")
 
@@ -173,11 +161,8 @@ async def get_node_neighbors(
         neighbors = []
         node_id = 0
 
-        result = await session.execute(
-            select(DropSource).where(DropSource.name.ilike(f"%{name}%"))
-        )
-        drop_sources = result.scalars().all()
-        
+        drop_sources = await DropSourceRepository.search_by_name(session, name, limit=50)
+
         if drop_sources:
             drop_source = drop_sources[0]
             starting_node = GraphNode(
@@ -192,31 +177,24 @@ async def get_node_neighbors(
                 },
             )
 
-            for drop_source in drop_sources:
+            for ds in drop_sources:
                 neighbors.append(
                     NodeNeighbor(
-                        id=str(drop_source.id),
-                        name=drop_source.source,
-                        type=drop_source.source_type,
+                        id=str(ds.id),
+                        name=ds.source,
+                        type=ds.source_type,
                         properties={},
                         relationship_type="DROPPED_BY",
                         relationship_properties={
-                            "chance": drop_source.chance,
-                            "rotation": drop_source.rotation,
+                            "chance": ds.chance,
+                            "rotation": ds.rotation,
                         },
                         relationship_direction="incoming",
                     )
                 )
         else:
-            result = await session.execute(
-                select(Mission).where(
-                    or_(
-                        Mission.mission_name.ilike(f"%{name}%"),
-                    )
-                )
-            )
-            missions = result.scalars().all()
-            
+            missions = await MissionRepository.search_by_name(session, name, limit=50)
+
             for mission in missions:
                 drops = mission.drops or []
                 for drop in drops:
@@ -232,7 +210,7 @@ async def get_node_neighbors(
                                     "planet": mission.planet,
                                 },
                             )
-                        
+
                         neighbors.append(
                             NodeNeighbor(
                                 id=str(node_id),
@@ -248,13 +226,8 @@ async def get_node_neighbors(
                             )
                         )
                         node_id += 1
-            
+
             if not starting_node:
-                result = await session.execute(
-                    select(Mission).where(Mission.mission_name.ilike(f"%{name}%"))
-                )
-                missions = result.scalars().all()
-                
                 for mission in missions:
                     if starting_node is None:
                         starting_node = GraphNode(
@@ -267,7 +240,7 @@ async def get_node_neighbors(
                                 "planet": mission.planet,
                             },
                         )
-                    
+
                     drops = mission.drops or []
                     for drop in drops:
                         neighbors.append(
@@ -299,7 +272,7 @@ async def get_node_neighbors(
                                     label="Item",
                                     properties={},
                                 )
-                            
+
                             neighbors.append(
                                 NodeNeighbor(
                                     id=str(mission.id),

@@ -48,9 +48,6 @@
 
         <!-- Security Tab -->
         <SecurityCenter v-if="activeTab === 'security'" />
-
-        <!-- Graph Database Tab -->
-        <GraphDatabase v-if="activeTab === 'graph'" />
       </div>
     </div>
   </div>
@@ -66,7 +63,6 @@ import SystemConfiguration from "@/components/admin/SystemConfiguration.vue";
 import ContentManagement from "@/components/admin/ContentManagement.vue";
 import AnalyticsReports from "@/components/admin/AnalyticsReports.vue";
 import SecurityCenter from "@/components/admin/SecurityCenter.vue";
-import GraphDatabase from "@/components/admin/GraphDatabase.vue";
 
 const router = useRouter();
 
@@ -92,7 +88,6 @@ const tabs: Tab[] = [
   { id: "content", name: "Content" },
   { id: "analytics", name: "Analytics" },
   { id: "security", name: "Security" },
-  { id: "graph", name: "Graph Database" },
 ];
 
 /* --- AUTH + DATA FETCH --- */

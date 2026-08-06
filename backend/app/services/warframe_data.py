@@ -1,6 +1,5 @@
-import asyncio
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 import httpx
 
@@ -8,11 +7,6 @@ from database.postgres_db import postgres_db
 from models.postgres.weapons import Weapon
 from models.postgres.warframes import Warframe
 from models.postgres.mods import Mod
-from models.postgres.missions import Mission
-from models.postgres.relics import Relic
-from models.postgres.recipes import Recipe
-from models.postgres.images import Image
-from models.postgres.drop_sources import DropSource
 
 logger = logging.getLogger(__name__)
 
@@ -263,111 +257,5 @@ async def sync_static_data() -> Dict[str, int]:
             logger.info(f"Static data sync complete: {results}")
         except Exception as e:
             logger.error(f"Static data sync failed: {e}")
-    
-    return results
-
-
-async def populate_from_mongodb(session, mongo_db) -> Dict[str, int]:
-    """Populate PostgreSQL from existing MongoDB data (for migration)."""
-    results = {"warframes": 0, "weapons": 0, "mods": 0, "missions": 0, "relics": 0, "recipes": 0}
-    
-    try:
-        warframes_collection = mongo_db["warframes"]
-        async for doc in warframes_collection.find({}):
-            warframe_dict = _warframe_from_api(doc)
-            warframe = Warframe(**warframe_dict)
-            session.add(warframe)
-            results["warframes"] += 1
-        await session.commit()
-        logger.info(f"Migrated {results['warframes']} warframes from MongoDB")
-        
-        weapons_collection = mongo_db["weapons"]
-        async for doc in weapons_collection.find({}):
-            weapon_dict = _weapon_from_api(doc)
-            weapon = Weapon(**weapon_dict)
-            session.add(weapon)
-            results["weapons"] += 1
-        await session.commit()
-        logger.info(f"Migrated {results['weapons']} weapons from MongoDB")
-        
-        mods_collection = mongo_db["mods"]
-        async for doc in mods_collection.find({}):
-            mod_dict = _mod_from_api(doc)
-            mod = Mod(**mod_dict)
-            session.add(mod)
-            results["mods"] += 1
-        await session.commit()
-        logger.info(f"Migrated {results['mods']} mods from MongoDB")
-        
-        missions_collection = mongo_db["missions"]
-        async for doc in missions_collection.find({}):
-            mission = Mission(
-                unique_name=doc.get("uniqueName", ""),
-                mission_name=doc.get("mission_name", doc.get("name", "")),
-                system_name=doc.get("systemName", ""),
-                planet=doc.get("planet", ""),
-                type=doc.get("type", ""),
-                node_type=doc.get("nodeType", 0),
-                faction_index=doc.get("factionIndex", 0),
-                mastery_req=doc.get("masteryReq", 0),
-                min_enemy_level=doc.get("minEnemyLevel", 0),
-                max_enemy_level=doc.get("maxEnemyLevel", 0),
-                mission_index=doc.get("missionIndex", 0),
-                system_index=doc.get("systemIndex", 0),
-                drops=doc.get("drops", []),
-            )
-            session.add(mission)
-            results["missions"] += 1
-        await session.commit()
-        logger.info(f"Migrated {results['missions']} missions from MongoDB")
-        
-        relics_collection = mongo_db["relics"]
-        async for doc in relics_collection.find({}):
-            relic = Relic(
-                unique_name=doc.get("uniqueName", ""),
-                name=doc.get("name", ""),
-                codex_secret=doc.get("codexSecret", False),
-                description=doc.get("description", ""),
-                relic_rewards=doc.get("relicRewards", []),
-            )
-            session.add(relic)
-            results["relics"] += 1
-        await session.commit()
-        logger.info(f"Migrated {results['relics']} relics from MongoDB")
-        
-        recipes_collection = mongo_db["recipes"]
-        async for doc in recipes_collection.find({}):
-            recipe = Recipe(
-                unique_name=doc.get("uniqueName", ""),
-                build_price=doc.get("buildPrice", 0),
-                build_time=doc.get("buildTime", 0),
-                skip_build_time_price=doc.get("skipBuildTimePrice", 0),
-                consume_on_use=doc.get("consumeOnUse", True),
-                num=doc.get("num", 1),
-                codex_secret=doc.get("codexSecret", False),
-                result_type=doc.get("resultType", ""),
-                ingredients=doc.get("ingredients", []),
-            )
-            session.add(recipe)
-            results["recipes"] += 1
-        await session.commit()
-        logger.info(f"Migrated {results['recipes']} recipes from MongoDB")
-        
-        drop_sources_collection = mongo_db["drop_sources"]
-        async for doc in drop_sources_collection.find({}):
-            drop_source = DropSource(
-                name=doc.get("name", ""),
-                source_type=doc.get("source_type", ""),
-                source=doc.get("source", ""),
-                chance=doc.get("chance", 0.0),
-                rotation=doc.get("rotation"),
-            )
-            session.add(drop_source)
-        await session.commit()
-        logger.info(f"Migrated drop sources from MongoDB")
-        
-    except Exception as e:
-        logger.error(f"Migration from MongoDB failed: {e}")
-        await session.rollback()
     
     return results
