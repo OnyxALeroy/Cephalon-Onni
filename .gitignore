@@ -362,3 +362,6 @@ __marimo__/
 
 # PyCharm
 .idea/
+
+# Cephalon Onni
+data/
