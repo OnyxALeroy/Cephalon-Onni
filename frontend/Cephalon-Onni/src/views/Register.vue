@@ -16,6 +16,7 @@
             required
             placeholder="TennoName"
             :disabled="loading"
+            class="form-input"
           />
         </div>
 
@@ -28,6 +29,7 @@
             required
             placeholder="tenno@warframe.com"
             :disabled="loading"
+            class="form-input"
           />
         </div>
 
@@ -40,6 +42,7 @@
             required
             placeholder="Create a strong password"
             :disabled="loading"
+            class="form-input"
           />
         </div>
 
@@ -52,18 +55,19 @@
             required
             placeholder="Confirm your password"
             :disabled="loading"
+            class="form-input"
           />
         </div>
 
-        <div v-if="error" class="error-message">
+        <div v-if="error" class="message message-error">
           {{ error }}
         </div>
 
-        <div v-if="success" class="success-message">
+        <div v-if="success" class="message message-success">
           {{ success }}
         </div>
 
-        <button type="submit" class="auth-button" :disabled="loading || !isFormValid">
+        <button type="submit" class="btn btn-primary btn-lg btn-block" :disabled="loading || !isFormValid">
           <span v-if="loading">Creating Account...</span>
           <span v-else>Register</span>
         </button>
@@ -148,145 +152,70 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #02050a;
-  padding: 2rem;
+  background: var(--bg-page);
+  padding: var(--space-8);
 }
 
 .auth-card {
-  background: #050b16;
-  border: 1px solid #1b2a3a;
-  border-radius: 8px;
-  padding: 2.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-10);
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 
 .auth-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-8);
 }
 
 .auth-title {
-  color: #38bdf8;
-  font-size: 1.8rem;
+  color: var(--accent);
+  font-size: var(--text-3xl);
   font-weight: bold;
   letter-spacing: 2px;
   text-transform: uppercase;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-2);
 }
 
 .auth-subtitle {
-  color: #c9e5ff;
+  color: var(--text-primary);
   opacity: 0.7;
-  font-size: 0.9rem;
+  font-size: var(--text-body);
 }
 
 .auth-form {
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-8);
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-6);
 }
 
 .form-group label {
   display: block;
-  color: #c9e5ff;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.form-group input {
-  width: 100%;
-  background: #08121f;
-  border: 1px solid #1b2a3a;
-  border-radius: 4px;
-  padding: 0.75rem;
-  color: #c9e5ff;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: #38bdf8;
-}
-
-.form-group input:disabled {
-  opacity: 0.5;
-}
-
-.error-message {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid #ef4444;
-  color: #ef4444;
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-}
-
-.success-message {
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid #22c55e;
-  color: #22c55e;
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-}
-
-.auth-button {
-  width: 100%;
-  background: #38bdf8;
-  color: #021019;
-  border: none;
-  border-radius: 4px;
-  padding: 0.875rem;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.auth-button:hover:not(:disabled) {
-  background: #0ea5e9;
-}
-
-.auth-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.auth-footer {
-  text-align: center;
-  border-top: 1px solid #1b2a3a;
-  padding-top: 1.5rem;
-}
-
-.auth-footer p {
-  color: #c9e5ff;
-  opacity: 0.7;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-body);
 }
 
 .auth-link {
-  color: #38bdf8;
+  color: var(--accent);
   text-decoration: none;
   font-weight: bold;
 }
 
 .auth-link:hover {
-  color: #0ea5e9;
+  color: var(--accent-hover);
 }
 
 .back-link {
-  color: #c9e5ff;
+  color: var(--text-primary);
   opacity: 0.6;
   text-decoration: none;
-  font-size: 0.8rem;
+  font-size: var(--text-base);
 }
 
 .back-link:hover {

@@ -256,64 +256,64 @@ onMounted(async () => {
 
 <style scoped>
 .worldstate-view h1 {
-  color: #7dd3fc;
+  color: var(--accent-subtle);
   letter-spacing: 2px;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-6);
 }
 
 .status-msg {
-  padding: 1.5rem;
+  padding: var(--space-6);
   text-align: center;
-  font-size: 1rem;
+  font-size: var(--text-normal);
   opacity: 0.7;
 }
 
 .status-msg.error {
-  color: #f87171;
+  color: var(--error-text);
   opacity: 1;
 }
 
 .meta-bar {
   display: flex;
-  gap: 2rem;
-  background: #08121f;
-  border: 1px solid #1b2a3a;
-  padding: 0.8rem 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  font-size: 0.85rem;
+  gap: var(--space-8);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  padding: 0.8rem var(--space-4);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-md);
 }
 
 .section {
-  margin-bottom: 0.5rem;
-  border: 1px solid #1b2a3a;
-  border-radius: 4px;
-  background: #08121f;
+  margin-bottom: var(--space-2);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
 }
 
 .section summary {
-  padding: 0.7rem 1rem;
+  padding: 0.7rem var(--space-4);
   cursor: pointer;
   font-weight: 600;
-  color: #7dd3fc;
+  color: var(--accent-subtle);
   user-select: none;
-  transition: 0.15s;
+  transition: var(--transition-fast);
 }
 
 .section summary:hover {
-  color: #38bdf8;
-  background: #0a1929;
+  color: var(--accent);
+  background: var(--bg-surface-hover);
 }
 
 .section pre {
   margin: 0;
-  padding: 1rem;
-  background: #050b16;
-  color: #c9e5ff;
-  font-size: 0.75rem;
+  padding: var(--space-4);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
   overflow-x: auto;
   max-height: 500px;
   overflow-y: auto;
-  border-top: 1px solid #1b2a3a;
+  border-top: 1px solid var(--border-primary);
 }
 </style>

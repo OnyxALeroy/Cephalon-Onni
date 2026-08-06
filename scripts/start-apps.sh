@@ -47,8 +47,8 @@ else
   done
 
   print_status "Service URLs:"
-  echo "  Frontend: http://localhost:8080"
-  echo "  Backend:  http://localhost:8000"
+  echo "  Frontend: http://localhost:3000"
+  echo "  Backend:  http://localhost:8080"
 
   print_success "Backend and Frontend are running${RESTART_MODE:+ (restart-mode: auto-update on code changes)}"
 fi

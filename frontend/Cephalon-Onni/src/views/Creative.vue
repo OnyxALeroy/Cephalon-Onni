@@ -40,7 +40,7 @@
         </div>
 
         <!-- Error Display -->
-        <div v-if="error" class="error-message">
+        <div v-if="error" class="message message-error">
             {{ error }}
         </div>
 
@@ -284,80 +284,80 @@ onMounted(async () => {
 .creative-mode {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 1rem;
+    padding: 0 var(--space-4);
 }
 
 .page-header {
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: var(--space-8);
 }
 
 .page-header h1 {
-    color: #a78bfa;
+    color: var(--purple);
     letter-spacing: 2px;
-    margin-bottom: 0.5rem;
-    font-size: 2.5rem;
+    margin-bottom: var(--space-2);
+    font-size: var(--text-4xl);
 }
 
 .subtitle {
     opacity: 0.7;
-    margin-bottom: 2rem;
-    font-size: 1.1rem;
+    margin-bottom: var(--space-8);
+    font-size: var(--text-lg);
 }
 
 .unsaved-build-indicator {
     position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    background: #050b16;
-    border: 2px solid #f59e0b;
-    border-radius: 8px;
-    padding: 1rem;
+    bottom: var(--space-8);
+    right: var(--space-8);
+    background: var(--bg-card);
+    border: 2px solid var(--warning);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
     max-width: 400px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-sm);
     z-index: 1000;
 }
 
 .unsaved-content p {
-    color: #f59e0b;
-    margin: 0 0 1rem 0;
-    font-size: 0.9rem;
+    color: var(--warning);
+    margin: 0 0 var(--space-4) 0;
+    font-size: var(--text-body);
 }
 
 .unsaved-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-2);
     flex-wrap: wrap;
 }
 
 .btn-continue,
 .btn-save,
 .btn-discard {
-    padding: 0.5rem 1rem;
+    padding: var(--space-2) var(--space-4);
     border: none;
-    border-radius: 4px;
-    font-size: 0.8rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-base);
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--transition-normal);
 }
 
 .btn-continue {
-    background: #38bdf8;
-    color: #021019;
+    background: var(--accent);
+    color: var(--text-on-accent);
 }
 
 .btn-continue:hover:not(:disabled) {
-    background: #0ea5e9;
+    background: var(--accent-hover);
 }
 
 .btn-save {
-    background: #22c55e;
-    color: #021019;
+    background: var(--success);
+    color: var(--text-on-accent);
 }
 
 .btn-save:hover:not(:disabled) {
-    background: #16a34a;
+    background: var(--success-hover);
 }
 
 .btn-save:disabled {
@@ -366,19 +366,19 @@ onMounted(async () => {
 }
 
 .btn-discard {
-    background: #374151;
-    color: #e5e7eb;
+    background: var(--gray-btn);
+    color: var(--text-gray-light);
 }
 
 .btn-discard:hover {
-    background: #4b5563;
+    background: var(--gray-btn-hover);
 }
 
 @media (max-width: 768px) {
     .unsaved-build-indicator {
-        bottom: 1rem;
-        right: 1rem;
-        left: 1rem;
+        bottom: var(--space-4);
+        right: var(--space-4);
+        left: var(--space-4);
         max-width: none;
     }
 
@@ -394,56 +394,7 @@ onMounted(async () => {
     }
 
     .page-header h1 {
-        font-size: 2rem;
+        font-size: var(--text-3xl);
     }
 }
-
-.error-message {
-    background: #dc2626;
-    color: white;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    text-align: center;
-}
-
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(5, 11, 22, 0.8);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-}
-
-.loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #374151;
-    border-top: 4px solid #a78bfa;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 1rem;
-}
-
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-.loading-overlay p {
-    color: white;
-    font-size: 1.1rem;
-}
-
-
 </style>
