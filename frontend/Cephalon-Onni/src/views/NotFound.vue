@@ -1,27 +1,21 @@
 <template>
-    <div class="not-found">
+    <div class="not-found scanlines">
+        <div class="error-code glow-accent">404</div>
+
         <div class="glitch-container">
             <div class="glitch-image-wrapper">
                 <img :src="imageSrc" class="glitch-base" alt="404" />
                 <img :src="imageSrc" class="glitch ghost ghost-right" alt="" />
-                <img
-                    :src="imageSrc"
-                    class="glitch ghost ghost-top-right"
-                    alt=""
-                />
+                <img :src="imageSrc" class="glitch ghost ghost-top-right" alt="" />
                 <img :src="imageSrc" class="glitch ghost ghost-left" alt="" />
-            </div>
-
-            <div class="overlay">
-                <h1 class="title glitch-text" data-text="404 Error">
-                    404 Error
-                </h1>
             </div>
         </div>
 
-        <p class="subtitle">
-            {{ subtitle }}
-        </p>
+        <p class="subtitle">{{ subtitle }}</p>
+
+        <div class="system-info">
+            <span class="mono">CEPHALON_ONNI://signal_lost</span>
+        </div>
     </div>
 </template>
 
@@ -43,9 +37,18 @@ withDefaults(defineProps<Props>(), {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background: #0b0b0b;
-    color: white;
+    background: var(--bg-page);
+    color: var(--text-primary);
     overflow: hidden;
+    position: relative;
+}
+
+.error-code {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    letter-spacing: 8px;
+    margin-bottom: 1rem;
+    font-weight: 500;
 }
 
 .glitch-container {
@@ -64,44 +67,20 @@ withDefaults(defineProps<Props>(), {
     pointer-events: none;
 }
 
-.title {
-    font-size: 3rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    position: relative;
-    color: #707070;
-    text-shadow:
-        0 0 2px #fff,
-        0 0 5px #fff,
-        0 0 10px #fff,
-        0 0 15px #fff;
-}
-
-.glitch-text::before,
-.glitch-text::after {
-    content: attr(data-text);
-    position: absolute;
-    inset: 0;
-}
-
-.glitch-text::before {
-    color: #ff0055;
-    transform: translate(2px, 0);
-    animation: glitch-text 1.5s infinite;
-}
-
-.glitch-text::after {
-    color: #00eaff;
-    transform: translate(-2px, 0);
-    animation: glitch-text 1.5s infinite reverse;
-}
-
 .subtitle {
     margin-top: 1.5rem;
     font-size: 1.1rem;
     opacity: 0.8;
     text-align: center;
     max-width: 400px;
+    color: var(--text-body);
+}
+
+.system-info {
+    margin-top: 2rem;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    letter-spacing: 2px;
 }
 
 .glitch-image-wrapper {
@@ -133,18 +112,19 @@ withDefaults(defineProps<Props>(), {
     mix-blend-mode: screen;
     pointer-events: none;
 }
+
 .ghost-right {
-    filter: drop-shadow(4px 2px cyan);
+    filter: drop-shadow(4px 2px var(--accent));
     animation: glitch-right 2.6s infinite steps(1);
 }
 
 .ghost-top-right {
-    filter: drop-shadow(3px -3px magenta);
+    filter: drop-shadow(3px -3px var(--accent-warm));
     animation: glitch-top-right 3.1s infinite steps(1);
 }
 
 .ghost-left {
-    filter: drop-shadow(-4px 0 red);
+    filter: drop-shadow(-4px 0 var(--accent-hover));
     animation: glitch-left 2.3s infinite steps(1);
 }
 

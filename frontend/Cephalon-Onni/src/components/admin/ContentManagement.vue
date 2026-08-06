@@ -19,19 +19,19 @@
 
 <style scoped>
 .tab-panel h2 {
-  color: #7dd3fc;
-  margin-bottom: 1rem;
+  color: var(--accent-subtle);
+  margin-bottom: var(--space-4);
 }
 
 .admin-placeholder {
-  background: #08121f;
-  border: 1px solid #1b2a3a;
-  padding: 2rem;
-  border-radius: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  padding: var(--space-8);
+  border-radius: var(--radius-sm);
 }
 
 .admin-placeholder p {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
   opacity: 0.8;
 }
 
@@ -41,13 +41,13 @@
 }
 
 .admin-placeholder li {
-  padding: 0.5rem 0;
+  padding: var(--space-2) 0;
   opacity: 0.7;
 }
 
 .admin-placeholder li::before {
   content: "▸ ";
-  color: #38bdf8;
-  margin-right: 0.5rem;
+  color: var(--accent);
+  margin-right: var(--space-2);
 }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div class="build-details">
     <div class="details-header">
-      <button @click="$emit('back')" class="btn-back">
+      <button @click="$emit('back')" class="btn btn-secondary btn-sm">
         ← Back to Builds
       </button>
       
@@ -213,161 +213,138 @@ const handleDelete = async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-8);
   flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.btn-back {
-  background: #374151;
-  color: #e5e7eb;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
-}
-
-.btn-back:hover {
-  background: #4b5563;
+  gap: var(--space-4);
 }
 
 .header-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .btn-edit,
 .btn-delete {
   background: none;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
+  font-size: var(--text-body);
+  transition: background-color var(--transition-normal);
 }
 
 .btn-edit {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
+  background: var(--success-subtle);
+  color: var(--success);
 }
 
 .btn-edit:hover {
-  background: rgba(34, 197, 94, 0.2);
+  background: var(--success-subtle);
+  filter: brightness(1.4);
 }
 
 .btn-delete {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  background: var(--danger-subtle);
+  color: var(--danger);
 }
 
 .btn-delete:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: var(--danger-subtle);
+  filter: brightness(1.4);
 }
 
 .build-overview {
-  background: #050b16;
-  border: 1px solid #1b2a3a;
-  border-radius: 8px;
-  padding: 2rem;
-  margin-bottom: 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  margin-bottom: var(--space-8);
 }
 
 .build-title h2 {
-  color: #e2e8f0;
-  margin: 0 0 1rem 0;
-  font-size: 2rem;
+  color: var(--text-heading);
+  margin: 0 0 var(--space-4) 0;
+  font-size: var(--text-3xl);
 }
 
 .build-meta {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
-
-.badge-local {
-  background: #f59e0b;
-  color: #021019;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  width: fit-content;
+  gap: var(--space-2);
 }
 
 .build-dates {
-  color: #64748b;
-  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-size: var(--text-md);
 }
 
 .warframe-details {
-  background: #050b16;
-  border: 1px solid #1b2a3a;
-  border-radius: 8px;
-  padding: 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
 }
 
 .warframe-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .warframe-header h3 {
-  color: #38bdf8;
+  color: var(--accent);
   margin: 0;
-  font-size: 1.5rem;
+  font-size: var(--text-2xl);
 }
 
 .mastery-req {
-  background: #38bdf8;
-  color: #021019;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  font-size: 0.9rem;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-body);
   font-weight: 500;
 }
 
 .warframe-description {
-  color: #cbd5e1;
+  color: var(--text-body);
   line-height: 1.6;
-  margin-bottom: 2rem;
-  font-size: 1rem;
+  margin-bottom: var(--space-8);
+  font-size: var(--text-normal);
 }
 
 .warframe-stats {
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-8);
 }
 
 .warframe-stats h4 {
-  color: #e2e8f0;
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
+  color: var(--text-heading);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-xl);
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .stat-card {
-  background: #08121f;
-  border: 1px solid #1b2a3a;
-  border-radius: 6px;
-  padding: 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .stat-icon {
-  font-size: 1.5rem;
+  font-size: var(--text-2xl);
 }
 
 .stat-info {
@@ -376,149 +353,149 @@ const handleDelete = async () => {
 }
 
 .stat-label {
-  font-size: 0.8rem;
-  color: #64748b;
+  font-size: var(--text-base);
+  color: var(--text-muted);
 }
 
 .stat-value {
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   font-weight: bold;
-  color: #e2e8f0;
+  color: var(--text-heading);
 }
 
 .passive-ability {
-  background: #08121f;
-  border: 1px solid #1b2a3a;
-  border-radius: 6px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
 .passive-ability h4 {
-  color: #38bdf8;
-  margin: 0 0 1rem 0;
-  font-size: 1.1rem;
+  color: var(--accent);
+  margin: 0 0 var(--space-4) 0;
+  font-size: var(--text-lg);
 }
 
 .passive-content p {
-  color: #cbd5e1;
+  color: var(--text-body);
   margin: 0;
   line-height: 1.5;
 }
 
 .abilities-section {
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-8);
 }
 
 .abilities-section h4 {
-  color: #e2e8f0;
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
+  color: var(--text-heading);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-xl);
 }
 
 .abilities-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .ability-card {
-  background: #08121f;
-  border: 1px solid #1b2a3a;
-  border-radius: 6px;
-  padding: 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
 }
 
 .ability-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .ability-header h5 {
-  color: #38bdf8;
+  color: var(--accent);
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
 }
 
 .ability-number {
-  background: #38bdf8;
-  color: #021019;
+  background: var(--accent);
+  color: var(--text-on-accent);
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: var(--text-base);
   font-weight: bold;
 }
 
 .ability-description {
-  color: #cbd5e1;
+  color: var(--text-body);
   line-height: 1.5;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
 }
 
 .ability-code {
   font-family: monospace;
-  font-size: 0.75rem;
-  color: #64748b;
-  background: #0f172a;
-  padding: 0.5rem;
-  border-radius: 4px;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
   word-break: break-all;
 }
 
 .exalted-section {
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-8);
 }
 
 .exalted-section h4 {
-  color: #e2e8f0;
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
+  color: var(--text-heading);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-xl);
 }
 
 .exalted-list {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .exalted-item {
-  background: #08121f;
-  border: 1px solid #1b2a3a;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  color: #38bdf8;
-  font-size: 0.9rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: var(--text-body);
 }
 
 .technical-details {
-  background: #08121f;
-  border: 1px solid #1b2a3a;
-  border-radius: 6px;
-  padding: 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
 }
 
 .technical-details h4 {
-  color: #e2e8f0;
-  margin: 0 0 1rem 0;
-  font-size: 1.1rem;
+  color: var(--text-heading);
+  margin: 0 0 var(--space-4) 0;
+  font-size: var(--text-lg);
 }
 
 .tech-grid {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .tech-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #1b2a3a;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .tech-item:last-child {
@@ -526,32 +503,32 @@ const handleDelete = async () => {
 }
 
 .tech-label {
-  color: #64748b;
-  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-size: var(--text-body);
 }
 
 .tech-value {
-  color: #cbd5e1;
-  font-size: 0.9rem;
+  color: var(--text-body);
+  font-size: var(--text-body);
   font-family: monospace;
 }
 
 .no-warframe-data {
-  background: #050b16;
-  border: 1px solid #1b2a3a;
-  border-radius: 8px;
-  padding: 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
   text-align: center;
 }
 
 .warning-content h4 {
-  color: #f59e0b;
-  margin-bottom: 1rem;
+  color: var(--warning);
+  margin-bottom: var(--space-4);
 }
 
 .warning-content p {
-  color: #cbd5e1;
-  margin-bottom: 0.5rem;
+  color: var(--text-body);
+  margin-bottom: var(--space-2);
   line-height: 1.5;
 }
 
@@ -572,7 +549,7 @@ const handleDelete = async () => {
   
   .build-overview,
   .warframe-details {
-    padding: 1.5rem;
+    padding: var(--space-6);
   }
 }
 </style>
