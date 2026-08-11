@@ -1,4 +1,4 @@
-.PHONY: up down restart logs logs-backend logs-frontend logs-mongo logs-redis shell-backend shell-mongo shell-redis clean clean-volumes health setup
+.PHONY: up down restart logs logs-backend logs-frontend logs-postgres logs-redis shell-backend shell-postgres shell-redis clean clean-volumes health setup
 
 up:
 	@./scripts/start-everything.sh
@@ -18,17 +18,17 @@ logs-backend:
 logs-frontend:
 	@docker compose logs -f frontend
 
-logs-mongo:
-	@docker compose logs -f mongodb
+logs-postgres:
+	@docker compose logs -f postgres
 
 logs-redis:
 	@docker compose logs -f redis
 
 shell-backend:
-	@docker exec -it cephalon-onni-backend /bin/bash
+	@docker exec -it cephalon-onni-backend /bin/sh
 
-shell-mongo:
-	@docker exec -it cephalon-onni-mongo mongosh -u admin -p $$MONGO_ROOT_PASSWORD
+shell-postgres:
+	@docker exec -it cephalon-onni-postgres psql -U postgres -d cephalon_onni
 
 shell-redis:
 	@docker exec -it cephalon-onni-redis redis-cli

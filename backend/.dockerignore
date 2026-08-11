@@ -1,9 +1,3 @@
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.env
-.venv
-venv/
-.git
-.gitignore
+target/
+.git/
+*.md

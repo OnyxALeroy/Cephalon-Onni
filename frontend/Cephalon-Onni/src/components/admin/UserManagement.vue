@@ -128,7 +128,8 @@ const fetchUsers = async () => {
             credentials: "include",
         });
         if (!response.ok) {
-            throw new Error("Failed to fetch users");
+            const data = await response.json().catch(() => null);
+            throw new Error((data && data.detail) || "Failed to fetch users");
         }
         users.value = await response.json();
     } catch (err) {
@@ -153,7 +154,8 @@ const updateUserRole = async (user: User) => {
         );
 
         if (!response.ok) {
-            throw new Error("Failed to update user role");
+            const data = await response.json().catch(() => null);
+            throw new Error((data && data.detail) || "Failed to update user role");
         }
     } catch (err) {
         error.value =
@@ -187,7 +189,8 @@ const deleteUser = async () => {
         );
 
         if (!response.ok) {
-            throw new Error("Failed to delete user");
+            const data = await response.json().catch(() => null);
+            throw new Error((data && data.detail) || "Failed to delete user");
         }
 
         // Remove user from local data

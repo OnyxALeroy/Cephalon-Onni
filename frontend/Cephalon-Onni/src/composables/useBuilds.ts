@@ -1,5 +1,13 @@
 import { ref, computed, watch } from "vue";
 
+// The backend returns a single {"detail": "..."} error envelope on every non-2xx response
+// (see backend-rework-plan.md Phase 3) - read it consistently everywhere instead of only on
+// the build-CRUD calls that happened to already do this.
+async function parseErrorDetail(response: Response, fallback: string): Promise<string> {
+  const data = await response.json().catch(() => null);
+  return (data && data.detail) || fallback;
+}
+
 // API Response Interfaces (matching backend Pydantic models)
 export interface WarframeAbility {
   abilityUniqueName: string;
@@ -280,7 +288,7 @@ export function useBuilds() {
         console.log("Fetch builds response status:", response.status);
 
         if (!response.ok) {
-          throw new Error("Failed to fetch builds");
+          throw new Error(await parseErrorDetail(response, "Failed to fetch builds"));
         }
 
         builds.value = await response.json();
@@ -327,8 +335,7 @@ export function useBuilds() {
         console.log("Create build response status:", response.status);
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || "Failed to create build");
+          throw new Error(await parseErrorDetail(response, "Failed to create build"));
         }
 
         const newBuild = await response.json();
@@ -374,8 +381,7 @@ export function useBuilds() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || "Failed to update build");
+          throw new Error(await parseErrorDetail(response, "Failed to update build"));
         }
 
         const updatedBuild = await response.json();
@@ -432,11 +438,7 @@ export function useBuilds() {
       });
 
       if (!response.ok) {
-        // Try to get a meaningful error from the backend
-        const errorData = await response
-          .json()
-          .catch(() => ({ detail: "Failed to delete build from server" }));
-        throw new Error(errorData.detail);
+        throw new Error(await parseErrorDetail(response, "Failed to delete build from server"));
       }
 
       // If deletion was successful, refetch the builds list from the server
@@ -585,7 +587,7 @@ export function useBuilds() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch warframes");
+        throw new Error(await parseErrorDetail(response, "Failed to fetch warframes"));
       }
 
       const warframes = await response.json();
@@ -624,7 +626,7 @@ export function useBuilds() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch available warframes");
+        throw new Error(await parseErrorDetail(response, "Failed to fetch available warframes"));
       }
 
       return await response.json();
@@ -642,7 +644,7 @@ export function useBuilds() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch available weapons");
+        throw new Error(await parseErrorDetail(response, "Failed to fetch available weapons"));
       }
 
       return await response.json();
@@ -660,7 +662,7 @@ export function useBuilds() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch available mods");
+        throw new Error(await parseErrorDetail(response, "Failed to fetch available mods"));
       }
 
       return await response.json();
@@ -678,7 +680,7 @@ export function useBuilds() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch available arcanes");
+        throw new Error(await parseErrorDetail(response, "Failed to fetch available arcanes"));
       }
 
       return await response.json();

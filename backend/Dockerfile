@@ -1,60 +1,30 @@
 # ==========================================
-# Stage 1: Builder
+# Stage 1: Build (Maven + JDK 21)
 # ==========================================
-FROM python:3.11-slim AS builder
-
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+FROM maven:3.9-eclipse-temurin-21 AS builder
 
 WORKDIR /build
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libssl-dev \
-    libffi-dev \
-    python3-dev \
-    libselinux1-dev \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+# Cache dependencies separately from source so a source-only change doesn't refetch the world.
+COPY pom.xml .
+RUN mvn -B -q dependency:go-offline
 
-# Create a virtual environment to cleanly isolate packages
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Install dependencies into the virtual environment
-COPY requirements.txt .
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+COPY src ./src
+RUN mvn -B -q package -DskipTests
 
 # ==========================================
-# Stage 2: Runner (Final Image)
+# Stage 2: Runtime (JRE only)
 # ==========================================
-FROM python:3.11-slim
+FROM eclipse-temurin:21-jre-alpine
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-# Make sure we use the virtual environment's Python
-ENV PATH="/opt/venv/bin:$PATH"
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
+COPY --from=builder /build/target/cephalon-onni-backend-*.jar app.jar
+RUN chown appuser:appgroup app.jar
 
-# Create a non-root user for security
-RUN groupadd -r appgroup && useradd -r -g appgroup appuser
-
-# Create log directory with correct ownership
-RUN mkdir -p /app/logs && chown -R appuser:appgroup /app
-
-# Install only runtime dependencies (if any are strictly required by your packages, e.g., libpq for postgres)
-# RUN apt-get update && apt-get install -y --no-install-recommends <runtime-deps> && rm -rf /var/lib/apt/lists/*
-
-# Copy ONLY the fully built virtual environment from the builder stage
-COPY --from=builder /opt/venv /opt/venv
-
-# Copy the application code and assign ownership to the non-root user
-COPY --chown=appuser:appgroup app/ ./app
-
-# Switch to the non-root user
 USER appuser
 
-CMD ["python", "app/main.py"]
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

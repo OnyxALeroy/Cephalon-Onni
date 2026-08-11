@@ -4,19 +4,19 @@ This file aims at explaining how to setup the environment to allow easy and flui
 
 **Prerequisites:**
 - Docker
-- Python
+- Java 21 + Maven (for backend development outside Docker)
 - NPM
 
 ## Environment description
 
 The whole application uses four different Docker containers:
 - `cephalon-onni-redis`:
-- `cephalon-onni-mongo`: 
-- `cephalon-onni-frontend`: 
+- `cephalon-onni-postgres`:
+- `cephalon-onni-frontend`:
 - `cephalon-onni-backend`:
 
 To launch them to explore the application, you can use the following Bash scripts:
-- `scripts/start-standalones.sh`: which launches the Redis and MongoDB containers ;
+- `scripts/start-standalones.sh`: which launches the Redis and PostgreSQL containers ;
 - `scripts/start-apps.sh`: which launches the Frontend and Backend containers, performing quick health checks on both ;
 - `scripts/start-everything.sh`: which runs the two previous scripts, launching the standalones containers then the Frontend and Backend.
 
@@ -34,9 +34,10 @@ docker compose up --build
 ```
 
 The services include:
-- **Backend API**: FastAPI server (port 8080) ;
-- **Frontend**: Vue.js application (port 8080) ;
-- **MongoDB**: Document database (port 27017).
+- **Backend API**: Spring Boot server (port 8080) ;
+- **Frontend**: Vue.js application (port 3000, proxying `/api/*` to the backend) ;
+- **PostgreSQL**: relational database (port 5432) ;
+- **Redis**: worldstate cache (port 6379).
 
 ### Frontend
 
@@ -65,18 +66,19 @@ Once you're done, stop the containers by pressing `Ctrl+C` in the terminal and d
 
 ## DB Setup
 
-The project uses one MongoDB database. It stores both static (loot tables, missions, Mod data, etc.) and dynamic (user-based) data, so you might want to initialize it with correct values. Using the script to do so directly on your PC won't work however, due to potential mismatches between authentifications to the DB so run:
+The project uses one PostgreSQL database for everything (static catalog data - warframes,
+weapons, mods, etc. - and dynamic user data: accounts, builds, inventory). Schema is managed by
+Flyway migrations under `backend/src/main/resources/db/migration/`, applied automatically on
+backend startup.
+
+**Static catalog seeding is not yet ported to Java** - the JSON-file-based seeder
+(`app/database/static/db_init/`) still only exists in `backend-python-legacy/`. See the comment
+at the top of `scripts/setup-static-db.sh` for how to run it against a fresh Postgres in the
+meantime; run that script to verify catalog tables are populated:
 
 ```
-docker exec -it cephalon-onni-backend python app/db_init_script.py -y
+./scripts/setup-static-db.sh
 ```
-
-**Note:** eventually remove the parameter `-y` if you want to manually handle the setup.
-
-For each run of this script, a logging file is created inside the Docker container, in `var/log/db_init` :
-- to list all logs: `docker exec cephalon-onni-backend ls /app/logs/db_init/` ;
-- to access it: `docker exec cephalon-onni-backend ls /app/logs/db_init/db_init_<time>.log` ;
-- to copy all logs to your local machine: `docker cp cephalon-onni-backend:/app/logs/db_init/* ./db_init_logs/`.
 
 ## Quick Commands (Makefile)
 
@@ -96,26 +98,26 @@ make setup          # Copy .env.example to .env if missing
 make logs            # Tail all logs
 make logs-backend    # Tail backend logs only
 make logs-frontend   # Tail frontend logs only
-make logs-mongo      # Tail MongoDB logs only
+make logs-postgres   # Tail PostgreSQL logs only
 make logs-redis      # Tail Redis logs only
 ```
 
 Or use the script directly:
 ```bash
-./scripts/logs.sh [backend|frontend|mongo|redis|all]
+./scripts/logs.sh [backend|frontend|postgres|redis|all]
 ```
 
 ### Shell Access
 
 ```bash
-make shell-backend   # Bash shell in backend container
-make shell-mongo     # MongoDB shell (mongosh)
-make shell-redis     # Redis CLI
+make shell-backend    # Shell in backend container
+make shell-postgres   # PostgreSQL shell (psql)
+make shell-redis      # Redis CLI
 ```
 
 Or use the script directly:
 ```bash
-./scripts/shell.sh [backend|mongo|redis]
+./scripts/shell.sh [backend|postgres|redis]
 ```
 
 ### Cleanup

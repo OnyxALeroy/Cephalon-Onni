@@ -7,19 +7,15 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - mongodb
-      - redis
-      - postgres
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - .env
-    volumes:
-      - ./data:/app/data:z
-    command: ["python", "-u", "app/main.py"]
-    tty: true
-    stdin_open: true
     develop:
       watch:
-        - path: ./backend/app
+        - path: ./backend/src
           action: rebuild
 
   postgres:
@@ -66,19 +62,11 @@ services:
     volumes:
       - redisdata:/data
 
-  mongodb:
-    image: mongo:7
-    container_name: cephalon-onni-mongo
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-    volumes:
-      - mongodata:/data/db
+# MongoDB is intentionally gone (backend-rework-plan.md: "MongoDB is removed"). If you still need
+# to run the one-time DataMigrationRunner against old data, point MONGO_URL (in .env) at whatever
+# Mongo instance still has it - e.g. keep the old backend-python-legacy stack up in parallel for
+# the duration of the cutover - rather than reintroducing a permanent mongodb service here.
 
 volumes:
-  mongodata:
   redisdata:
   postgresdata:
