@@ -1,0 +1,58 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: cephalon-onni-backend
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cephalon_onni}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  jackson:
+    default-property-inclusion: non_null
+
+# One-time Mongo -> Postgres migration source (see migration.DataMigrationRunner).
+# Only read when app.migration.enabled=true; not used by normal request handling.
+mongo:
+  url: ${MONGO_URL:mongodb://localhost:27017}
+  database: ${MONGO_DB:cephalon_onni}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+    expiration-minutes: 60
+  migration:
+    enabled: ${RUN_MONGO_MIGRATION:false}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  worldstate:
+    url: https://api.warframe.com/cdn/worldState.php
+    poll-interval-seconds: 60
+
+logging:
+  level:
+    com.cephalononni: INFO

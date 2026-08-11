@@ -140,8 +140,10 @@ async function performSearch() {
             credentials: "include",
         });
 
-        if (!response.ok)
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            const data = await response.json().catch(() => null);
+            throw new Error((data && data.detail) || `HTTP error! status: ${response.status}`);
+        }
 
         const data: NodeSearchResponse = await response.json();
         searchResults.value = data.nodes || [];
@@ -173,8 +175,10 @@ async function loadSources(name: string) {
             credentials: "include",
         });
 
-        if (!response.ok)
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            const data = await response.json().catch(() => null);
+            throw new Error((data && data.detail) || `HTTP error! status: ${response.status}`);
+        }
 
         const data: NodeNeighborsResponse = await response.json();
 

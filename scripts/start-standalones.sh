@@ -5,15 +5,13 @@ source "$(dirname "$0")/docker-common.sh"
 print_status "Starting standalone services only..."
 cd "$PROJECT_ROOT"
 
-compose down mongodb 2>/dev/null || true
 compose down redis 2>/dev/null || true
 compose down postgres 2>/dev/null || true
 
-compose up -d mongodb redis postgres
+compose up -d redis postgres
 sleep 8
 
 services=(
-  "MongoDB:cephalon-onni-mongo"
   "Redis:cephalon-onni-redis"
   "PostgreSQL:cephalon-onni-postgres"
 )

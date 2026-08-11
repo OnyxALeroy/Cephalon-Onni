@@ -39,7 +39,8 @@ export function useAuth() {
                 await fetchUser();
                 return await response.json();
             } else {
-                throw new Error("Login failed");
+                const errorData = await response.json().catch(() => ({ detail: "Login failed" }));
+                throw new Error(errorData.detail || "Login failed");
             }
         } catch (error) {
             await fetchUser();
@@ -60,7 +61,8 @@ export function useAuth() {
                 await fetchUser();
                 return await response.json();
             } else {
-                throw new Error("Registration failed");
+                const errorData = await response.json().catch(() => ({ detail: "Registration failed" }));
+                throw new Error(errorData.detail || "Registration failed");
             }
         } catch (error) {
             await fetchUser();

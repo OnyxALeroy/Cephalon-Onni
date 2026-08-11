@@ -81,16 +81,27 @@ onMounted(async () => {
 });
 
 async function fetchUser() {
-  const res = await fetch("/api/auth/me", { credentials: "include" });
-
-  if (res.ok) {
-    user.value = await res.json();
+  try {
+    const res = await fetch("/api/auth/me", { credentials: "include" });
+    if (res.ok) {
+      user.value = await res.json();
+    }
+  } catch (err) {
+    console.error("Failed to fetch current user:", err);
   }
 }
 
 async function fetchInventory() {
-  const res = await fetch("/api/inventory", { credentials: "include" });
-  inventory.value = await res.json();
+  try {
+    const res = await fetch("/api/inventory", { credentials: "include" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error((data && data.detail) || "Failed to fetch inventory");
+    }
+    inventory.value = await res.json();
+  } catch (err) {
+    console.error("Failed to fetch inventory:", err);
+  }
 }
 
 /* --- FILTERING --- */

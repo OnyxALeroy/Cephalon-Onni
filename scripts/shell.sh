@@ -7,9 +7,8 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/docker-common.sh"
 
 usage() {
-    echo "Usage: $0 [backend|mongo|postgres|redis]"
+    echo "Usage: $0 [backend|postgres|redis]"
     echo "  backend  - Shell into backend container"
-    echo "  mongo    - MongoDB shell (mongosh)"
     echo "  postgres - PostgreSQL CLI (psql)"
     echo "  redis    - Redis CLI"
     exit 1
@@ -20,11 +19,7 @@ CONTAINER="${1:-}"
 case "$CONTAINER" in
     backend)
         print_status "Opening shell in backend container..."
-        docker exec -it cephalon-onni-backend /bin/bash
-        ;;
-    mongo|mongodb)
-        print_status "Opening MongoDB shell..."
-        docker exec -it cephalon-onni-mongo mongosh -u admin -p "$MONGO_ROOT_PASSWORD"
+        docker exec -it cephalon-onni-backend /bin/sh
         ;;
     postgres|pg)
         print_status "Opening PostgreSQL shell..."

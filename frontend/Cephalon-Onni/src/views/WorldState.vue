@@ -243,7 +243,8 @@ onMounted(async () => {
   try {
     const response = await fetch('/api/worldstate')
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      const data = await response.json().catch(() => null)
+      throw new Error((data && data.detail) || `HTTP ${response.status}: ${response.statusText}`)
     }
     worldstate.value = await response.json()
   } catch (e) {

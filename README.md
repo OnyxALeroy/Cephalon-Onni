@@ -17,10 +17,10 @@ The main selling point of the Cephalon Onni are the Warframe profile getter, all
 
 ### Backend
 
-* FastAPI
-* MongoDB
-* Redis
-* OAuth-based authentication system
+* Spring Boot (Java 21)
+* PostgreSQL (Hibernate/JPA + Flyway)
+* Redis (worldstate cache)
+* JWT-based (cookie) authentication
 * REST API
 
 ---

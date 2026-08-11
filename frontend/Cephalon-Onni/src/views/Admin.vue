@@ -97,10 +97,13 @@ onMounted(async () => {
 });
 
 async function fetchUser() {
-  const res = await fetch("/api/auth/me", { credentials: "include" });
-
-  if (res.ok) {
-    user.value = await res.json();
+  try {
+    const res = await fetch("/api/auth/me", { credentials: "include" });
+    if (res.ok) {
+      user.value = await res.json();
+    }
+  } catch (err) {
+    console.error("Failed to fetch current user:", err);
   }
 }
 
