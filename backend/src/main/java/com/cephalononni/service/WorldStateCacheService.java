@@ -1,18 +1,23 @@
 package com.cephalononni.service;
 
-import com.cephalononni.model.WorldstateCache;
-import com.cephalononni.repository.WorldstateCacheRepository;
-import com.cephalononni.web.dto.WorldstateDtos.WorldState;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.util.Optional;
+import com.cephalononni.model.WorldstateCache;
+import com.cephalononni.repository.WorldstateCacheRepository;
+import com.cephalononni.web.dto.WorldstateDtos.WorldState;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Redis-first, Postgres-fallback cache for the worldstate poller - mirrors the old backend's
@@ -27,6 +32,7 @@ public class WorldStateCacheService {
     private static final String DATA_KEY = "worldstate:data";
     private static final String ETAG_KEY = "worldstate:etag";
     private static final String FETCHED_AT_KEY = "worldstate:fetched_at";
+    @NonNull
     private static final Long CACHE_ROW_ID = 1L;
 
     private final StringRedisTemplate redisTemplate;
@@ -43,13 +49,19 @@ public class WorldStateCacheService {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Returns the cached worldstate, preferring Redis and falling back to the DB row if Redis
+     * is empty or unreachable. Empty only if neither has ever been populated.
+     */
     public Optional<WorldState> get() {
         try {
             String json = redisTemplate.opsForValue().get(DATA_KEY);
             if (json != null) {
                 return Optional.of(parser.parse(objectMapper.readTree(json)));
             }
-        } catch (Exception e) {
+        } catch (JsonProcessingException | DataAccessException e) {
+            // DataAccessException covers a Redis connection failure; JsonProcessingException
+            // covers a corrupt cached payload. Either way, fall back to the DB.
             log.warn("Redis read for worldstate failed, falling back to DB: {}", e.getMessage());
         }
 
@@ -62,11 +74,12 @@ public class WorldStateCacheService {
         return Optional.of(parser.parse(cache.getPayload()));
     }
 
+    /** Writes the freshly-fetched payload to both Redis (best-effort) and the DB row of record. */
     @Transactional
     public void update(JsonNode rawPayload, String etag) {
         writeRedis(rawPayload, etag);
 
-        WorldstateCache cache = worldstateCacheRepository.findById(CACHE_ROW_ID).orElseGet(WorldstateCache::new);
+        WorldstateCache cache = loadOrCreateCache();
         cache.setId(CACHE_ROW_ID);
         cache.setPayload(rawPayload);
         cache.setEtag(etag);
@@ -74,25 +87,48 @@ public class WorldStateCacheService {
         worldstateCacheRepository.save(cache);
     }
 
+    /** Best-effort mirror of a freshly-fetched payload into Redis; a failure here never propagates. */
     private void writeRedis(JsonNode rawPayload, String etag) {
         try {
-            redisTemplate.opsForValue().set(DATA_KEY, objectMapper.writeValueAsString(rawPayload));
+            redisTemplate.opsForValue().set(DATA_KEY, toJson(rawPayload));
             if (etag != null && !etag.isBlank()) {
                 redisTemplate.opsForValue().set(ETAG_KEY, etag);
             }
-            redisTemplate.opsForValue().set(FETCHED_AT_KEY, Instant.now().toString());
-        } catch (Exception e) {
+            redisTemplate.opsForValue().set(FETCHED_AT_KEY, instantToString(Instant.now()));
+        } catch (JsonProcessingException | DataAccessException e) {
             log.warn("Redis write for worldstate failed (continuing on DB only): {}", e.getMessage());
         }
     }
 
+    /** Re-populates Redis from the DB row after a cache miss, so the next read hits Redis again. */
     private void backfillRedis(WorldstateCache cache) {
         try {
-            redisTemplate.opsForValue().set(DATA_KEY, objectMapper.writeValueAsString(cache.getPayload()));
-            redisTemplate.opsForValue().set(ETAG_KEY, cache.getEtag() == null ? "" : cache.getEtag());
-            redisTemplate.opsForValue().set(FETCHED_AT_KEY, cache.getFetchedAt().toString());
-        } catch (Exception e) {
+            redisTemplate.opsForValue().set(DATA_KEY, toJson(cache.getPayload()));
+            String etag = cache.getEtag();
+            redisTemplate.opsForValue().set(ETAG_KEY, etag == null ? "" : etag);
+            redisTemplate.opsForValue().set(FETCHED_AT_KEY, instantToString(cache.getFetchedAt()));
+        } catch (JsonProcessingException | DataAccessException e) {
             log.warn("Redis backfill for worldstate failed: {}", e.getMessage());
         }
+    }
+
+    /** Loads the single cache row, or a fresh (unsaved) one if it doesn't exist yet. */
+    @NonNull
+    private WorldstateCache loadOrCreateCache() {
+        WorldstateCache cache = worldstateCacheRepository.findById(CACHE_ROW_ID).orElseGet(WorldstateCache::new);
+        return Objects.requireNonNull(cache);
+    }
+
+    /** Serializes a value to JSON for storage in Redis. */
+    @NonNull
+    private String toJson(Object value) throws com.fasterxml.jackson.core.JsonProcessingException {
+        String json = objectMapper.writeValueAsString(value);
+        return Objects.requireNonNull(json);
+    }
+
+    /** Formats an instant for storage in Redis. */
+    @NonNull
+    private String instantToString(Instant instant) {
+        return Objects.requireNonNull(instant.toString());
     }
 }

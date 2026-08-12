@@ -1,10 +1,14 @@
 package com.cephalononni.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "drop_sources", uniqueConstraints =
     @UniqueConstraint(name = "uq_drop_sources_name_source", columnNames = {"name", "source"}))
+@Getter
+@Setter
 public class DropSource {
 
     @Id
@@ -21,17 +25,4 @@ public class DropSource {
     private Double chance;
 
     private String rotation;
-
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getSourceType() { return sourceType; }
-    public void setSourceType(String sourceType) { this.sourceType = sourceType; }
-    public String getSource() { return source; }
-    public void setSource(String source) { this.source = source; }
-    public Double getChance() { return chance; }
-    public void setChance(Double chance) { this.chance = chance; }
-    public String getRotation() { return rotation; }
-    public void setRotation(String rotation) { this.rotation = rotation; }
 }

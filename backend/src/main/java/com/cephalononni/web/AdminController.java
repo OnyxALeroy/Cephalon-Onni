@@ -7,6 +7,7 @@ import com.cephalononni.web.dto.AdminDtos.UpdateRoleRequest;
 import com.cephalononni.web.dto.AuthDtos.MessageResponse;
 import com.cephalononni.web.dto.AuthDtos.UserPublic;
 import jakarta.validation.Valid;
+import org.springframework.lang.NonNull;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,26 +34,28 @@ public class AdminController {
         this.adminService = adminService;
     }
 
+    /** Lists every user. {@code search} is accepted for wire compatibility but not applied. */
     @GetMapping("/users")
     public List<UserPublic> listUsers(@RequestParam(required = false) String search) {
-        // `search` accepted for wire compatibility with the existing frontend call but unused,
-        // same as the old backend (UserService.get_all_users ignored it too).
         return adminService.listUsers();
     }
 
+    /** Sets a user's role. An admin cannot change their own role. */
     @PutMapping("/users/{userId}/role")
     public MessageResponse updateRole(@AuthenticationPrincipal CurrentUser admin,
-                                       @PathVariable Long userId,
+                                       @PathVariable @NonNull Long userId,
                                        @Valid @RequestBody UpdateRoleRequest request) {
         return new MessageResponse(adminService.updateRole(admin.id(), userId, request.role()));
     }
 
+    /** Deletes a user. An admin cannot delete their own account. */
     @DeleteMapping("/users/{userId}")
-    public MessageResponse deleteUser(@AuthenticationPrincipal CurrentUser admin, @PathVariable Long userId) {
+    public MessageResponse deleteUser(@AuthenticationPrincipal CurrentUser admin, @PathVariable @NonNull Long userId) {
         adminService.deleteUser(admin.id(), userId);
         return new MessageResponse("User deleted successfully");
     }
 
+    /** Creates a new user with the ADMINISTRATOR role directly. */
     @PostMapping("/create-admin")
     public UserPublic createAdmin(@Valid @RequestBody CreateAdminRequest request) {
         return adminService.createAdmin(request);

@@ -1,10 +1,14 @@
 package com.cephalononni.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 /** From the `items` branch: crafting resources. */
 @Entity
 @Table(name = "resources")
+@Getter
+@Setter
 public class Resource {
 
     @Id
@@ -33,23 +37,4 @@ public class Resource {
 
     @Column(name = "prime_selling_price")
     private Integer primeSellingPrice;
-
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-    public String getUniqueName() { return uniqueName; }
-    public void setUniqueName(String uniqueName) { this.uniqueName = uniqueName; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public Boolean getCodexSecret() { return codexSecret; }
-    public void setCodexSecret(Boolean codexSecret) { this.codexSecret = codexSecret; }
-    public String getParentName() { return parentName; }
-    public void setParentName(String parentName) { this.parentName = parentName; }
-    public Boolean getExcludeFromCodex() { return excludeFromCodex; }
-    public void setExcludeFromCodex(Boolean excludeFromCodex) { this.excludeFromCodex = excludeFromCodex; }
-    public Boolean getShowInInventory() { return showInInventory; }
-    public void setShowInInventory(Boolean showInInventory) { this.showInInventory = showInInventory; }
-    public Integer getPrimeSellingPrice() { return primeSellingPrice; }
-    public void setPrimeSellingPrice(Integer primeSellingPrice) { this.primeSellingPrice = primeSellingPrice; }
 }

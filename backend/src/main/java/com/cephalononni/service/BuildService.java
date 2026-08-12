@@ -12,6 +12,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -98,15 +100,13 @@ public class BuildService {
     }
 
     public BuildWithDetails getBuild(Long userId, Long buildId) {
-        Build build = buildRepository.findByIdAndUserId(buildId, userId)
-                .orElseThrow(() -> ApiException.notFound("Build not found"));
+        Build build = requireBuild(userId, buildId);
         return toBuildWithDetails(build);
     }
 
     @Transactional
     public BuildWithDetails updateBuild(Long userId, Long buildId, UpdateRequest req) {
-        Build build = buildRepository.findByIdAndUserId(buildId, userId)
-                .orElseThrow(() -> ApiException.notFound("Build not found"));
+        Build build = requireBuild(userId, buildId);
 
         if (req.name() != null) {
             build.setName(req.name().trim());
@@ -150,6 +150,14 @@ public class BuildService {
         }
     }
 
+    /** Looks up a build owned by {@code userId}, or throws a 404 {@link ApiException}. */
+    @NonNull
+    private Build requireBuild(Long userId, Long buildId) {
+        Build build = buildRepository.findByIdAndUserId(buildId, userId)
+                .orElseThrow(() -> ApiException.notFound("Build not found"));
+        return Objects.requireNonNull(build);
+    }
+
     public List<AvailableWarframe> availableWarframes() {
         return warframeRepository.findAll().stream()
                 .map(w -> new AvailableWarframe(
@@ -178,32 +186,35 @@ public class BuildService {
                 .toList();
     }
 
-    // -- validation helpers --------------------------------------------------------------------
-
+    /** Throws a 400 {@link ApiException} if no warframe with this uniqueName exists in the catalog. */
     private void validateWarframe(String uniqueName) {
         if (!warframeRepository.existsByUniqueName(uniqueName)) {
             throw ApiException.badRequest("Warframe with uniqueName '" + uniqueName + "' not found");
         }
     }
 
+    /** Throws a 400 {@link ApiException} if no mod with this uniqueName exists in the catalog. */
     private void validateMod(String uniqueName) {
         if (!modRepository.existsByUniqueName(uniqueName)) {
             throw ApiException.badRequest("Mod with uniqueName '" + uniqueName + "' not found");
         }
     }
 
+    /** Throws a 400 {@link ApiException} if no arcane with this uniqueName exists in the catalog. */
     private void validateArcane(String uniqueName) {
         if (!arcaneRepository.existsByUniqueName(uniqueName)) {
             throw ApiException.badRequest("Arcane with uniqueName '" + uniqueName + "' not found");
         }
     }
 
+    /** Throws a 400 {@link ApiException} if no weapon with this uniqueName exists in the catalog. */
     private void validateWeapon(String uniqueName) {
         if (!weaponRepository.existsByUniqueName(uniqueName)) {
             throw ApiException.badRequest("Weapon with uniqueName '" + uniqueName + "' not found");
         }
     }
 
+    /** Validates a weapon slot's uniqueName, mod count/uniqueNames, and optional arcane, if present. */
     private void validateWeaponBuild(WeaponBuild weaponBuild) {
         if (weaponBuild == null) {
             return;
@@ -227,12 +238,12 @@ public class BuildService {
         return toNode(weaponBuild);
     }
 
-    // -- JSON <-> DTO helpers -------------------------------------------------------------------
-
+    /** Serializes a DTO to the JSON tree stored on the entity, or null if the DTO itself is null. */
     private JsonNode toNode(Object value) {
         return value == null ? null : objectMapper.valueToTree(value);
     }
 
+    /** Deserializes the stored warframe_mods JSON tree back into its DTO list, or an empty list. */
     private List<EquippedMod> readModList(JsonNode node) {
         if (node == null || node.isNull()) {
             return List.of();
@@ -240,6 +251,7 @@ public class BuildService {
         return objectMapper.convertValue(node, new TypeReference<List<EquippedMod>>() {});
     }
 
+    /** Deserializes a stored JSON string-array (e.g. warframe_arcanes) back into a list, or empty. */
     private List<String> readStringList(JsonNode node) {
         if (node == null || node.isNull()) {
             return List.of();
@@ -247,6 +259,7 @@ public class BuildService {
         return objectMapper.convertValue(node, new TypeReference<List<String>>() {});
     }
 
+    /** Deserializes a stored weapon-slot JSON tree back into its DTO, or null if the slot is empty. */
     private WeaponBuild readWeaponBuild(JsonNode node) {
         if (node == null || node.isNull()) {
             return null;
@@ -254,8 +267,7 @@ public class BuildService {
         return objectMapper.convertValue(node, WeaponBuild.class);
     }
 
-    // -- entity -> response DTO -----------------------------------------------------------------
-
+    /** Maps a build entity to the list-response DTO, enriching it with warframe details on request. */
     private BuildPublic toBuildPublic(Build build, boolean includeDetails) {
         WarframeDetails warframe = includeDetails ? warframeDetailsOrNull(build.getWarframeUniqueName()) : null;
         return new BuildPublic(
@@ -266,6 +278,7 @@ public class BuildService {
                 readWeaponBuild(build.getMeleeWeapon()));
     }
 
+    /** Maps a build entity to the single-build DTO, fully enriched with warframe/weapon/arcane details. */
     private BuildWithDetails toBuildWithDetails(Build build) {
         WeaponBuild primary = readWeaponBuild(build.getPrimaryWeapon());
         WeaponBuild secondary = readWeaponBuild(build.getSecondaryWeapon());
@@ -292,6 +305,7 @@ public class BuildService {
                 arcaneDetailsOrNull(melee == null ? null : melee.arcaneUniqueName()));
     }
 
+    /** Looks up a warframe by uniqueName and maps it to its details DTO, or null if not found. */
     private WarframeDetails warframeDetailsOrNull(String uniqueName) {
         Optional<Warframe> found = warframeRepository.findByUniqueName(uniqueName);
         if (found.isEmpty()) {
@@ -309,6 +323,7 @@ public class BuildService {
                 exalted, abilities, w.getProductCategory());
     }
 
+    /** Looks up the weapon equipped in this slot and maps it to its details DTO, or null if empty/not found. */
     private WeaponDetails weaponDetailsOrNull(WeaponBuild weaponBuild) {
         if (weaponBuild == null) {
             return null;
@@ -327,6 +342,7 @@ public class BuildService {
                 w.getReloadTime(), w.getMultishot(), w.getNoise(), w.getTrigger());
     }
 
+    /** Looks up an arcane by uniqueName and maps it to its details DTO, or null if blank/not found. */
     private ArcaneDetails arcaneDetailsOrNull(String uniqueName) {
         if (uniqueName == null || uniqueName.isBlank()) {
             return null;

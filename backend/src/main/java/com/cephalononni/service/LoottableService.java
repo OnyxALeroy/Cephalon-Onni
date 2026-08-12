@@ -40,6 +40,11 @@ public class LoottableService {
         this.dropSourceRepository = dropSourceRepository;
     }
 
+    /**
+     * Searches for graph nodes matching a name and/or label. When {@code label} is "mission(s)"
+     * it searches missions and returns their drops as nodes; otherwise it searches drop sources
+     * by type. Returns an empty result (rather than throwing) on any lookup failure.
+     */
     public NodeSearchResponse searchNodes(String name, String label) {
         String n = name == null ? "" : name.trim();
         String l = label == null ? "" : label.trim();
@@ -78,6 +83,11 @@ public class LoottableService {
         }
     }
 
+    /**
+     * Finds a node matching {@code name} and its immediate neighbors: drop sources it appears in,
+     * or (if none) the mission-based {@link #fallbackFromMissions} result. Throws 404 if nothing
+     * matches, 400 if {@code name} is blank.
+     */
     public NodeNeighborsResponse neighbors(String name) {
         String n = name == null ? "" : name.trim();
         if (n.isEmpty()) {
@@ -113,7 +123,17 @@ public class LoottableService {
         }
     }
 
-    /** Ports the three sequential fallback passes over `missions` the old handler ran. */
+    /**
+     * Falls back to searching missions when no drop source matches {@code name} directly: first
+     * an exact match of a drop's item name, then (if none found) the first mission with all of
+     * its drops as edges. Returns null if no mission matches {@code name} at all.
+     *
+     * <p>Ports the old handler's three sequential fallback passes, minus the third: a substring
+     * match producing a synthetic "Item" starting node. That pass is unreachable in practice -
+     * the second pass above always finds a starting node once {@code missions} is non-empty, and
+     * an empty {@code missions} already returns null before the third pass would run - so it's
+     * dropped here rather than ported.
+     */
     private GraphNode fallbackFromMissions(String name, List<NodeNeighbor> neighbors) {
         List<Mission> missions = missionRepository.findByMissionNameContainingIgnoreCase(name, PageRequest.of(0, 50));
         if (missions.isEmpty()) {
@@ -150,11 +170,6 @@ public class LoottableService {
             }
         }
         return startingNode;
-
-        // (Pass 3 in the old handler - substring match producing a synthetic Item starting node -
-        // is unreachable in practice: pass 2 above always finds a starting node once `missions`
-        // is non-empty, and `missions` being empty already returns null before pass 3 would run.
-        // Preserved intentionally as dead-code-for-dead-code parity rather than ported.)
     }
 
     private List<JsonNode> dropsOf(Mission mission) {

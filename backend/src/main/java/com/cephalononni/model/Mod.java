@@ -2,11 +2,15 @@ package com.cephalononni.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "mods")
+@Getter
+@Setter
 public class Mod {
 
     @Id
@@ -63,41 +67,4 @@ public class Mod {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "available_challenges")
     private JsonNode availableChallenges;
-
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-    public String getUniqueName() { return uniqueName; }
-    public void setUniqueName(String uniqueName) { this.uniqueName = uniqueName; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getPolarity() { return polarity; }
-    public void setPolarity(String polarity) { this.polarity = polarity; }
-    public String getRarity() { return rarity; }
-    public void setRarity(String rarity) { this.rarity = rarity; }
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
-    public String getSubtype() { return subtype; }
-    public void setSubtype(String subtype) { this.subtype = subtype; }
-    public Boolean getCodexSecret() { return codexSecret; }
-    public void setCodexSecret(Boolean codexSecret) { this.codexSecret = codexSecret; }
-    public Integer getBaseDrain() { return baseDrain; }
-    public void setBaseDrain(Integer baseDrain) { this.baseDrain = baseDrain; }
-    public Integer getFusionLimit() { return fusionLimit; }
-    public void setFusionLimit(Integer fusionLimit) { this.fusionLimit = fusionLimit; }
-    public String getCompatName() { return compatName; }
-    public void setCompatName(String compatName) { this.compatName = compatName; }
-    public String getModSet() { return modSet; }
-    public void setModSet(String modSet) { this.modSet = modSet; }
-    public JsonNode getModSetValues() { return modSetValues; }
-    public void setModSetValues(JsonNode modSetValues) { this.modSetValues = modSetValues; }
-    public Boolean getIsUtility() { return isUtility; }
-    public void setIsUtility(Boolean isUtility) { this.isUtility = isUtility; }
-    public JsonNode getDescription() { return description; }
-    public void setDescription(JsonNode description) { this.description = description; }
-    public JsonNode getLevelStats() { return levelStats; }
-    public void setLevelStats(JsonNode levelStats) { this.levelStats = levelStats; }
-    public JsonNode getUpgradeEntries() { return upgradeEntries; }
-    public void setUpgradeEntries(JsonNode upgradeEntries) { this.upgradeEntries = upgradeEntries; }
-    public JsonNode getAvailableChallenges() { return availableChallenges; }
-    public void setAvailableChallenges(JsonNode availableChallenges) { this.availableChallenges = availableChallenges; }
 }
