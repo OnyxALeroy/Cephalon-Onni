@@ -1,18 +1,21 @@
 package com.cephalononni.security;
 
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Objects;
+
+import javax.crypto.SecretKey;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Component;
+
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 
 /**
  * HS256 JWT issuance/verification. Mirrors the old backend's contract: the only claim carried
@@ -53,14 +56,20 @@ public class JwtService {
         this.key = Keys.hmacShaKeyFor(bytes);
     }
 
+    /**
+     * Issues a signed HS256 JWT for the given user id: `sub` is the user id, `exp` is
+     * {@code expirationMinutes} from now. No other claims are carried.
+     */
+    @NonNull
     public String issueToken(Long userId) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        String token = Jwts.builder()
                 .subject(String.valueOf(userId))
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(Duration.ofMinutes(expirationMinutes))))
                 .signWith(key)
                 .compact();
+        return Objects.requireNonNull(token);
     }
 
     /** Returns the user id from the token's `sub` claim, or empty if missing/expired/invalid. */
@@ -75,7 +84,7 @@ public class JwtService {
             if (sub == null || sub.isBlank()) {
                 return java.util.Optional.empty();
             }
-            return java.util.Optional.of(Long.parseLong(sub));
+            return java.util.Optional.of(Long.valueOf(sub));
         } catch (JwtException | NumberFormatException e) {
             return java.util.Optional.empty();
         }

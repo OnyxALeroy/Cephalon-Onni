@@ -1,8 +1,10 @@
 package com.cephalononni.service;
 
 import com.cephalononni.web.dto.WorldstateDtos.*;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -33,7 +35,8 @@ public class WorldStateParser {
         List<SyndicateMission> syndicateMissions = arrayOf(ws, "SyndicateMissions").stream()
                 .map(this::parseSyndicateMission).toList();
         List<VoidFissure> voidFissures = arrayOf(ws, "ActiveMissions").stream().map(this::parseVoidFissure).toList();
-        List<String> globalBoosts = arrayOf(ws, "GlobalUpgrades").stream().map(JsonNode::asText).toList();
+        List<String> globalBoosts = arrayOf(ws, "GlobalUpgrades").stream()
+                .map((@NonNull JsonNode n) -> n.asText()).toList();
         List<VoidTrader> voidTraders = arrayOf(ws, "VoidTraders").stream().map(this::parseVoidTrader).toList();
         PrimeResurgence primeResurgence = parsePrimeResurgence(ws.get("PrimeResurgence"));
         List<DailyDeal> dailyDeals = arrayOf(ws, "DailyDeals").stream().map(this::parseDailyDeal).toList();
@@ -64,8 +67,7 @@ public class WorldStateParser {
                 parseSeasonInfo(objectOf(ws, "SeasonInfo")));
     }
 
-    // -- top-level pieces ------------------------------------------------------------------------
-
+    /** Returns the first entry of the `Events` array, falling back to the singular `Event` field. */
     private JsonNode firstEvent(JsonNode ws) {
         List<JsonNode> events = arrayOf(ws, "Events");
         if (!events.isEmpty()) {
@@ -191,7 +193,8 @@ public class WorldStateParser {
         Map<String, Boolean> platforms = new LinkedHashMap<>();
         JsonNode platformsNode = dojo.get("HiddenPlatforms");
         if (platformsNode != null && platformsNode.isObject()) {
-            platformsNode.fields().forEachRemaining(e -> platforms.put(e.getKey(), e.getValue().asBoolean()));
+            // fields() is deprecated in favor of properties() (added Jackson 2.17+, we're on 2.19).
+            platformsNode.properties().forEach(e -> platforms.put(e.getKey(), e.getValue().asBoolean()));
         }
         return new FeaturedDojo(
                 allianceId != null ? text(allianceId, "$oid", "") : "",
@@ -209,8 +212,11 @@ public class WorldStateParser {
                 intOf(si, "Season", 0), activeChallenges);
     }
 
-    // -- date parsing (ports _parse_date) --------------------------------------------------------
-
+    /**
+     * Parses a date field from any of the shapes upstream sends: a Mongo extended-JSON object
+     * ({@code $numberLong}/{@code $date}), a raw epoch number, or an epoch/ISO-8601 string.
+     * Returns null if the field is missing or unrecognized. Ports {@code _parse_date}.
+     */
     private Instant parseDate(JsonNode value) {
         if (value == null || value.isNull()) {
             return null;
@@ -259,8 +265,7 @@ public class WorldStateParser {
         };
     }
 
-    // -- JsonNode access helpers (mirror dict.get(key, default)) ---------------------------------
-
+    /** Returns the array at `field`, or an empty list if missing/not an array. Mirrors `dict.get(key, default)`. */
     private List<JsonNode> arrayOf(JsonNode node, String field) {
         if (node == null) {
             return List.of();
@@ -321,7 +326,7 @@ public class WorldStateParser {
         if (node == null) return List.of();
         JsonNode value = node.get(field);
         if (value == null || !value.isArray()) return List.of();
-        return objectMapper.convertValue(value, List.class);
+        return objectMapper.convertValue(value, new TypeReference<List<Object>>() {});
     }
 
     private List<Integer> intListOf(JsonNode node, String field) {
@@ -337,9 +342,10 @@ public class WorldStateParser {
         if (node == null) return Map.of();
         JsonNode value = node.get(field);
         if (value == null || !value.isObject()) return Map.of();
-        return objectMapper.convertValue(value, Map.class);
+        return objectMapper.convertValue(value, new TypeReference<Map<String, Object>>() {});
     }
 
+    /** Returns the 2-element `[current, max]` pair at `field`, or `[0, 0]` if missing/malformed. */
     private double[] doubleArrayOf(JsonNode node, String field) {
         JsonNode value = node.get(field);
         if (value == null || !value.isArray() || value.size() < 2) {

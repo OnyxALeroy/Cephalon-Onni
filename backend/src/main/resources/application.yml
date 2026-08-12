@@ -35,18 +35,10 @@ spring:
   jackson:
     default-property-inclusion: non_null
 
-# One-time Mongo -> Postgres migration source (see migration.DataMigrationRunner).
-# Only read when app.migration.enabled=true; not used by normal request handling.
-mongo:
-  url: ${MONGO_URL:mongodb://localhost:27017}
-  database: ${MONGO_DB:cephalon_onni}
-
 app:
   jwt:
     secret: ${JWT_SECRET:}
     expiration-minutes: 60
-  migration:
-    enabled: ${RUN_MONGO_MIGRATION:false}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   worldstate:

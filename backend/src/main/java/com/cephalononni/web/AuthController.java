@@ -15,6 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
+import java.util.Objects;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -32,11 +35,13 @@ public class AuthController {
         this.cookieSecure = cookieSecure;
     }
 
+    /** Creates a new Tenno account. */
     @PostMapping("/register")
     public UserPublic register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
     }
 
+    /** Verifies credentials and sets the httponly access-token cookie, expiring with the JWT itself. */
     @PostMapping("/login")
     public ResponseEntity<UserPublic> login(@RequestBody LoginRequest request) {
         AuthService.LoginResult result = authService.login(request);
@@ -45,16 +50,18 @@ public class AuthController {
                 .secure(cookieSecure)
                 .sameSite("Lax")
                 .path("/")
-                .maxAge(java.time.Duration.ofMinutes(jwtService.getExpirationMinutes()))
+                .maxAge(Objects.requireNonNull(Duration.ofMinutes(jwtService.getExpirationMinutes())))
                 .build();
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(result.user());
     }
 
+    /** Returns the currently authenticated user, as resolved from the access-token cookie. */
     @GetMapping("/me")
     public UserPublic me(@AuthenticationPrincipal CurrentUser principal) {
         return new UserPublic(String.valueOf(principal.id()), principal.email(), principal.username(), principal.role().getWireValue());
     }
 
+    /** Clears the access-token cookie. */
     @PostMapping("/logout")
     public ResponseEntity<MessageResponse> logout() {
         ResponseCookie cookie = ResponseCookie.from(COOKIE_NAME, "")

@@ -1,9 +1,13 @@
 package com.cephalononni.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "images")
+@Getter
+@Setter
 public class Image {
 
     @Id
@@ -15,11 +19,4 @@ public class Image {
 
     @Column(name = "texture_location")
     private String textureLocation;
-
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-    public String getUniqueName() { return uniqueName; }
-    public void setUniqueName(String uniqueName) { this.uniqueName = uniqueName; }
-    public String getTextureLocation() { return textureLocation; }
-    public void setTextureLocation(String textureLocation) { this.textureLocation = textureLocation; }
 }

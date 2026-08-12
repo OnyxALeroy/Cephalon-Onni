@@ -44,7 +44,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
-            readCookie(request).ifPresent(token -> jwtService.parseUserId(token).ifPresent(userId -> {
+            readCookie(request).ifPresent(token -> jwtService.parseUserId(token).ifPresent((@NonNull Long userId) -> {
                 Optional<User> user = userRepository.findById(userId);
                 user.ifPresent(u -> {
                     CurrentUser principal = new CurrentUser(u.getId(), u.getEmail(), u.getUsername(), u.getRole());

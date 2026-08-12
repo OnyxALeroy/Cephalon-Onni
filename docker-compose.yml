@@ -62,11 +62,6 @@ services:
     volumes:
       - redisdata:/data
 
-# MongoDB is intentionally gone (backend-rework-plan.md: "MongoDB is removed"). If you still need
-# to run the one-time DataMigrationRunner against old data, point MONGO_URL (in .env) at whatever
-# Mongo instance still has it - e.g. keep the old backend-python-legacy stack up in parallel for
-# the duration of the cutover - rather than reintroducing a permanent mongodb service here.
-
 volumes:
   redisdata:
   postgresdata:

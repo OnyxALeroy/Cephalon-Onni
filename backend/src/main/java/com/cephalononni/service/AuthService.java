@@ -8,6 +8,7 @@ import com.cephalononni.security.JwtService;
 import com.cephalononni.web.dto.AuthDtos.LoginRequest;
 import com.cephalononni.web.dto.AuthDtos.RegisterRequest;
 import com.cephalononni.web.dto.AuthDtos.UserPublic;
+import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,10 +26,12 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
+    /**
+     * Creates a new Tenno user. Email is only checked for `@` and `.` presence (a loose
+     * substring check, not real format validation), and must not already be registered.
+     */
     @Transactional
     public UserPublic register(RegisterRequest request) {
-        // Same (deliberately loose) check as the old backend: substring presence, not a real
-        // email-format validator.
         String email = request.email().trim();
         if (!email.contains("@") || !email.contains(".")) {
             throw ApiException.badRequest("Invalid email format");
@@ -41,15 +44,16 @@ public class AuthService {
         user.setEmail(email);
         user.setUsername(request.username().trim());
         user.setHashedPassword(passwordEncoder.encode(request.password()));
-        user.setRole(UserRole.TENNO); // registration always creates a Tenno, same as before
+        user.setRole(UserRole.TENNO);
         user = userRepository.save(user);
 
         return toPublic(user);
     }
 
-    public record LoginResult(UserPublic user, String token) {
+    public record LoginResult(UserPublic user, @NonNull String token) {
     }
 
+    /** Verifies email/password and issues a JWT for the matching user, or throws 401. */
     public LoginResult login(LoginRequest request) {
         String email = request.email() == null ? "" : request.email();
         String password = request.password() == null ? "" : request.password();
@@ -62,6 +66,7 @@ public class AuthService {
         return new LoginResult(toPublic(user), token);
     }
 
+    /** Maps a user entity to its wire representation. */
     public static UserPublic toPublic(User user) {
         return new UserPublic(String.valueOf(user.getId()), user.getEmail(), user.getUsername(), user.getRole().getWireValue());
     }

@@ -1,6 +1,7 @@
 package com.cephalononni.web.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.springframework.lang.Nullable;
 
 import java.time.Instant;
 import java.util.List;
@@ -32,9 +33,9 @@ public final class WorldstateDtos {
             boolean community,
             String icon,
             @JsonProperty("image_url") String imageUrl,
-            Instant date,
-            @JsonProperty("start_date") Instant startDate,
-            @JsonProperty("end_date") Instant endDate,
+            @Nullable Instant date,
+            @JsonProperty("start_date") @Nullable Instant startDate,
+            @JsonProperty("end_date") @Nullable Instant endDate,
             @JsonProperty("live_url") String liveUrl,
             @JsonProperty("do_hide_end_date_modifier") boolean doHideEndDateModifier,
             List<Link> links) {
@@ -55,8 +56,8 @@ public final class WorldstateDtos {
     }
 
     public record Alert(
-            Instant activation,
-            Instant expiry,
+            @Nullable Instant activation,
+            @Nullable Instant expiry,
             @JsonProperty("mission_info") MissionInfo missionInfo,
             String tag,
             @JsonProperty("force_unlock") boolean forceUnlock) {
@@ -72,16 +73,16 @@ public final class WorldstateDtos {
     }
 
     public record SyndicateMission(
-            Instant activation,
-            Instant expiry,
+            @Nullable Instant activation,
+            @Nullable Instant expiry,
             @JsonProperty("syndicate_tag") String syndicateTag,
             List<Object> nodes,
-            @JsonProperty("open_world_missions") List<OpenWorldMission> openWorldMissions) {
+            @JsonProperty("open_world_missions") @Nullable List<OpenWorldMission> openWorldMissions) {
     }
 
     public record VoidFissure(
-            Instant activation,
-            Instant expiry,
+            @Nullable Instant activation,
+            @Nullable Instant expiry,
             @JsonProperty("mission_type") String missionType,
             String node,
             int region,
@@ -93,8 +94,8 @@ public final class WorldstateDtos {
     }
 
     public record Sortie(
-            Instant activation,
-            Instant expiry,
+            @Nullable Instant activation,
+            @Nullable Instant expiry,
             String boss,
             String reward,
             @JsonProperty("extra_drops") List<Object> extraDrops,
@@ -102,31 +103,31 @@ public final class WorldstateDtos {
             List<SortieMission> missions) {
     }
 
-    public record VoidTrader(Instant activation, Instant expiry, String node, String character) {
+    public record VoidTrader(@Nullable Instant activation, @Nullable Instant expiry, String node, String character) {
     }
 
     public record PrimeResurgenceItem(@JsonProperty("item_type") String itemType, int price) {
     }
 
     public record PrimeResurgenceScheduleInfo(
-            Instant expiry,
+            @Nullable Instant expiry,
             @JsonProperty("featured_item") String featuredItem,
-            @JsonProperty("preview_hidden_until") Instant previewHiddenUntil) {
+            @JsonProperty("preview_hidden_until") @Nullable Instant previewHiddenUntil) {
     }
 
     public record PrimeResurgence(
-            Instant activation,
-            Instant expiry,
+            @Nullable Instant activation,
+            @Nullable Instant expiry,
             String node,
-            @JsonProperty("initial_start_date") Instant initialStartDate,
+            @JsonProperty("initial_start_date") @Nullable Instant initialStartDate,
             List<PrimeResurgenceItem> manifest,
             @JsonProperty("evergreen_manifest") List<PrimeResurgenceItem> evergreenManifest,
             @JsonProperty("schedule_info") List<PrimeResurgenceScheduleInfo> scheduleInfo) {
     }
 
     public record DailyDeal(
-            Instant activation,
-            Instant expiry,
+            @Nullable Instant activation,
+            @Nullable Instant expiry,
             @JsonProperty("original_price") int originalPrice,
             @JsonProperty("sale_price") int salePrice,
             String item,
@@ -135,8 +136,8 @@ public final class WorldstateDtos {
     }
 
     public record ConclaveChallenge(
-            Instant activation,
-            Instant expiry,
+            @Nullable Instant activation,
+            @Nullable Instant expiry,
             String category,
             @JsonProperty("pvp_mode") String pvpMode,
             @JsonProperty("challenge_type_id") String challengeTypeId,
@@ -152,12 +153,12 @@ public final class WorldstateDtos {
             int tier) {
     }
 
-    public record MissionChallenge(Instant activation, String challenge, boolean daily, Instant expiry) {
+    public record MissionChallenge(@Nullable Instant activation, String challenge, boolean daily, @Nullable Instant expiry) {
     }
 
     public record SeasonInfo(
-            Instant activation,
-            Instant expiry,
+            @Nullable Instant activation,
+            @Nullable Instant expiry,
             @JsonProperty("affiliation_tag") String affiliationTag,
             String parameters,
             int phase,
@@ -170,14 +171,14 @@ public final class WorldstateDtos {
             @JsonProperty("api_version") int apiVersion,
             @JsonProperty("mobile_version") String mobileVersion,
             @JsonProperty("build_label") String buildLabel,
-            @JsonProperty("current_event") Event currentEvent,
+            @JsonProperty("current_event") @Nullable Event currentEvent,
             @JsonProperty("current_alerts") List<Alert> currentAlerts,
             Sortie sortie,
             @JsonProperty("syndicate_missions") List<SyndicateMission> syndicateMissions,
             @JsonProperty("void_fissures") List<VoidFissure> voidFissures,
             @JsonProperty("global_boosts") List<String> globalBoosts,
             @JsonProperty("void_traders") List<VoidTrader> voidTraders,
-            @JsonProperty("prime_resurgence") PrimeResurgence primeResurgence,
+            @JsonProperty("prime_resurgence") @Nullable PrimeResurgence primeResurgence,
             @JsonProperty("prime_token_availability") boolean primeTokenAvailability,
             @JsonProperty("daily_deals") List<DailyDeal> dailyDeals,
             @JsonProperty("pvp_alternative_modes") List<ConclaveChallenge> pvpAlternativeModes,

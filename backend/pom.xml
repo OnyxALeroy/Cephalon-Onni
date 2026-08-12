@@ -20,7 +20,6 @@
     <properties>
         <java.version>21</java.version>
         <jjwt.version>0.12.6</jjwt.version>
-        <mongodb-driver.version>5.2.0</mongodb-driver.version>
     </properties>
 
     <dependencies>
@@ -79,13 +78,6 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- One-time Mongo -> Postgres migration tool only; not used by normal request handling. -->
-        <dependency>
-            <groupId>org.mongodb</groupId>
-            <artifactId>mongodb-driver-sync</artifactId>
-            <version>${mongodb-driver.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -116,10 +108,35 @@
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <!-- javac's automatic annotation-processor discovery doesn't pick up Lombok
+                         on every JDK (verified: silently runs zero processors, no error, just no
+                         generated code) - forcing it via annotationProcessorPaths is Lombok's own
+                         recommended Maven setup anyway. annotationProcessorPathsUseDepMgmt lets
+                         this path inherit spring-boot-starter-parent's managed Lombok version
+                         instead of pinning a second, easily-drifting version here. -->
+                    <annotationProcessorPathsUseDepMgmt>true</annotationProcessorPathsUseDepMgmt>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

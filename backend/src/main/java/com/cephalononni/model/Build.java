@@ -2,6 +2,8 @@ package com.cephalononni.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -14,6 +16,8 @@ import java.time.Instant;
  */
 @Entity
 @Table(name = "builds")
+@Getter
+@Setter
 public class Build {
 
     @Id
@@ -57,27 +61,4 @@ public class Build {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getWarframeUniqueName() { return warframeUniqueName; }
-    public void setWarframeUniqueName(String warframeUniqueName) { this.warframeUniqueName = warframeUniqueName; }
-    public JsonNode getWarframeMods() { return warframeMods; }
-    public void setWarframeMods(JsonNode warframeMods) { this.warframeMods = warframeMods; }
-    public JsonNode getWarframeArcanes() { return warframeArcanes; }
-    public void setWarframeArcanes(JsonNode warframeArcanes) { this.warframeArcanes = warframeArcanes; }
-    public JsonNode getPrimaryWeapon() { return primaryWeapon; }
-    public void setPrimaryWeapon(JsonNode primaryWeapon) { this.primaryWeapon = primaryWeapon; }
-    public JsonNode getSecondaryWeapon() { return secondaryWeapon; }
-    public void setSecondaryWeapon(JsonNode secondaryWeapon) { this.secondaryWeapon = secondaryWeapon; }
-    public JsonNode getMeleeWeapon() { return meleeWeapon; }
-    public void setMeleeWeapon(JsonNode meleeWeapon) { this.meleeWeapon = meleeWeapon; }
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }

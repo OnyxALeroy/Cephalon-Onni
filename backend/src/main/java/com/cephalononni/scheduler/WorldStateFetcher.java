@@ -1,18 +1,20 @@
 package com.cephalononni.scheduler;
 
-import com.cephalononni.service.WorldStateCacheService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
+import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.util.concurrent.atomic.AtomicReference;
+import com.cephalononni.service.WorldStateCacheService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Polls the upstream Warframe worldstate feed and refreshes the cache. Uses If-None-Match/ETag
@@ -37,7 +39,7 @@ public class WorldStateFetcher {
     private final AtomicReference<String> lastEtag = new AtomicReference<>();
 
     public WorldStateFetcher(WorldStateCacheService cacheService, ObjectMapper objectMapper,
-                              @Value("${app.worldstate.url}") String worldstateUrl) {
+            @Value("${app.worldstate.url}") @NonNull String worldstateUrl) {
         this.cacheService = cacheService;
         this.objectMapper = objectMapper;
         this.restClient = RestClient.builder().baseUrl(worldstateUrl).build();
@@ -46,8 +48,9 @@ public class WorldStateFetcher {
     @Scheduled(fixedDelayString = "${app.worldstate.poll-interval-seconds:60}000", initialDelay = 0)
     public void fetchOnce() {
         try {
+            String etagToSend = lastEtag.get();
             restClient.get()
-                    .header("If-None-Match", lastEtag.get() == null ? "" : lastEtag.get())
+                    .header("If-None-Match", etagToSend == null ? "" : etagToSend)
                     .exchange((request, response) -> {
                         if (response.getStatusCode().value() == 304) {
                             return null; // upstream unchanged, nothing to do

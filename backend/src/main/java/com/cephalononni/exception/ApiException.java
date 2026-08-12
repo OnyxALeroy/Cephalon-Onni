@@ -1,6 +1,7 @@
 package com.cephalononni.exception;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.NonNull;
 
 /**
  * Single exception type for all handler/service-level errors. GlobalExceptionHandler turns any
@@ -9,13 +10,15 @@ import org.springframework.http.HttpStatus;
  */
 public class ApiException extends RuntimeException {
 
+    @NonNull
     private final HttpStatus status;
 
-    public ApiException(HttpStatus status, String detail) {
+    public ApiException(@NonNull HttpStatus status, String detail) {
         super(detail);
         this.status = status;
     }
 
+    @NonNull
     public HttpStatus getStatus() {
         return status;
     }

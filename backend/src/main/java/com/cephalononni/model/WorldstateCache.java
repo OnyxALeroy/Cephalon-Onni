@@ -2,6 +2,8 @@ package com.cephalononni.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -14,6 +16,8 @@ import java.time.Instant;
  */
 @Entity
 @Table(name = "worldstate_cache")
+@Getter
+@Setter
 public class WorldstateCache {
 
     @Id
@@ -28,13 +32,4 @@ public class WorldstateCache {
 
     @Column(name = "fetched_at", nullable = false)
     private Instant fetchedAt = Instant.now();
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getEtag() { return etag; }
-    public void setEtag(String etag) { this.etag = etag; }
-    public JsonNode getPayload() { return payload; }
-    public void setPayload(JsonNode payload) { this.payload = payload; }
-    public Instant getFetchedAt() { return fetchedAt; }
-    public void setFetchedAt(Instant fetchedAt) { this.fetchedAt = fetchedAt; }
 }
