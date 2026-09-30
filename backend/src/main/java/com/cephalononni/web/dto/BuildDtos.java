@@ -23,8 +23,14 @@ public final class BuildDtos {
         }
     }
 
+    /**
+     * Note: weaponUniqueName carries no @NotBlank on purpose. Creation requires it non-blank
+     * (enforced in BuildService.validateWeaponBuild), but an update sends a blank value to
+     * explicitly clear that weapon slot - the old backend had the same intent but its DTO-level
+     * @NotBlank made that path unreachable, so this time the blank check lives in the service.
+     */
     public record WeaponBuild(
-            @JsonProperty("weapon_uniqueName") @NotBlank String weaponUniqueName,
+            @JsonProperty("weapon_uniqueName") String weaponUniqueName,
             @Valid @Size(max = 9, message = "Weapon can have maximum 9 mods") List<EquippedMod> mods,
             @JsonProperty("arcane_uniqueName") String arcaneUniqueName) {
         public WeaponBuild {

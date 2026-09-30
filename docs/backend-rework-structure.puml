@@ -1,0 +1,187 @@
+@startuml backend-rework-structure
+title Cephalon Onni Backend — Actual Architecture (Spring Boot / Java 21)
+
+skinparam packageStyle rectangle
+skinparam componentStyle uml2
+skinparam wrapWidth 200
+skinparam linetype ortho
+allowmixing
+
+package "com.cephalononni" as root {
+
+  class CephalonOnniApplication <<@SpringBootApplication + @EnableScheduling>>
+
+  package "config" {
+    class SecurityConfig {
+      BCrypt(12), STATELESS
+      /api/admin/** -> ADMINISTRATOR
+      everything else -> authenticated
+    }
+    class CorsConfig {
+      explicit origin allowlist
+      allowCredentials(true)
+    }
+  }
+
+  package "web" as web {
+    class AuthController <<@RestController /api/auth>>
+    class UserController <<@RestController /api/users>>
+    class BuildController <<@RestController /api/builds>>
+    class WarframeController <<@RestController /api/warframes>>
+    class InventoryController <<@RestController /api/inventory>>
+    class WorldstateController <<@RestController /api/worldstate>>
+    class LoottableController <<@RestController /api/loottables>>
+    class AdminController <<@RestController /api/admin>>
+    class HealthController <<@RestController /health>>
+
+    package "dto" as dto {
+      note as DtoNote
+        Request/response records, snake_case wire
+        shapes preserved for the existing frontend
+      end note
+    }
+
+    class JwtAuthFilter <<Filter>>
+    class GlobalExceptionHandler <<@ControllerAdvice>> {
+      {"detail": string} error envelope
+      unhandled 500s logged, never leaked
+    }
+  }
+
+  package "security" {
+    class JwtService {
+      HS256, env JWT_SECRET (>= 32 bytes)
+      fails fast at startup
+    }
+    class CurrentUser
+    class RestAuthEntryPoint {
+      401 {"detail":"Not authenticated"}
+    }
+    class RestAccessDeniedHandler {
+      403 {"detail":"Administrator access required"}
+    }
+  }
+
+  package "service" as service {
+    class AuthService
+    class AdminService
+    class BuildService {
+      max 30 builds / user
+      <= 10 warframe mods, <= 2 arcanes
+      <= 9 weapon mods; blank weapon_uniqueName
+      on update clears the slot
+      DB-level paging (HQL limit/offset)
+      scalar projections for available*
+    }
+    class WarframeService
+    class InventoryService
+    class LoottableService {
+      paged search queries
+    }
+    class WorldStateCacheService {
+      Redis-first, Postgres row-of-record
+      in-memory parsed WorldState
+      best-effort Redis, never surfaces
+    }
+    class WorldStateParser {
+      defensive field access,
+      tolerates upstream drift
+    }
+  }
+
+  package "repository" as repository {
+    interface WarframeRepository
+    interface WeaponRepository
+    interface ModRepository
+    interface MissionRepository
+    interface RelicRepository
+    interface RecipeRepository
+    interface DropSourceRepository
+    interface ImageRepository
+    interface ArcaneRepository
+    interface AmpPartRepository
+    interface CompanionRepository
+    interface ResourceRepository
+    interface UserRepository
+    interface InventoryItemRepository
+    interface BuildRepository
+    interface WorldstateCacheRepository
+  }
+
+  package "model" as model {
+    package "static catalog (Flyway V1)" {
+      class Warframe
+      class Weapon
+      class Mod
+      class Mission
+      class Relic
+      class Recipe
+      class DropSource
+      class Image
+      class Arcane
+      class AmpPart
+      class Companion
+      class Resource
+    }
+    package "user data (Flyway V1)" {
+      class User {
+        role: Traveller|Tenno|Administrator
+        passwordHash (bcrypt)
+      }
+      class InventoryItem
+      class Build {
+        warframe_mods / warframe_arcanes
+        primary/secondary/melee_weapon (JSONB)
+      }
+      class WorldstateCache
+    }
+  }
+
+  package "scheduler" {
+    class WorldStateFetcher <<@Scheduled>> {
+      polls api.warframe.com every 10s (default)
+      ETag-aware; seeds in-memory etag from
+      the persisted cache after a restart
+      connect/read timeouts
+    }
+  }
+
+  package "exception" {
+    class ApiException
+  }
+}
+
+' -- external systems --
+database "PostgreSQL" as postgres
+database "Redis" as redis
+cloud "Warframe Worldstate API" as worldstateApi
+
+' -- layer dependencies --
+web ..> service : calls
+service ..> repository : uses
+repository ..> model : maps
+repository --> postgres
+
+' -- security / web plumbing --
+SecurityConfig ..> JwtAuthFilter : registers
+SecurityConfig ..> CorsConfig : applies
+JwtAuthFilter ..> JwtService : validates JWT
+JwtAuthFilter ..> web : filters requests
+GlobalExceptionHandler ..> web : handles errors
+CephalonOnniApplication ..> config : bootstraps
+
+' -- scheduler --
+WorldStateFetcher --> worldstateApi : polls (If-None-Match)
+WorldStateFetcher --> WorldStateCacheService : update
+WorldStateCacheService --> redis : best-effort cache
+WorldStateCacheService --> postgres : row of record
+
+' -- data initialization --
+note as FlywayNote
+  Flyway owns the schema (V1__init_schema.sql);
+  Hibernate only validates (ddl-auto: validate).
+  The pre-launch decision was a fresh start:
+  no Mongo data was migrated (the old backend
+  lives under backend-python-legacy/ for reference).
+end note
+@enduml

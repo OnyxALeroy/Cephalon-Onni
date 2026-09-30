@@ -2,7 +2,10 @@ package com.cephalononni;
 
 import com.cephalononni.model.Warframe;
 import com.cephalononni.repository.WarframeRepository;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.MethodOrderer;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -22,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @Testcontainers
 @SpringBootTest
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class CephalonOnniApplicationTest {
 
     @Container
@@ -40,6 +44,7 @@ class CephalonOnniApplicationTest {
     private WarframeRepository warframeRepository;
 
     @Test
+    @Order(1)
     void contextLoadsAndFlywayMigratesCleanly() {
         // If V1__init_schema.sql didn't apply cleanly, or an entity didn't validate against the
         // resulting schema (ddl-auto=validate), the context would have failed to start already.
@@ -47,6 +52,7 @@ class CephalonOnniApplicationTest {
     }
 
     @Test
+    @Order(2)
     void catalogTableAcceptsAndReturnsARow() {
         Warframe warframe = new Warframe();
         warframe.setUniqueName("/Lotus/Powersuits/Excalibur/Excalibur");

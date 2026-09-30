@@ -13,12 +13,17 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * One error envelope everywhere: {"detail": "&lt;message&gt;"}. The old FastAPI backend was
  * inconsistent here (see backend-rework-plan.md Phase 3) - this replaces all of it.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ErrorResponse> handleApiException(ApiException ex) {
@@ -56,12 +61,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
+        // Constraint details (table/column names) stay server-side; clients get a generic 409.
+        log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse("The request conflicts with existing data"));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
+        // The response body stays generic on purpose; without this log line, unhandled 500s
+        // would be invisible in production.
+        log.error("Unhandled exception", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse("Internal server error"));
     }

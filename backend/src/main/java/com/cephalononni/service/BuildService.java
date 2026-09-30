@@ -11,8 +11,6 @@ import com.cephalononni.web.dto.WarframeDtos.AvailableWeapon;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.data.domain.Pageable;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +18,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -90,11 +87,12 @@ public class BuildService {
     }
 
     public List<BuildPublic> listBuilds(Long userId, int skip, int limit, boolean includeDetails) {
-        List<Build> builds = buildRepository.findByUserIdOrderByCreatedAtDesc(
-                userId, Pageable.unpaged());
-        return builds.stream()
-                .skip(Math.max(skip, 0))
-                .limit(Math.max(limit, 0))
+        int safeSkip = Math.max(skip, 0);
+        int safeLimit = Math.max(limit, 0);
+        if (safeLimit == 0) {
+            return List.of();
+        }
+        return buildRepository.findPageByUserId(userId, safeSkip, safeLimit).stream()
                 .map(b -> toBuildPublic(b, includeDetails))
                 .toList();
     }
@@ -109,7 +107,11 @@ public class BuildService {
         Build build = requireBuild(userId, buildId);
 
         if (req.name() != null) {
-            build.setName(req.name().trim());
+            String name = req.name().trim();
+            if (name.isEmpty()) {
+                throw ApiException.badRequest("Build name cannot be empty");
+            }
+            build.setName(name);
         }
         if (req.warframeUniqueName() != null) {
             validateWarframe(req.warframeUniqueName());
@@ -151,38 +153,32 @@ public class BuildService {
     }
 
     /** Looks up a build owned by {@code userId}, or throws a 404 {@link ApiException}. */
-    @NonNull
     private Build requireBuild(Long userId, Long buildId) {
-        Build build = buildRepository.findByIdAndUserId(buildId, userId)
+        return buildRepository.findByIdAndUserId(buildId, userId)
                 .orElseThrow(() -> ApiException.notFound("Build not found"));
-        return Objects.requireNonNull(build);
     }
 
     public List<AvailableWarframe> availableWarframes() {
-        return warframeRepository.findAll().stream()
-                .map(w -> new AvailableWarframe(
-                        w.getUniqueName(), w.getName(), w.getMasteryReq()))
+        return warframeRepository.findAllBrief().stream()
+                .map(w -> new AvailableWarframe(w.getUniqueName(), w.getName(), w.getMasteryReq()))
                 .toList();
     }
 
     public List<AvailableWeapon> availableWeapons() {
-        return weaponRepository.findAll().stream()
-                .map(w -> new AvailableWeapon(
-                        w.getUniqueName(), w.getName(), w.getMasteryReq(), w.getProductCategory()))
+        return weaponRepository.findAllBrief().stream()
+                .map(w -> new AvailableWeapon(w.getUniqueName(), w.getName(), w.getMasteryReq(), w.getProductCategory()))
                 .toList();
     }
 
     public List<AvailableMod> availableMods() {
-        return modRepository.findAll().stream()
-                .map(m -> new AvailableMod(
-                        m.getUniqueName(), m.getName(), m.getType(), m.getRarity(), m.getPolarity()))
+        return modRepository.findAllBrief().stream()
+                .map(m -> new AvailableMod(m.getUniqueName(), m.getName(), m.getType(), m.getRarity(), m.getPolarity()))
                 .toList();
     }
 
     public List<AvailableArcane> availableArcanes() {
-        return arcaneRepository.findAll().stream()
-                .map(a -> new AvailableArcane(
-                        a.getUniqueName(), a.getName(), a.getRarity()))
+        return arcaneRepository.findAllBrief().stream()
+                .map(a -> new AvailableArcane(a.getUniqueName(), a.getName(), a.getRarity()))
                 .toList();
     }
 
@@ -214,11 +210,23 @@ public class BuildService {
         }
     }
 
-    /** Validates a weapon slot's uniqueName, mod count/uniqueNames, and optional arcane, if present. */
+    /**
+     * Validates a weapon slot for creation: uniqueName is mandatory, plus mod count/uniqueNames
+     * and optional arcane. A blank uniqueName is only legal in update context
+     * ({@link #applyWeaponSlot}), where it clears the slot.
+     */
     private void validateWeaponBuild(WeaponBuild weaponBuild) {
         if (weaponBuild == null) {
             return;
         }
+        if (weaponBuild.weaponUniqueName() == null || weaponBuild.weaponUniqueName().isBlank()) {
+            throw ApiException.badRequest("weapon_uniqueName must not be blank");
+        }
+        validateWeaponBuildSlot(weaponBuild);
+    }
+
+    /** Validates a weapon slot's mod count/uniqueNames and optional arcane, if present. */
+    private void validateWeaponBuildSlot(WeaponBuild weaponBuild) {
         if (weaponBuild.mods().size() > MAX_WEAPON_MODS) {
             throw ApiException.badRequest("Weapon can have maximum " + MAX_WEAPON_MODS + " mods");
         }
@@ -229,12 +237,16 @@ public class BuildService {
         }
     }
 
-    /** A weapon slot with a blank weaponUniqueName explicitly clears the slot, same as before. */
+    /**
+     * A weapon slot with a blank weaponUniqueName explicitly clears the slot, same as before.
+     * Reachable in update context only - creation rejects blank uniqueNames in
+     * {@link #validateWeaponBuild}.
+     */
     private JsonNode applyWeaponSlot(WeaponBuild weaponBuild) {
         if (weaponBuild.weaponUniqueName() == null || weaponBuild.weaponUniqueName().isBlank()) {
             return null;
         }
-        validateWeaponBuild(weaponBuild);
+        validateWeaponBuildSlot(weaponBuild);
         return toNode(weaponBuild);
     }
 

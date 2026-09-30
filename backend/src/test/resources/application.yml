@@ -3,5 +3,3 @@ app:
     secret: test-secret-at-least-32-bytes-long-for-hs256
   worldstate:
     scheduler-enabled: false
-  migration:
-    enabled: false

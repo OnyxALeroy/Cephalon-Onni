@@ -5,8 +5,10 @@ import com.cephalononni.security.RestAccessDeniedHandler;
 import com.cephalononni.security.RestAuthEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,10 +34,15 @@ public class SecurityConfig {
         this.corsConfigurationSource = corsConfigurationSource;
     }
 
-    /** BCrypt round-trips the old backend's raw-bcrypt ($2a$/$2b$) hashes without changes. */
+    /**
+     * BCrypt round-trips the old backend's raw-bcrypt ($2a$/$2b$) hashes without changes.
+     * Strength 12 matches the old backend's bcrypt.gensalt() default work factor (Spring's
+     * own default is 10); the strength only affects how new hashes are encoded, not how
+     * existing ones verify.
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(12);
     }
 
     @Bean
@@ -43,6 +50,14 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable()) // stateless JWT-in-cookie API, no server-side session to protect
+                .headers(headers -> headers
+                        // Same as Spring Security's defaults, made explicit: JSON APIs should
+                        // not be sniffable, framable, or (once served over TLS) downgradeable.
+                        .contentTypeOptions(Customizer.withDefaults())
+                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000)))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(eh -> eh
                         .authenticationEntryPoint(authEntryPoint)

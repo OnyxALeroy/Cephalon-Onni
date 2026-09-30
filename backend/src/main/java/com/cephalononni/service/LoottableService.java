@@ -58,10 +58,13 @@ public class LoottableService {
 
             if (!l.isEmpty()) {
                 if (l.equalsIgnoreCase("missions") || l.equalsIgnoreCase("mission")) {
-                    List<Mission> missions = n.isEmpty()
-                            ? missionRepository.findAll()
-                            : missionRepository.findByMissionNameContainingIgnoreCase(n, PageRequest.of(0, 50));
-                    missions.stream().limit(50).forEach(m -> nodes.addAll(missionDropNodes(m, counter)));
+                    // Paged at the DB level in both branches: the missions table carries a full
+                    // drops JSONB blob per row, so an unbounded findAll() here would load every
+                    // mission's drops to emit at most 50 missions' worth of nodes.
+                    (n.isEmpty()
+                            ? missionRepository.findAll(PageRequest.of(0, 50))
+                            : missionRepository.findByMissionNameContainingIgnoreCase(n, PageRequest.of(0, 50)))
+                            .forEach(m -> nodes.addAll(missionDropNodes(m, counter)));
                 } else {
                     List<DropSource> rows = n.isEmpty()
                             ? dropSourceRepository.findBySourceTypeIgnoreCase(l, PageRequest.of(0, 50))

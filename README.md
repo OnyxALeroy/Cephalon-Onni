@@ -31,6 +31,26 @@ See [[Development.md]] for detailed setup instructions.
 
 ---
 
+## Operations
+
+**Environment variables** — see [.env.example](.env.example). Two that matter in production:
+
+* `JWT_SECRET` — required; the backend refuses to start without a >= 32-byte secret.
+* `APP_COOKIE_SECURE` — set to `true` behind TLS so the auth cookie gets the `Secure` flag.
+
+**Creating the first administrator** — there is deliberately no bootstrap endpoint (nothing
+admin-gated that a fresh deploy could call without an admin). Register a normal account,
+then promote it once, directly in the database:
+
+```sql
+UPDATE users SET role = 'Administrator' WHERE email = 'you@example.com';
+```
+
+**Running the backend tests** — `cd backend && mvn test` (requires Docker: the integration
+tests use Testcontainers to run a real Postgres; no Redis is needed).
+
+---
+
 ## Roadmap
 
 * [ ] Inventory display API

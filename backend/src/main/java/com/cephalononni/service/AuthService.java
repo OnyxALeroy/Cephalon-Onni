@@ -39,10 +39,16 @@ public class AuthService {
         if (userRepository.existsByEmail(email)) {
             throw ApiException.badRequest("Email already used");
         }
+        String username = request.username().trim();
+        if (userRepository.existsByUsername(username)) {
+            // Pre-checked so the user gets a friendly 400; without this the DB unique
+            // constraint would surface as a generic 409.
+            throw ApiException.badRequest("Username already used");
+        }
 
         User user = new User();
         user.setEmail(email);
-        user.setUsername(request.username().trim());
+        user.setUsername(username);
         user.setHashedPassword(passwordEncoder.encode(request.password()));
         user.setRole(UserRole.TENNO);
         user = userRepository.save(user);

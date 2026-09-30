@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS amp_parts (
     id SERIAL PRIMARY KEY,
     unique_name VARCHAR UNIQUE,
     name VARCHAR,
-    description VARCHAR,
+    description TEXT,
     codex_secret BOOLEAN DEFAULT FALSE,
     component_type VARCHAR
 );
@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS companions (
     id SERIAL PRIMARY KEY,
     unique_name VARCHAR UNIQUE,
     name VARCHAR,
-    description VARCHAR,
+    description TEXT,
     health INTEGER,
     shield INTEGER,
     armor INTEGER,
@@ -194,7 +194,7 @@ CREATE TABLE IF NOT EXISTS resources (
     id SERIAL PRIMARY KEY,
     unique_name VARCHAR UNIQUE,
     name VARCHAR,
-    description VARCHAR,
+    description TEXT,
     codex_secret BOOLEAN DEFAULT FALSE,
     parent_name VARCHAR,
     exclude_from_codex BOOLEAN DEFAULT FALSE,
