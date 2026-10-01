@@ -1,5 +1,8 @@
 server:
   port: 8080
+  # Trust X-Forwarded-* from the TLS-terminating proxy so requests are seen as secure
+  # (required for HSTS to be emitted and for correct redirect/scheme handling).
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -43,6 +46,17 @@ app:
   cookie:
     # Set APP_COOKIE_SECURE=true behind TLS (reverse-proxy/nginx); false keeps local dev simple.
     secure: ${APP_COOKIE_SECURE:false}
+  catalog:
+    # Import the static catalog (warframes, weapons, mods, drop tables, ...) at startup when the
+    # warframes table is empty. Later refreshes: Admin page > System Configuration, or the cron.
+    import-if-empty: ${CATALOG_IMPORT_IF_EMPTY:true}
+    # Spring cron (6 fields), e.g. "0 0 5 * * MON"; "-" disables scheduled refreshes.
+    refresh-cron: ${CATALOG_REFRESH_CRON:-}
+    # Defaults for the source URLs; admins can override each one at runtime (stored in app_settings).
+    defaults:
+      export-index-url: https://origin.warframe.com/PublicExport/index_en.txt.lzma
+      export-content-base-url: https://content.warframe.com/PublicExport/Manifest/
+      drop-tables-url: https://www.warframe.com/droptables
   worldstate:
     url: https://api.warframe.com/cdn/worldState.php
     poll-interval-ms: ${WORLDSTATE_POLL_INTERVAL_MS:10000}

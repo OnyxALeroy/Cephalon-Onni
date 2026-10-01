@@ -1,5 +1,20 @@
+# This file replaces (not merges with) src/main/resources/application.yml in tests, so settings
+# that guard DB correctness are repeated here: Hibernate must validate entities against the
+# Flyway schema exactly like the real app does.
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
 app:
   jwt:
     secret: test-secret-at-least-32-bytes-long-for-hs256
   worldstate:
     scheduler-enabled: false
+  catalog:
+    import-if-empty: false
+    defaults:
+      export-index-url: https://origin.warframe.com/PublicExport/index_en.txt.lzma
+      export-content-base-url: https://content.warframe.com/PublicExport/Manifest/
+      drop-tables-url: https://www.warframe.com/droptables

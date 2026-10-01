@@ -67,6 +67,44 @@ class AuthFlowIntegrationTest {
         mockMvc.perform(get("/api/worldstate")).andExpect(status().isServiceUnavailable());
     }
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    @Test
+    void anAdminPromotedWithTheReadmeSqlCanLogInAndReachAdminRoutes() throws Exception {
+        register("sql-admin@example.com", "sqladmin");
+        // Exactly the first-admin bootstrap statement documented in README.md.
+        jdbcTemplate.update("UPDATE users SET role = 'Administrator' WHERE email = 'sql-admin@example.com'");
+
+        Cookie cookie = login("sql-admin@example.com");
+        mockMvc.perform(get("/api/auth/me").cookie(cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("Administrator"));
+        mockMvc.perform(get("/api/admin/users").cookie(cookie)).andExpect(status().isOk());
+        org.assertj.core.api.Assertions.assertThat(jdbcTemplate.queryForObject(
+                "SELECT role FROM users WHERE email = 'sql-admin@example.com'",
+                String.class)).isEqualTo("Administrator");
+    }
+
+    @Test
+    void newUsersAreStoredWithTheWireRoleValue() throws Exception {
+        register("wire-role@example.com", "wirerole");
+        org.assertj.core.api.Assertions.assertThat(jdbcTemplate.queryForObject(
+                "SELECT role FROM users WHERE email = 'wire-role@example.com'", String.class)).isEqualTo("Tenno");
+    }
+
+    @Test
+    void unknownRoutesAreA404NotA500() throws Exception {
+        mockMvc.perform(get("/api/does-not-exist").cookie(login(registerAndReturnEmail("route@example.com", "route"))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Not found"));
+    }
+
+    private String registerAndReturnEmail(String email, String username) throws Exception {
+        register(email, username);
+        return email;
+    }
+
     @Test
     void registerLoginMeRoundTrip() throws Exception {
         register("round-trip@example.com", "roundtrip");

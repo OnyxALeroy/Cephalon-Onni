@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "drop_sources", uniqueConstraints =
-    @UniqueConstraint(name = "uq_drop_sources_name_source", columnNames = {"name", "source"}))
+    @UniqueConstraint(name = "uq_drop_sources_name_source_rotation", columnNames = {"name", "source", "rotation"}))
 @Getter
 @Setter
 public class DropSource {

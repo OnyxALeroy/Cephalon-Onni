@@ -25,7 +25,7 @@ public class User {
     @Column(name = "hashed_password", nullable = false)
     private String hashedPassword;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = UserRoleConverter.class)
     @Column(nullable = false)
     private UserRole role = UserRole.TENNO;
 

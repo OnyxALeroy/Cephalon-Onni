@@ -4,31 +4,27 @@ set -e
 source "$(dirname "$0")/docker-common.sh"
 cd "$PROJECT_ROOT"
 
-print_status "Running PostgreSQL database initialization script..."
-
-# The Java backend (cephalon-onni-backend) does NOT seed the static catalog (warframes, weapons,
-# mods, ...) - it only creates schema via Flyway and expects that data to already be in Postgres
-# (see backend-rework-plan.md Phase 2: "Static data is already in Postgres - no copy needed").
-# The seeder itself (app/db_init_script.py + app/database/static/db_init/*) still only exists in
-# the legacy Python backend, which is no longer part of the default docker-compose stack.
+# The Java backend seeds the static catalog (warframes, weapons, mods, missions, drop tables, ...)
+# itself: on startup, if the warframes table is empty, it imports everything from Warframe's
+# public data (see backend/src/main/java/com/cephalononni/catalog). To refresh it after a game
+# update, use Admin > System Configuration > "Import now" (or POST /api/admin/catalog/import as an
+# administrator). The legacy Python seeder is no longer needed.
 #
-# To (re)seed a genuinely empty Postgres, build and run the legacy backend's image once, pointed
-# at the same Postgres, e.g.:
-#   docker build -t cephalon-onni-backend-legacy ./backend-python-legacy
-#   docker run --rm --network cephalon-onni_default --env-file .env \
-#       cephalon-onni-backend-legacy python app/db_init_script.py -y
-#
-# Porting this seeder to Java is a known follow-up, not yet done.
+# This script only reports what is currently in the catalog.
 
-# Check if postgres container is running
 if ! docker ps --filter "name=cephalon-onni-postgres" --filter "status=running" | grep -q "cephalon-onni-postgres"; then
     print_error "PostgreSQL container is not running"
     print_status "Please start the services first: ./scripts/start-everything.sh"
     exit 1
 fi
 
-print_status "Verifying static catalog data in PostgreSQL..."
-docker exec cephalon-onni-postgres psql -U postgres -d cephalon_onni -c "SELECT COUNT(*) FROM warframes;" 2>/dev/null || true
-docker exec cephalon-onni-postgres psql -U postgres -d cephalon_onni -c "SELECT COUNT(*) FROM weapons;" 2>/dev/null || true
-docker exec cephalon-onni-postgres psql -U postgres -d cephalon_onni -c "SELECT COUNT(*) FROM mods;" 2>/dev/null || true
-print_status "If any of the above are 0, see the comment at the top of this script."
+print_status "Static catalog row counts:"
+docker exec cephalon-onni-postgres psql -U postgres -d cephalon_onni -c "
+    SELECT 'warframes' AS table_name, count(*) FROM warframes
+    UNION ALL SELECT 'weapons', count(*) FROM weapons
+    UNION ALL SELECT 'mods', count(*) FROM mods
+    UNION ALL SELECT 'arcanes', count(*) FROM arcanes
+    UNION ALL SELECT 'relics', count(*) FROM relics
+    UNION ALL SELECT 'missions', count(*) FROM missions
+    UNION ALL SELECT 'drop_sources', count(*) FROM drop_sources;" 2>/dev/null || true
+print_status "If these are 0, check the backend logs for 'Catalog import' (make logs-backend)."

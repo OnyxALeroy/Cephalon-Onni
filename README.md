@@ -46,6 +46,24 @@ then promote it once, directly in the database:
 UPDATE users SET role = 'Administrator' WHERE email = 'you@example.com';
 ```
 
+**Static catalog (warframes, weapons, mods, drop tables, ...)** — the backend imports it from
+Warframe's public data on first start (when the `warframes` table is empty; takes ~15 s).
+Refresh it after a game update from *Admin > System Configuration > Import now*. The source URLs
+can be changed on that page too. An import is all-or-nothing, and it refuses to apply a snapshot
+that would drop more than half of any table's rows unless *Force* is ticked. Optional:
+`CATALOG_REFRESH_CRON` (Spring cron, e.g. `0 0 5 * * MON`) schedules refreshes, and
+`CATALOG_IMPORT_IF_EMPTY=false` disables the first-start import.
+
+**Existing databases and `V1__init_schema.sql`** — V1 was amended in place during the Java
+rework (some `description` columns went from `VARCHAR` to `TEXT`). A database that already
+applied the earlier V1 will fail Flyway's checksum validation on boot: either wipe the Postgres
+volume (`docker compose down -v`) or run `flyway repair` against it once.
+
+**Behind an HTTP proxy** — configure it for Docker as usual (`~/.docker/config.json` `proxies`
+or the daemon settings). Docker passes it to builds and containers as `HTTP(S)_PROXY`/`NO_PROXY`,
+which Maven and the JVM ignore on their own, so `backend/docker/proxy-from-env.sh` translates them
+(Maven `settings.xml` at build time, `-Dhttps.proxyHost`... at runtime). No proxy set = no-op.
+
 **Running the backend tests** — `cd backend && mvn test` (requires Docker: the integration
 tests use Testcontainers to run a real Postgres; no Redis is needed).
 

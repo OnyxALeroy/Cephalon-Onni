@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -31,6 +32,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class LoottableService {
 
     private static final Logger log = LoggerFactory.getLogger(LoottableService.class);
+    /** Deterministic order for paged mission queries (id breaks ties between same-name missions). */
+    private static final Sort MISSION_ORDER = Sort.by("missionName", "id");
 
     private final MissionRepository missionRepository;
     private final DropSourceRepository dropSourceRepository;
@@ -62,8 +65,8 @@ public class LoottableService {
                     // drops JSONB blob per row, so an unbounded findAll() here would load every
                     // mission's drops to emit at most 50 missions' worth of nodes.
                     (n.isEmpty()
-                            ? missionRepository.findAll(PageRequest.of(0, 50))
-                            : missionRepository.findByMissionNameContainingIgnoreCase(n, PageRequest.of(0, 50)))
+                            ? missionRepository.findAll(PageRequest.of(0, 50, MISSION_ORDER))
+                            : missionRepository.findByMissionNameContainingIgnoreCase(n, PageRequest.of(0, 50, MISSION_ORDER)))
                             .forEach(m -> nodes.addAll(missionDropNodes(m, counter)));
                 } else {
                     List<DropSource> rows = n.isEmpty()
@@ -75,7 +78,7 @@ public class LoottableService {
             } else {
                 dropSourceRepository.findByNameContainingIgnoreCase(n, PageRequest.of(0, 25))
                         .forEach(row -> nodes.add(dropSourceNode(row)));
-                missionRepository.findByMissionNameContainingIgnoreCase(n, PageRequest.of(0, 25))
+                missionRepository.findByMissionNameContainingIgnoreCase(n, PageRequest.of(0, 25, MISSION_ORDER))
                         .forEach(m -> nodes.addAll(missionDropNodes(m, counter)));
             }
 
@@ -138,7 +141,7 @@ public class LoottableService {
      * dropped here rather than ported.
      */
     private GraphNode fallbackFromMissions(String name, List<NodeNeighbor> neighbors) {
-        List<Mission> missions = missionRepository.findByMissionNameContainingIgnoreCase(name, PageRequest.of(0, 50));
+        List<Mission> missions = missionRepository.findByMissionNameContainingIgnoreCase(name, PageRequest.of(0, 50, MISSION_ORDER));
         if (missions.isEmpty()) {
             return null;
         }

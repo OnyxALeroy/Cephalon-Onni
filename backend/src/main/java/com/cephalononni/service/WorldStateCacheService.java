@@ -2,6 +2,7 @@ package com.cephalononni.service;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,8 +26,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *
  * The parsed {@link WorldState} is kept in memory once parsed (the raw payload is ~1 MB of
  * JSON and the public /api/worldstate endpoint would otherwise re-parse it on every request).
- * It is single-process safe by construction: the only writer is the single-threaded
- * scheduler in WorldStateFetcher.
+ * {@link #update} (the scheduler) always overwrites it; {@link #get} only fills it when it is
+ * still empty, so a cold-start read racing a fresh poll can never clobber the newer copy.
  */
 @Service
 public class WorldStateCacheService {
@@ -42,7 +43,7 @@ public class WorldStateCacheService {
     private final WorldStateParser parser;
     private final ObjectMapper objectMapper;
 
-    private volatile WorldState cachedWorldState;
+    private final AtomicReference<WorldState> cachedWorldState = new AtomicReference<>();
 
     public WorldStateCacheService(StringRedisTemplate redisTemplate,
                                    WorldstateCacheRepository worldstateCacheRepository,
@@ -58,7 +59,7 @@ public class WorldStateCacheService {
      * DB row if Redis is empty or unreachable. Empty only if nothing has ever been populated.
      */
     public Optional<WorldState> get() {
-        WorldState cached = cachedWorldState;
+        WorldState cached = cachedWorldState.get();
         if (cached != null) {
             return Optional.of(cached);
         }
@@ -67,9 +68,10 @@ public class WorldStateCacheService {
         if (rawPayload.isEmpty()) {
             return Optional.empty();
         }
-        WorldState worldState = parser.parse(rawPayload.get());
-        cachedWorldState = worldState;
-        return Optional.of(worldState);
+        // compareAndSet, not set: if update() published a fresher copy while we were parsing
+        // an older Redis/DB payload, keep the fresher one.
+        cachedWorldState.compareAndSet(null, parser.parse(rawPayload.get()));
+        return Optional.of(cachedWorldState.get());
     }
 
     /** Writes the freshly-fetched payload to both Redis (best-effort) and the DB row of record. */
@@ -85,7 +87,7 @@ public class WorldStateCacheService {
         cache.setFetchedAt(Instant.now());
         worldstateCacheRepository.save(cache);
 
-        cachedWorldState = parser.parse(rawPayload);
+        cachedWorldState.set(parser.parse(rawPayload));
     }
 
     /**
